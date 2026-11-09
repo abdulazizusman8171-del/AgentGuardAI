@@ -1,3 +1,4 @@
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -124,6 +125,44 @@ class TestAgentGuard(unittest.TestCase):
 
         self.assertEqual(result["decision"], "ALLOW")
         self.assertFalse(result["recipient_blocklisted"])
+
+    def test_negative_amount_is_rejected(self):
+        transaction = {
+            "amount": -5,
+            "recipient_known": True,
+            "recipient_address": "0xSAFE123",
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction)
+
+    def test_invalid_amount_format_is_rejected(self):
+        transaction = {
+            "amount": "abc",
+            "recipient_known": True,
+            "recipient_address": "0xSAFE123",
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction)      
+    def test_invalid_transaction_input_is_rejected(self):
+        with self.assertRaises(ValueError):
+            evaluate_transaction(None)   
+
+    def test_missing_amount_is_rejected(self):
+        transaction = {
+            "recipient_known": True,
+            "recipient_address": "0xSAFE123",
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction)
 
 if __name__ == "__main__":
     unittest.main()

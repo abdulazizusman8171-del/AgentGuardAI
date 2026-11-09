@@ -1,13 +1,30 @@
+import math
+
+
 def evaluate_transaction(
     transaction,
     max_amount=2,
     blocked_recipients=None
 ):
-
     risk_score = 0
-    reasons = []
+    if not isinstance(transaction, dict):
+        raise ValueError("Transaction must be a dictionary")
 
+    if "amount" not in transaction:
+        raise ValueError("Transaction amount is required")
+
+    reasons = []
     amount = transaction.get("amount", 0)
+
+    if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+        raise ValueError("Transaction amount must be a number")
+
+    if not math.isfinite(amount):
+        raise ValueError("Transaction amount must be finite")
+
+    if amount < 0:
+        raise ValueError("Transaction amount cannot be negative")
+
     recipient_known = transaction.get("recipient_known", False)
     recipient_address = transaction.get("recipient_address", "")
     new_contract = transaction.get("new_contract", False)
