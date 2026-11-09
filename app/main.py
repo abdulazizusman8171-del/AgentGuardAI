@@ -79,8 +79,10 @@ def evaluate_transaction(
     duplicate_transaction = False
 
     if transaction_tracker is not None:
-
-        if not isinstance(transaction_tracker, TransactionTracker):
+        if not (
+            callable(getattr(transaction_tracker, "is_duplicate", None))
+            and callable(getattr(transaction_tracker, "mark_processed", None))
+        ):
             raise ValueError("Invalid transaction tracker")
 
         if transaction_id is None:
@@ -93,7 +95,6 @@ def evaluate_transaction(
         )
 
     elif transaction_id is not None:
-
         raise ValueError(
             "Transaction tracker is required when using a transaction ID"
         )
