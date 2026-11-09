@@ -24,15 +24,43 @@ class SQLiteTransactionTracker:
         return sqlite3.connect(self.database_path)
 
     def _initialize_database(self):
-
         with closing(self._connect()) as connection:
             with connection:
+
                 connection.execute("""
                     CREATE TABLE IF NOT EXISTS processed_transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         transaction_id TEXT NOT NULL UNIQUE,
                         processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
+                """)
+
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS pending_approvals (
+                        approval_id TEXT PRIMARY KEY,
+                        transaction_id TEXT NOT NULL,
+                        transaction_json TEXT NOT NULL,
+                        fingerprint TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING'
+                            CHECK (
+                                status IN (
+                                    'PENDING',
+                                    'APPROVED',
+                                    'CONSUMED',
+                                    'EXPIRED'
+                                )
+                            ),
+                        created_at INTEGER NOT NULL,
+                        expires_at INTEGER NOT NULL,
+                        approved_at INTEGER,
+                        consumed_at INTEGER
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_pending_approvals_transaction
+                    ON pending_approvals(transaction_id)
                 """)
 
     def _validate_transaction_id(self, transaction_id):
@@ -72,3 +100,132 @@ class SQLiteTransactionTracker:
                     """,
                     (transaction_id,)
                 )
+
+    def create_pending_approval(
+        self,
+        approval_id,
+        transaction_id,
+        transaction_json,
+        fingerprint,
+        created_at,
+        expires_at
+    ):
+
+        with closing(self._connect()) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    INSERT INTO pending_approvals (
+                        approval_id,
+                        transaction_id,
+                        transaction_json,
+                        fingerprint,
+                        created_at,
+                        expires_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        approval_id,
+                        transaction_id,
+                        transaction_json,
+                        fingerprint,
+                        created_at,
+                        expires_at
+                    )
+                )
+
+    def get_approval(self, approval_id):
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM pending_approvals
+                WHERE approval_id = ?
+                """,
+                (approval_id,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "approval_id",
+            "transaction_id",
+            "transaction_json",
+            "fingerprint",
+            "status",
+            "created_at",
+            "expires_at",
+            "approved_at",
+            "consumed_at"
+        ]
+
+        return dict(zip(columns, row))
+
+    def approve_pending_approval(self, approval_id, current_time):
+
+        with closing(self._connect()) as connection:
+            with connection:
+
+                result = connection.execute(
+                    """
+                    UPDATE pending_approvals
+                    SET status = 'APPROVED',
+                        approved_at = ?
+                    WHERE approval_id = ?
+                      AND status = 'PENDING'
+                      AND expires_at > ?
+                    """,
+                    (current_time, approval_id, current_time)
+                )
+
+                if result.rowcount == 1:
+                    return True
+
+                connection.execute(
+                    """
+                    UPDATE pending_approvals
+                    SET status = 'EXPIRED'
+                    WHERE approval_id = ?
+                      AND status = 'PENDING'
+                      AND expires_at <= ?
+                    """,
+                    (approval_id, current_time)
+                )
+
+                return False
+
+    def consume_approved_approval(self, approval_id, current_time):
+
+        with closing(self._connect()) as connection:
+            with connection:
+
+                result = connection.execute(
+                    """
+                    UPDATE pending_approvals
+                    SET status = 'CONSUMED',
+                        consumed_at = ?
+                    WHERE approval_id = ?
+                      AND status = 'APPROVED'
+                      AND expires_at > ?
+                    """,
+                    (current_time, approval_id, current_time)
+                )
+
+                if result.rowcount == 1:
+                    return True
+
+                connection.execute(
+                    """
+                    UPDATE pending_approvals
+                    SET status = 'EXPIRED'
+                    WHERE approval_id = ?
+                      AND status = 'APPROVED'
+                      AND expires_at <= ?
+                    """,
+                    (approval_id, current_time)
+                )
+
+                return False

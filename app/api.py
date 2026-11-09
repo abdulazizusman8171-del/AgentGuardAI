@@ -6,15 +6,21 @@ from fastapi import FastAPI, HTTPException
 from app.main import evaluate_transaction
 from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
+from app.approval import ApprovalManager
 
 
 app = FastAPI(
     title="AgentGuard AI",
     description="Blockchain transaction security API",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 tracker = SQLiteTransactionTracker()
+
+approval_manager = ApprovalManager(
+    storage=tracker,
+    approval_lifetime=300
+)
 
 BLOCKED_RECIPIENTS = [
     address.strip()
@@ -35,7 +41,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "AgentGuard AI",
-        "version": "0.2.0"
+        "version": "0.3.0"
     }
 
 
@@ -43,13 +49,62 @@ def health_check():
 def evaluate(payload: dict[str, Any]):
 
     try:
-        result = evaluate_transaction(
+        return evaluate_transaction(
             payload,
             transaction_tracker=tracker,
             blocked_recipients=BLOCKED_RECIPIENTS
         )
 
-        return result
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+
+@app.post("/approvals")
+def create_approval(payload: dict[str, Any]):
+
+    try:
+        security_report = evaluate_transaction(
+            payload,
+            transaction_tracker=tracker,
+            blocked_recipients=BLOCKED_RECIPIENTS
+        )
+
+        if security_report["decision"] != "REQUIRE_CONFIRMATION":
+            return {
+                "approval_required": False,
+                "security_report": security_report,
+                "message": "This transaction does not require approval."
+            }
+
+        approval = approval_manager.create_approval(payload)
+
+        return {
+            "approval_required": True,
+            "security_report": security_report,
+            "approval": approval
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+
+@app.post("/approvals/{approval_id}/approve")
+def approve_transaction(
+    approval_id: str,
+    payload: dict[str, Any]
+):
+
+    try:
+        return approval_manager.approve_transaction(
+            approval_id,
+            payload
+        )
 
     except ValueError as error:
         raise HTTPException(
@@ -64,26 +119,68 @@ def process_transaction(payload: dict[str, Any]):
     try:
         transaction = payload.copy()
 
-        confirmed = transaction.pop("confirmed", False)
+        if "confirmed" in transaction:
+            raise ValueError(
+                "Client-supplied confirmation is not accepted. "
+                "Use an approval ID instead."
+            )
+
+        approval_id = transaction.pop("approval_id", None)
+
         simulated_success = transaction.pop(
             "simulated_success", True
         )
-
-        if type(confirmed) is not bool:
-            raise ValueError("Confirmation must be True or False")
 
         if type(simulated_success) is not bool:
             raise ValueError(
                 "Execution result must be True or False"
             )
 
-        result = workflow.process(
+        security_report = evaluate_transaction(
+            transaction,
+            transaction_tracker=tracker,
+            blocked_recipients=BLOCKED_RECIPIENTS
+        )
+        print("PROCESS SECURITY REPORT:", security_report)
+
+        confirmed = False
+
+        if security_report["decision"] == "REQUIRE_CONFIRMATION":
+
+            if not approval_id:
+                return workflow.process(
+                    transaction=transaction,
+                    confirmed=False,
+                    simulated_success=simulated_success
+                )
+
+            approval_result = approval_manager.consume_approval(
+                approval_id,
+                transaction
+            )
+
+            if not approval_result["consumed"]:
+                return {
+                    "security_report": security_report,
+                    "execution_result": {
+                        "status": "APPROVAL_REJECTED",
+                        "message": approval_result["message"]
+                    }
+                }
+
+            confirmed = True
+
+        elif approval_id is not None:
+            raise ValueError(
+                "An approval ID was supplied for a transaction "
+                "that does not require confirmation."
+            )
+
+        return workflow.process(
             transaction=transaction,
             confirmed=confirmed,
             simulated_success=simulated_success
         )
-
-        return result
 
     except ValueError as error:
         raise HTTPException(
