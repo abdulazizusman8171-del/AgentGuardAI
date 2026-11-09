@@ -31,6 +31,15 @@ def evaluate_transaction(
     risk_score = 0
     if not isinstance(transaction, dict):
         raise ValueError("Transaction must be a dictionary")
+        # Validate spending limit
+    if isinstance(max_amount, bool) or not isinstance(max_amount, (int, float)):
+        raise ValueError("Maximum amount must be a number")
+
+    if not math.isfinite(max_amount):
+        raise ValueError("Maximum amount must be finite")
+
+    if max_amount < 0:
+        raise ValueError("Maximum amount cannot be negative")
 
     if "amount" not in transaction:
         raise ValueError("Transaction amount is required")

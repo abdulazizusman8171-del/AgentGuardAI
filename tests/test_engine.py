@@ -265,7 +265,54 @@ class TestAgentGuard(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             evaluate_transaction(transaction)
+    def test_negative_max_amount_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction, max_amount=-100)
+    def test_invalid_max_amount_format_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
 
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction, max_amount="abc")
+    def test_boolean_max_amount_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
 
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction, max_amount=True)
+    def test_non_finite_max_amount_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        for invalid_limit in [float("nan"), float("inf"), float("-inf")]:
+            with self.subTest(limit=invalid_limit):
+                with self.assertRaises(ValueError):
+                    evaluate_transaction(transaction, max_amount=invalid_limit)
 if __name__ == "__main__":
     unittest.main()
