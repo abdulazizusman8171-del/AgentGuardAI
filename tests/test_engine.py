@@ -73,6 +73,21 @@ class TestAgentGuard(unittest.TestCase):
         self.assertEqual(result["decision"], "ALLOW")
         self.assertFalse(result["limit_exceeded"])
 
+    def test_unknown_recipient_requires_confirmation(self):
+        transaction = {
+            "amount": 0.1,
+            "recipient_known": False,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction)
+
+        self.assertEqual(
+            result["decision"],
+            "REQUIRE_CONFIRMATION"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

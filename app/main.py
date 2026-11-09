@@ -43,9 +43,12 @@ def evaluate_transaction(transaction, max_amount=2):
     # Final decision
     if risk_score >= 60 or limit_exceeded:
         decision = "BLOCK"
+
+    elif not recipient_known:
+        decision = "REQUIRE_CONFIRMATION"
+
     else:
         decision = "ALLOW"
-
     return {
         "risk_score": risk_score,
         "decision": decision,
