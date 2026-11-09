@@ -273,6 +273,10 @@ def evaluate_transaction(
 
         decision = "BLOCK"
 
+    elif unlimited_approval:
+
+        decision = "REQUIRE_CONFIRMATION"
+
     elif not recipient_known:
 
         decision = "REQUIRE_CONFIRMATION"
