@@ -86,12 +86,18 @@ def evaluate_transaction(
     new_contract = transaction.get("new_contract", False)
     unlimited_approval = transaction.get("unlimited_approval", False)
 
-    # Prepare blocked address list
-    blocked_addresses = {
-        address.strip().lower()
-        for address in (blocked_recipients or [])
-        if isinstance(address, str)
-    }
+    # Validate blocked recipients
+    if blocked_recipients is None:
+        blocked_recipients = []
+
+    if not isinstance(blocked_recipients, list):
+        raise ValueError("Blocked recipients must be a list")
+
+    blocked_addresses = set()
+
+    for address in blocked_recipients:
+        validate_recipient_address(network, address)
+        blocked_addresses.add(address.strip().lower())
 
     # Check recipient address
     normalized_address = (

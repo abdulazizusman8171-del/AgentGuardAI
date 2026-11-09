@@ -340,5 +340,62 @@ class TestAgentGuard(unittest.TestCase):
 
                     with self.assertRaises(ValueError):
                         evaluate_transaction(test_transaction)
+    def test_blocklist_string_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(
+                transaction,
+                blocked_recipients="0x1234567890abcdef1234567890abcdef12345678"
+            )
+
+    def test_non_string_blocklist_entry_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678"
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(
+                transaction,
+                blocked_recipients=[12345]
+            )
+
+    def test_invalid_blocklist_address_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678"
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(
+                transaction,
+                blocked_recipients=["invalid-address"]
+            )
+
+    def test_valid_blocklist_address_is_accepted(self):
+        address = "0x1234567890abcdef1234567890abcdef12345678"
+
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": address,
+            "recipient_known": True
+        }
+
+        result = evaluate_transaction(
+            transaction,
+            blocked_recipients=[address]
+        )
+
+        self.assertTrue(result["recipient_blocklisted"])
+        self.assertEqual(result["decision"], "BLOCK")
 if __name__ == "__main__":
     unittest.main()
