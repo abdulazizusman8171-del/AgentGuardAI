@@ -141,7 +141,6 @@ def process_transaction(payload: dict[str, Any]):
             transaction_tracker=tracker,
             blocked_recipients=BLOCKED_RECIPIENTS
         )
-        print("PROCESS SECURITY REPORT:", security_report)
 
         confirmed = False
 
