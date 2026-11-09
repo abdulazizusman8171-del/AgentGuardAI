@@ -47,6 +47,32 @@ class TestAgentGuard(unittest.TestCase):
 
         self.assertEqual(result["risk_score"], 40)
 
+    def test_transaction_exceeds_spending_limit(self):
+        transaction = {
+            "amount": 3,
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction, max_amount=2)
+
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertTrue(result["limit_exceeded"])
+
+    def test_transaction_within_spending_limit(self):
+        transaction = {
+            "amount": 1,
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction, max_amount=2)
+
+        self.assertEqual(result["decision"], "ALLOW")
+        self.assertFalse(result["limit_exceeded"])
+
 
 if __name__ == "__main__":
     unittest.main()
