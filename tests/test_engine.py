@@ -148,10 +148,10 @@ class TestAgentGuard(unittest.TestCase):
         }
 
         with self.assertRaises(ValueError):
-            evaluate_transaction(transaction)      
+            evaluate_transaction(transaction)
     def test_invalid_transaction_input_is_rejected(self):
         with self.assertRaises(ValueError):
-            evaluate_transaction(None)   
+            evaluate_transaction(None)
 
     def test_missing_amount_is_rejected(self):
         transaction = {
@@ -164,5 +164,68 @@ class TestAgentGuard(unittest.TestCase):
         with self.assertRaises(ValueError):
             evaluate_transaction(transaction)
 
+    def test_invalid_ethereum_address_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x123INVALID",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+          evaluate_transaction(transaction)
+    def test_invalid_near_account_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "near",
+            "recipient_address": "INVALID ACCOUNT!",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction)
+    def test_valid_ethereum_address(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction)
+
+        self.assertEqual(result["decision"], "ALLOW")
+    def test_valid_near_account(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "near",
+            "recipient_address": "alice.near",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction)
+
+        self.assertEqual(result["decision"], "ALLOW")
+    def test_valid_bnb_address(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "bnb",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        result = evaluate_transaction(transaction)
+
+        self.assertEqual(result["decision"], "ALLOW")
 if __name__ == "__main__":
     unittest.main()

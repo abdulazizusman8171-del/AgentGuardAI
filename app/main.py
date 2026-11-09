@@ -1,5 +1,27 @@
 import math
+import re
+def validate_recipient_address(network, address):
 
+    if not isinstance(address, str):
+        raise ValueError("Recipient address must be text")
+
+    address = address.strip()
+
+    if network == "near":
+        if not re.fullmatch(r"[a-z0-9]+(?:[-_.][a-z0-9]+)*", address):
+            raise ValueError("Invalid NEAR account ID")
+
+        if not 2 <= len(address) <= 64:
+            raise ValueError("NEAR account ID must be 2-64 characters")
+
+    elif network in ("ethereum", "bnb"):
+        if not re.fullmatch(r"0x[a-fA-F0-9]{40}", address):
+            raise ValueError("Invalid EVM wallet address")
+
+    else:
+        raise ValueError("Unsupported blockchain network")
+
+    return True
 
 def evaluate_transaction(
     transaction,
@@ -27,6 +49,19 @@ def evaluate_transaction(
 
     recipient_known = transaction.get("recipient_known", False)
     recipient_address = transaction.get("recipient_address", "")
+    network = transaction.get("network")
+
+    if network is not None:
+        if not isinstance(network, str):
+            raise ValueError("Network must be text")
+
+        network = network.strip().lower()
+
+        if not recipient_address:
+            raise ValueError("Recipient address is required")
+
+        validate_recipient_address(network, recipient_address)
+
     new_contract = transaction.get("new_contract", False)
     unlimited_approval = transaction.get("unlimited_approval", False)
 
