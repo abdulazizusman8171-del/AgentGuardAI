@@ -87,7 +87,43 @@ class TestAgentGuard(unittest.TestCase):
             result["decision"],
             "REQUIRE_CONFIRMATION"
         )
+    def test_blocklisted_recipient_is_blocked(self):
+        transaction = {
+            "amount": 0.1,
+            "recipient_known": True,
+            "recipient_address": "0xDANGER123",
+            "new_contract": False,
+            "unlimited_approval": False
+        }
 
+        blocked_addresses = ["0xdanger123"]
+
+        result = evaluate_transaction(
+            transaction,
+            blocked_recipients=blocked_addresses
+        )
+
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertTrue(result["recipient_blocklisted"])
+
+    def test_safe_recipient_not_on_blocklist(self):
+        transaction = {
+            "amount": 0.1,
+            "recipient_known": True,
+            "recipient_address": "0xSAFE123",
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        blocked_addresses = ["0xDANGER123"]
+
+        result = evaluate_transaction(
+            transaction,
+            blocked_recipients=blocked_addresses
+        )
+
+        self.assertEqual(result["decision"], "ALLOW")
+        self.assertFalse(result["recipient_blocklisted"])
 
 if __name__ == "__main__":
     unittest.main()
