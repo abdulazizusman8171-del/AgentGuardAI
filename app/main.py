@@ -49,18 +49,20 @@ def evaluate_transaction(
 
     recipient_known = transaction.get("recipient_known", False)
     recipient_address = transaction.get("recipient_address", "")
-    network = transaction.get("network")
+    if "network" not in transaction:
+        raise ValueError("Blockchain network is required")
 
-    if network is not None:
-        if not isinstance(network, str):
-            raise ValueError("Network must be text")
+    network = transaction["network"]
 
-        network = network.strip().lower()
+    if not isinstance(network, str):
+        raise ValueError("Network must be text")
 
-        if not recipient_address:
-            raise ValueError("Recipient address is required")
+    network = network.strip().lower()
 
-        validate_recipient_address(network, recipient_address)
+    if not recipient_address:
+        raise ValueError("Recipient address is required")
+
+    validate_recipient_address(network, recipient_address)
 
     new_contract = transaction.get("new_contract", False)
     unlimited_approval = transaction.get("unlimited_approval", False)

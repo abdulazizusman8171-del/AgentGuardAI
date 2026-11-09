@@ -1,4 +1,3 @@
-import math
 import sys
 import unittest
 from pathlib import Path
@@ -13,6 +12,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_safe_transaction(self):
         transaction = {
             "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
             "new_contract": False,
             "unlimited_approval": False
@@ -26,6 +27,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_suspicious_transaction(self):
         transaction = {
             "amount": 6,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": False,
             "new_contract": True,
             "unlimited_approval": False
@@ -39,6 +42,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_unlimited_approval(self):
         transaction = {
             "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
             "new_contract": False,
             "unlimited_approval": True
@@ -51,6 +56,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_transaction_exceeds_spending_limit(self):
         transaction = {
             "amount": 3,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
             "new_contract": False,
             "unlimited_approval": False
@@ -64,6 +71,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_transaction_within_spending_limit(self):
         transaction = {
             "amount": 1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
             "new_contract": False,
             "unlimited_approval": False
@@ -77,6 +86,8 @@ class TestAgentGuard(unittest.TestCase):
     def test_unknown_recipient_requires_confirmation(self):
         transaction = {
             "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": False,
             "new_contract": False,
             "unlimited_approval": False
@@ -88,16 +99,20 @@ class TestAgentGuard(unittest.TestCase):
             result["decision"],
             "REQUIRE_CONFIRMATION"
         )
+
     def test_blocklisted_recipient_is_blocked(self):
         transaction = {
             "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
-            "recipient_address": "0xDANGER123",
             "new_contract": False,
             "unlimited_approval": False
         }
 
-        blocked_addresses = ["0xdanger123"]
+        blocked_addresses = [
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ]
 
         result = evaluate_transaction(
             transaction,
@@ -110,13 +125,16 @@ class TestAgentGuard(unittest.TestCase):
     def test_safe_recipient_not_on_blocklist(self):
         transaction = {
             "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0xabcdef1234567890abcdef1234567890abcdef12",
             "recipient_known": True,
-            "recipient_address": "0xSAFE123",
             "new_contract": False,
             "unlimited_approval": False
         }
 
-        blocked_addresses = ["0xDANGER123"]
+        blocked_addresses = [
+            "0x1234567890abcdef1234567890abcdef12345678"
+        ]
 
         result = evaluate_transaction(
             transaction,
@@ -129,8 +147,9 @@ class TestAgentGuard(unittest.TestCase):
     def test_negative_amount_is_rejected(self):
         transaction = {
             "amount": -5,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
-            "recipient_address": "0xSAFE123",
             "new_contract": False,
             "unlimited_approval": False
         }
@@ -141,22 +160,25 @@ class TestAgentGuard(unittest.TestCase):
     def test_invalid_amount_format_is_rejected(self):
         transaction = {
             "amount": "abc",
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
-            "recipient_address": "0xSAFE123",
             "new_contract": False,
             "unlimited_approval": False
         }
 
         with self.assertRaises(ValueError):
             evaluate_transaction(transaction)
+
     def test_invalid_transaction_input_is_rejected(self):
         with self.assertRaises(ValueError):
             evaluate_transaction(None)
 
     def test_missing_amount_is_rejected(self):
         transaction = {
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
-            "recipient_address": "0xSAFE123",
             "new_contract": False,
             "unlimited_approval": False
         }
@@ -175,7 +197,8 @@ class TestAgentGuard(unittest.TestCase):
         }
 
         with self.assertRaises(ValueError):
-          evaluate_transaction(transaction)
+            evaluate_transaction(transaction)
+
     def test_invalid_near_account_is_rejected(self):
         transaction = {
             "amount": 0.1,
@@ -188,6 +211,7 @@ class TestAgentGuard(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             evaluate_transaction(transaction)
+
     def test_valid_ethereum_address(self):
         transaction = {
             "amount": 0.1,
@@ -201,6 +225,7 @@ class TestAgentGuard(unittest.TestCase):
         result = evaluate_transaction(transaction)
 
         self.assertEqual(result["decision"], "ALLOW")
+
     def test_valid_near_account(self):
         transaction = {
             "amount": 0.1,
@@ -214,6 +239,7 @@ class TestAgentGuard(unittest.TestCase):
         result = evaluate_transaction(transaction)
 
         self.assertEqual(result["decision"], "ALLOW")
+
     def test_valid_bnb_address(self):
         transaction = {
             "amount": 0.1,
@@ -227,5 +253,19 @@ class TestAgentGuard(unittest.TestCase):
         result = evaluate_transaction(transaction)
 
         self.assertEqual(result["decision"], "ALLOW")
+
+    def test_missing_network_is_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        with self.assertRaises(ValueError):
+            evaluate_transaction(transaction)
+
+
 if __name__ == "__main__":
     unittest.main()
