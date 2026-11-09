@@ -314,5 +314,31 @@ class TestAgentGuard(unittest.TestCase):
             with self.subTest(limit=invalid_limit):
                 with self.assertRaises(ValueError):
                     evaluate_transaction(transaction, max_amount=invalid_limit)
+    def test_invalid_security_flags_are_rejected(self):
+        transaction = {
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True,
+            "new_contract": False,
+            "unlimited_approval": False
+        }
+
+        security_flags = [
+            "recipient_known",
+            "new_contract",
+            "unlimited_approval"
+        ]
+
+        invalid_values = ["yes", "no", 1, 0, None]
+
+        for flag in security_flags:
+            for value in invalid_values:
+                with self.subTest(flag=flag, value=value):
+                    test_transaction = transaction.copy()
+                    test_transaction[flag] = value
+
+                    with self.assertRaises(ValueError):
+                        evaluate_transaction(test_transaction)
 if __name__ == "__main__":
     unittest.main()

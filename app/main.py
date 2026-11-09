@@ -56,6 +56,16 @@ def evaluate_transaction(
     if amount < 0:
         raise ValueError("Transaction amount cannot be negative")
 
+    security_flags = [
+        "recipient_known",
+        "new_contract",
+        "unlimited_approval"
+    ]
+
+    for flag in security_flags:
+        if flag in transaction and type(transaction[flag]) is not bool:
+            raise ValueError(f"{flag} must be True or False")
+
     recipient_known = transaction.get("recipient_known", False)
     recipient_address = transaction.get("recipient_address", "")
     if "network" not in transaction:
