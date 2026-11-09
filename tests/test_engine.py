@@ -4,10 +4,52 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 
-from main import evaluate_transaction
+from app.main import evaluate_transaction, TransactionTracker
 
 
 class TestAgentGuard(unittest.TestCase):
+    def test_new_transaction_is_not_duplicate(self):
+        tracker = TransactionTracker()
+
+        transaction = {
+            "transaction_id": "tx-001",
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True
+        }
+
+        result = evaluate_transaction(transaction, transaction_tracker=tracker)
+
+        self.assertFalse(result["duplicate_transaction"])
+        self.assertEqual(result["decision"], "ALLOW")
+
+    def test_processed_transaction_is_blocked(self):
+        tracker = TransactionTracker()
+        tracker.mark_processed("tx-001")
+
+        transaction = {
+            "transaction_id": "tx-001",
+            "amount": 0.1,
+            "network": "ethereum",
+            "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+            "recipient_known": True
+        }
+
+        result = evaluate_transaction(
+            transaction,
+            transaction_tracker=tracker
+        )
+
+        self.assertTrue(result["duplicate_transaction"])
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertEqual(result["risk_score"], 100)
+
+    def test_empty_transaction_id_is_rejected(self):
+        tracker = TransactionTracker()
+
+        with self.assertRaises(ValueError):
+            tracker.is_duplicate("")
 
     def test_safe_transaction(self):
         transaction = {
@@ -20,7 +62,6 @@ class TestAgentGuard(unittest.TestCase):
         }
 
         result = evaluate_transaction(transaction)
-
         self.assertEqual(result["risk_score"], 0)
         self.assertEqual(result["decision"], "ALLOW")
 
