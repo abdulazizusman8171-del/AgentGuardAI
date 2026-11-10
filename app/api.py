@@ -1,7 +1,10 @@
 import os
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from app.main import evaluate_transaction
 from app.security_intelligence import generate_security_insights
@@ -36,7 +39,26 @@ workflow = TransactionWorkflow(
     transaction_tracker=tracker,
     blocked_recipients=BLOCKED_RECIPIENTS
 )
+BASE_DIR = Path(__file__).resolve().parent
 
+app.mount(
+    "/static",
+    StaticFiles(directory=BASE_DIR / "static"),
+    name="static"
+)
+
+templates = Jinja2Templates(
+    directory=BASE_DIR / "templates"
+)
+
+
+@app.get("/", include_in_schema=False)
+def dashboard(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={}
+    )
 
 @app.get("/health")
 def health_check():

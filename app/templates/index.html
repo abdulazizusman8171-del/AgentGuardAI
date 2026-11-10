@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGuard AI | Security Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">A</div>
+                <h2>AgentGuard<span>AI</span></h2>
+            </div>
+
+            <nav>
+                <a href="#" class="active">Dashboard</a>
+                <a href="#transaction">Transaction Security</a>
+                <a href="#intelligence">Security Intelligence</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="status-dot"></span>
+                Security Engine Active
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <header class="topbar">
+                <div>
+                    <h1>Security Dashboard</h1>
+                    <p>Monitor and evaluate blockchain transaction risks.</p>
+                </div>
+
+                <div class="system-status">
+                    <span class="status-dot"></span>
+                    System Online
+                </div>
+            </header>
+
+            <section class="welcome">
+                <h2>Welcome to AgentGuard AI</h2>
+                <p>
+                    Protect blockchain transactions with explainable
+                    security intelligence and risk assessment.
+                </p>
+            </section>
+
+            <section class="overview">
+                <div class="stat-card">
+                    <p>Security Engine</p>
+                    <h3>ACTIVE</h3>
+                    <span>Transaction monitoring</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Supported Networks</p>
+                    <h3>3</h3>
+                    <span>Ethereum, BNB Chain, NEAR</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Execution Mode</p>
+                    <h3>SIMULATED</h3>
+                    <span>No real transactions submitted</span>
+                </div>
+            </section>
+
+            <section class="panel" id="transaction">
+
+                <div class="panel-heading">
+                    <div>
+                        <h2>Transaction Security Check</h2>
+                        <p>Evaluate a transaction before execution.</p>
+                    </div>
+                </div>
+
+                <form id="transaction-form">
+
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label for="transaction_id">
+                                Transaction ID
+                            </label>
+                            <input
+                                type="text"
+                                id="transaction_id"
+                                placeholder="demo-transaction-001"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="amount">Amount</label>
+                            <input
+                                type="number"
+                                id="amount"
+                                min="0"
+                                step="any"
+                                placeholder="0.5"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="network">Blockchain Network</label>
+                            <select id="network" required>
+                                <option value="ethereum">Ethereum</option>
+                                <option value="bnb">BNB Chain</option>
+                                <option value="near">NEAR</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="recipient_address">
+                                Recipient Address
+                            </label>
+                            <input
+                                type="text"
+                                id="recipient_address"
+                                placeholder="Enter recipient address"
+                                required
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="security-options">
+
+                        <label>
+                            <input type="checkbox" id="recipient_known">
+                            Recipient is known
+                        </label>
+
+                        <label>
+                            <input type="checkbox" id="new_contract">
+                            New contract interaction
+                        </label>
+
+                        <label>
+                            <input
+                                type="checkbox"
+                                id="unlimited_approval"
+                            >
+                            Unlimited token approval
+                        </label>
+
+                    </div>
+
+                    <button type="submit" id="evaluate-button">
+                        Evaluate Transaction
+                    </button>
+
+                </form>
+
+                <div id="loading" class="hidden">
+                    Evaluating transaction...
+                </div>
+
+                <div id="error-message" class="error hidden"></div>
+
+            </section>
+
+            <section class="panel hidden" id="results">
+
+                <div class="panel-heading">
+                    <div>
+                        <h2>Security Assessment</h2>
+                        <p>Transaction evaluation results.</p>
+                    </div>
+                </div>
+
+                <div class="result-grid">
+
+                    <div class="result-card">
+                        <p>Risk Score</p>
+                        <h2 id="risk-score">--</h2>
+                    </div>
+
+                    <div class="result-card">
+                        <p>Decision</p>
+                        <h2 id="decision">--</h2>
+                    </div>
+
+                    <div class="result-card">
+                        <p>Risk Findings</p>
+                        <h2 id="finding-count">--</h2>
+                    </div>
+
+                </div>
+
+                <div id="summary"></div>
+
+                <div id="intelligence"></div>
+
+            </section>
+
+            <footer>
+                AgentGuard AI © 2026 |
+                Blockchain Transaction Security
+            </footer>
+
+        </main>
+
+    </div>
+
+    <script src="/static/app.js"></script>
+
+</body>
+</html>

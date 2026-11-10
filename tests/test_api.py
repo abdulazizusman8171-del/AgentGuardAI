@@ -55,7 +55,23 @@ class TestAgentGuardAPI(unittest.TestCase):
 
     def tearDown(self):
         self.temp_dir.cleanup()
+    def test_dashboard_homepage(self):
+        response = self.client.get("/")
 
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Security Dashboard", response.text)
+
+    def test_dashboard_css(self):
+        response = self.client.get("/static/styles.css")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("body", response.text)
+
+    def test_dashboard_javascript(self):
+        response = self.client.get("/static/app.js")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/intelligence", response.text)
     def test_health_endpoint(self):
         response = self.client.get("/health")
 
