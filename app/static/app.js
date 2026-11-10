@@ -1,4 +1,4 @@
-const form = document.getElementById("transaction-form");
+﻿const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -111,3 +111,158 @@ function displayResults(data) {
         block: "start"
     });
 }
+// ==========================================
+// TRANSACTION HISTORY
+// ==========================================
+
+const historyList = document.getElementById("historyList");
+const refreshHistoryButton = document.getElementById("refreshHistory");
+
+async function loadTransactionHistory() {
+    historyList.textContent = "Loading transaction history...";
+
+    try {
+        const response = await fetch("/transactions/history?limit=50");
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Could not load transaction history.");
+        }
+
+        historyList.replaceChildren();
+
+        if (!data.transactions || data.transactions.length === 0) {
+            historyList.textContent = "No executed transactions found yet.";
+            return;
+        }
+
+        data.transactions.forEach(function (transaction) {
+            const item = document.createElement("div");
+            item.className = "record-item";
+
+            const details = document.createElement("div");
+            details.className = "record-details";
+
+            const title = document.createElement("h3");
+            title.textContent = transaction.transaction_id;
+
+            const date = document.createElement("p");
+            date.textContent = "Processed: " +
+                (transaction.processed_at || "Date unavailable");
+
+            const badge = document.createElement("span");
+            badge.className = "status-badge consumed";
+            badge.textContent = "EXECUTED";
+
+            details.append(title, date);
+            item.append(details, badge);
+            historyList.appendChild(item);
+        });
+
+    } catch (error) {
+        historyList.textContent = error.message;
+    }
+}
+
+
+// ==========================================
+// APPROVAL CENTER
+// ==========================================
+
+const approvalList = document.getElementById("approvalList");
+const approvalStatus = document.getElementById("approvalStatus");
+const refreshApprovalsButton = document.getElementById("refreshApprovals");
+
+// Format approval timestamps
+function formatTimestamp(value) {
+    if (!value) return "Date unavailable";
+
+    const numeric = Number(value);
+
+    const date = Number.isFinite(numeric)
+        ? new Date(numeric < 1000000000000 ? numeric * 1000 : numeric)
+        : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return date.toLocaleString();
+}
+async function loadApprovals() {
+    approvalList.textContent = "Loading approvals...";
+
+    try {
+        const status = approvalStatus.value;
+
+        const query = new URLSearchParams({
+            limit: "50"
+        });
+
+        if (status) {
+            query.set("status", status);
+        }
+
+        const response = await fetch("/approvals?" + query.toString());
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Could not load approvals.");
+        }
+
+        approvalList.replaceChildren();
+
+        if (!data.approvals || data.approvals.length === 0) {
+            approvalList.textContent = "No approvals found.";
+            return;
+        }
+
+        data.approvals.forEach(function (approval) {
+            const item = document.createElement("div");
+            item.className = "record-item";
+
+            const details = document.createElement("div");
+            details.className = "record-details";
+
+            const title = document.createElement("h3");
+            title.textContent = "Transaction: " + approval.transaction_id;
+
+            const id = document.createElement("p");
+            id.textContent = "Approval ID: " + approval.approval_id;
+
+            const created = document.createElement("p");
+            created.textContent = "Created: " + formatTimestamp(approval.created_at);
+
+            const badge = document.createElement("span");
+            const normalizedStatus = String(approval.status || "UNKNOWN").toLowerCase();
+
+            badge.className = "status-badge " + normalizedStatus;
+            badge.textContent = normalizedStatus.toUpperCase();
+
+            details.append(title, id, created);
+            item.append(details, badge);
+
+            approvalList.appendChild(item);
+        });
+
+    } catch (error) {
+        approvalList.textContent = error.message;
+    }
+}
+
+
+// ==========================================
+// DASHBOARD EVENT LISTENERS
+// ==========================================
+
+refreshHistoryButton.addEventListener("click", loadTransactionHistory);
+
+refreshApprovalsButton.addEventListener("click", loadApprovals);
+
+approvalStatus.addEventListener("change", loadApprovals);
+
+
+// Load dashboard records when the page opens.
+
+loadTransactionHistory();
+loadApprovals();

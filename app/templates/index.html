@@ -200,7 +200,46 @@
                 <div id="intelligence"></div>
 
             </section>
+<!-- Transaction History -->
+<section class="panel" id="history">
+    <div class="panel-heading panel-toolbar">
+        <div>
+            <h2>Transaction History</h2>
+            <p>Previously executed simulated transactions.</p>
+        </div>
+        <button id="refreshHistory">Refresh</button>
+    </div>
 
+    <div id="historyList" class="record-list">
+        <p class="empty-state">Loading transaction history...</p>
+    </div>
+</section>
+
+<!-- Approval Center -->
+<section class="panel" id="approvals">
+    <div class="panel-heading panel-toolbar">
+        <div>
+            <h2>Approval Center</h2>
+            <p>Review transactions that require authorization.</p>
+        </div>
+        <button id="refreshApprovals">Refresh</button>
+    </div>
+
+    <div class="approval-filter">
+        <label for="approvalStatus">Filter by status:</label>
+        <select id="approvalStatus">
+            <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="CONSUMED">Consumed</option>
+            <option value="EXPIRED">Expired</option>
+        </select>
+    </div>
+
+    <div id="approvalList" class="record-list">
+        <p class="empty-state">Loading approvals...</p>
+    </div>
+</section>
             <footer>
                 AgentGuard AI © 2026 |
                 Blockchain Transaction Security

@@ -134,7 +134,30 @@ class SQLiteTransactionTracker:
                         expires_at
                     )
                 )
+    def get_transaction_history(self, limit=50):
 
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("Limit must be an integer between 1 and 200")
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """
+                SELECT id, transaction_id, processed_at
+                FROM processed_transactions
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,)
+            ).fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "transaction_id": row[1],
+                "processed_at": row[2]
+            }
+            for row in rows
+        ]
     def get_approval(self, approval_id):
 
         with closing(self._connect()) as connection:
@@ -229,3 +252,65 @@ class SQLiteTransactionTracker:
                 )
 
                 return False
+    def get_approvals(self, status=None, limit=50):
+
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("Limit must be an integer between 1 and 200")
+
+        valid_statuses = {
+            "PENDING",
+            "APPROVED",
+            "CONSUMED",
+            "EXPIRED"
+        }
+
+        if status is not None:
+            if not isinstance(status, str):
+                raise ValueError("Invalid approval status")
+
+            status = status.strip().upper()
+
+            if status not in valid_statuses:
+                raise ValueError("Invalid approval status")
+
+        query = """
+            SELECT
+                approval_id,
+                transaction_id,
+                status,
+                created_at,
+                expires_at,
+                approved_at,
+                consumed_at
+            FROM pending_approvals
+        """
+
+        parameters = []
+
+        if status is not None:
+            query += " WHERE status = ?"
+            parameters.append(status)
+
+        query += " ORDER BY created_at DESC LIMIT ?"
+        parameters.append(limit)
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                query,
+                parameters
+            ).fetchall()
+
+        columns = [
+            "approval_id",
+            "transaction_id",
+            "status",
+            "created_at",
+            "expires_at",
+            "approved_at",
+            "consumed_at"
+        ]
+
+        return [
+            dict(zip(columns, row))
+            for row in rows
+        ]

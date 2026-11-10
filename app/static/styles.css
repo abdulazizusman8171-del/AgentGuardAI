@@ -365,3 +365,97 @@ footer {
         flex-direction: column;
     }
 }
+/* Dashboard records */
+
+.panel-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.record-item {
+    background: #0b1120;
+    border: 1px solid #26334d;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.record-details h3 {
+    font-size: 14px;
+    margin-bottom: 7px;
+    overflow-wrap: anywhere;
+}
+
+.record-details p,
+.empty-state {
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+.status-badge.pending {
+    background: #422006;
+    color: #fbbf24;
+}
+
+.status-badge.approved,
+.status-badge.consumed {
+    background: #052e16;
+    color: #4ade80;
+}
+
+.status-badge.expired,
+.status-badge.blocked {
+    background: #450a0a;
+    color: #fca5a5;
+}
+
+.approval-filter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.approval-filter label {
+    color: #cbd5e1;
+    font-size: 13px;
+}
+
+.approval-filter select {
+    max-width: 180px;
+}
+
+@media (max-width: 600px) {
+    .panel-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .approval-filter {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -158,6 +158,47 @@ def security_intelligence(payload: dict[str, Any]):
             "success": True,
             "security_report": security_report,
             "intelligence": intelligence
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+@app.get("/transactions/history")
+def transaction_history(
+    limit: int = Query(default=50, ge=1, le=200)
+):
+    try:
+        transactions = tracker.get_transaction_history(limit=limit)
+
+        return {
+            "success": True,
+            "transactions": transactions
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+
+@app.get("/approvals")
+def list_approvals(
+    status: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200)
+):
+    try:
+        approvals = tracker.get_approvals(
+            status=status,
+            limit=limit
+        )
+
+        return {
+            "success": True,
+            "approvals": approvals
         }
 
     except ValueError as error:

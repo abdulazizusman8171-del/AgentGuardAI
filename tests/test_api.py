@@ -445,5 +445,74 @@ class TestAgentGuardAPI(unittest.TestCase):
         )
         self.assertEqual(response.status_code,400)
 
+    def test_transaction_history_empty(self):
+        response = self.client.get("/transactions/history")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(response.json()["transactions"], [])
+
+    def test_transaction_history_after_execution(self):
+        self.client.post(
+            "/process",
+            json=self.safe_transaction
+        )
+
+        response = self.client.get("/transactions/history")
+
+        self.assertEqual(response.status_code, 200)
+
+        transactions = response.json()["transactions"]
+
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(
+            transactions[0]["transaction_id"],
+            self.safe_transaction["transaction_id"]
+        )
+
+    def test_list_pending_approvals(self):
+        self.client.post(
+            "/approvals",
+            json=self.unknown_transaction
+        )
+
+        response = self.client.get("/approvals?status=PENDING")
+
+        self.assertEqual(response.status_code, 200)
+
+        approvals = response.json()["approvals"]
+
+        self.assertEqual(len(approvals), 1)
+        self.assertEqual(approvals[0]["status"], "PENDING")
+
+    def test_filter_approved_approvals(self):
+        create_response = self.client.post(
+            "/approvals",
+            json=self.unknown_transaction
+        )
+
+        approval_id = (
+            create_response.json()["approval"]["approval_id"]
+        )
+
+        self.client.post(
+            f"/approvals/{approval_id}/approve",
+            json=self.unknown_transaction
+        )
+
+        response = self.client.get("/approvals?status=APPROVED")
+
+        self.assertEqual(response.status_code, 200)
+
+        approvals = response.json()["approvals"]
+
+        self.assertEqual(len(approvals), 1)
+        self.assertEqual(approvals[0]["status"], "APPROVED")
+
+    def test_invalid_approval_status_filter(self):
+        response = self.client.get("/approvals?status=INVALID")
+
+        self.assertEqual(response.status_code, 400)
+
 if __name__ == "__main__":
     unittest.main()

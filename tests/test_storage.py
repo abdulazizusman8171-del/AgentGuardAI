@@ -44,6 +44,33 @@ class TestSQLiteTransactionTracker(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.tracker.mark_processed(123)
 
+    def test_transaction_history(self):
+        self.tracker.mark_processed("transaction-101")
+        self.tracker.mark_processed("transaction-102")
 
+        history = self.tracker.get_transaction_history()
+
+        self.assertEqual(len(history), 2)
+        self.assertEqual(
+            history[0]["transaction_id"],
+            "transaction-102"
+        )
+
+    def test_empty_transaction_history(self):
+        history = self.tracker.get_transaction_history()
+
+        self.assertEqual(history, [])
+
+    def test_invalid_history_limit(self):
+        with self.assertRaises(ValueError):
+            self.tracker.get_transaction_history(limit=500)
+
+    def test_invalid_approval_status(self):
+        with self.assertRaises(ValueError):
+            self.tracker.get_approvals(status="INVALID")
+
+    def test_invalid_approval_limit(self):
+        with self.assertRaises(ValueError):
+            self.tracker.get_approvals(limit=500)
 if __name__ == "__main__":
     unittest.main()
