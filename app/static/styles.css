@@ -91,6 +91,7 @@ body {
 /* Main content */
 
 .main-content {
+    min-width: 0;
     flex: 1;
     padding: 35px;
     max-width: 1500px;
@@ -349,6 +350,7 @@ footer {
 
 @media (max-width: 600px) {
     .main-content {
+    min-width: 0;
         padding: 18px;
     }
 
@@ -606,37 +608,40 @@ body[data-network="ethereum"] {
     margin-bottom: 25px;
 }
 
+.activity-track {
+    display: flex;
+    align-items: stretch;
+    width: max-content;
+    gap: 18px;
+    padding: 5px 3px;
+    will-change: transform;
+}
+
+.activity-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.activity-card {
+    flex: 0 0 280px;
+    width: 280px;
+}
+
+@media (max-width: 600px) {
+    .activity-card {
+        flex-basis: 250px;
+        width: 250px;
+    }
+}
 .activity-carousel {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
     position: relative;
     padding: 5px 0 18px;
 }
 
-.activity-track {
-    display: flex;
-    width: max-content;
-    gap: 18px;
-    padding: 5px 3px;
-    animation: agentguard-marquee 300s linear infinite;
-}
 
-.activity-carousel:hover .activity-track {
-    animation-play-state: paused;
-}
-
-.activity-track::-webkit-scrollbar {
-    display: none;
-}
-
-@keyframes agentguard-marquee {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-50%);
-    }
-}
 
 .activity-card {
     flex: 0 0 300px;
@@ -718,11 +723,12 @@ body[data-network="ethereum"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        animation-duration: 0.01ms !important;
+
+    .visual-icon {
+        animation: none !important;
+    }
+
+    * {
         transition-duration: 0.01ms !important;
     }
 }
@@ -842,5 +848,272 @@ body[data-network="ethereum"] {
 @media (prefers-reduced-motion: reduce) {
     .visual-icon {
         animation: none;
+    }
+}
+
+
+
+
+
+
+/* Prevent horizontal dashboard overflow */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.activity-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.activity-card {
+    flex: 0 0 280px;
+    width: 280px;
+}
+
+@media (max-width: 600px) {
+    .activity-card {
+        flex-basis: 250px;
+        width: 250px;
+    }
+}
+
+
+/* FINAL AGENTGUARD CAROUSEL LAYOUT */
+* {
+    box-sizing: border-box;
+}
+
+.main-content {
+    min-width: 0;
+    width: 100%;
+}
+
+.activity-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.activity-carousel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+}
+
+.activity-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.activity-track {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: max-content;
+    gap: 18px;
+}
+
+.activity-card {
+    flex: 0 0 280px;
+    width: 280px;
+    scroll-snap-align: start;
+}
+
+@media (max-width: 600px) {
+    .main-content {
+        padding: 18px;
+    }
+
+    .activity-card {
+        flex-basis: 250px;
+        width: 250px;
+    }
+}
+
+/* FINAL SLIDING CAROUSEL OVERRIDES */
+.activity-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.activity-carousel {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    scroll-behavior: auto;
+}
+
+.activity-track {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    width: max-content;
+    max-width: none;
+    gap: 18px;
+    will-change: transform;
+}
+
+.activity-card {
+    flex: 0 0 280px;
+    width: 280px;
+}
+
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+@media (max-width: 600px) {
+    .activity-card {
+        flex: 0 0 250px;
+        width: 250px;
+    }
+}
+
+/* AGENTGUARD CONTINUOUS CAROUSEL */
+.activity-carousel {
+    overflow: hidden !important;
+    position: relative;
+}
+
+.activity-track {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: max-content !important;
+    max-width: none !important;
+    gap: 18px;
+    animation-timing-function: linear !important;
+    animation-iteration-count: infinite !important;
+    will-change: transform;
+}
+
+.activity-track .activity-card {
+    flex-shrink: 0 !important;
+}
+
+@keyframes agentGuardContinuousSlide {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+/* RESPONSIVE OFF-CANVAS NAVIGATION */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1200;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #0b151c;
+    cursor: pointer;
+    padding: 11px;
+}
+
+.mobile-menu-toggle span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    margin: 5px 0;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .dashboard {
+        display: block;
+        min-height: 100vh;
+    }
+
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1100;
+        width: min(290px, 85vw);
+        height: 100vh;
+        height: 100dvh;
+        overflow-y: auto;
+        transform: translateX(-105%);
+        transition: transform 0.28s ease;
+        box-shadow: 12px 0 35px rgba(0, 0, 0, 0.35);
+    }
+
+    body.nav-open .sidebar {
+        transform: translateX(0);
+    }
+
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.62);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
+
+    body.nav-open .sidebar-backdrop {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    body.nav-open {
+        overflow: hidden;
+    }
+
+    .main-content {
+        width: 100%;
+        max-width: none;
+        padding: 82px 24px 30px;
+    }
+}
+
+@media (max-width: 600px) {
+    .main-content {
+        padding: 78px 16px 24px;
+    }
+
+    .topbar {
+        gap: 12px;
+    }
+
+    .topbar h1 {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 900px) {
+    .sidebar nav {
+        flex-direction: column;
+        flex-wrap: nowrap;
     }
 }

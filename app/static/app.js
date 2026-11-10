@@ -275,56 +275,128 @@ const networkSelector = document.getElementById("network");
 const activityTrack = document.getElementById("activityTrack");
 const activityPrev = document.getElementById("activityPrev");
 const activityNext = document.getElementById("activityNext");
-// AGENTGUARD INFINITE CAROUSEL
-if (activityTrack && !activityTrack.dataset.loopReady) {
-    const originalCards = Array.from(activityTrack.children);
+// AGENTGUARD CONTINUOUS INFINITE CAROUSEL
+const carouselViewport = activityTrack?.parentElement;
 
+const originalCards = activityTrack
+    ? Array.from(activityTrack.children)
+    : [];
+
+const originalCardCount = originalCards.length;
+const carouselDuration = 36000;
+
+if (activityTrack && carouselViewport && originalCardCount > 0) {
     originalCards.forEach(card => {
         const clone = card.cloneNode(true);
         clone.setAttribute("aria-hidden", "true");
+        clone.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
         activityTrack.appendChild(clone);
     });
 
-    activityTrack.dataset.loopReady = "true";
+    activityTrack.style.animation =
+        `agentGuardContinuousSlide ${carouselDuration}ms linear infinite`;
 }
 
-// Apply the selected blockchain network theme.
+function moveCarousel(direction) {
+    if (!activityTrack || originalCardCount === 0) return;
+
+    const animation = activityTrack.getAnimations()[0];
+
+    if (animation) {
+        const stepDuration = carouselDuration / originalCardCount;
+        animation.currentTime =
+            (Number(animation.currentTime) || 0) + direction * stepDuration;
+    }
+}
+
+if (carouselViewport && activityTrack) {
+    carouselViewport.addEventListener("mouseenter", () => {
+        activityTrack.style.animationPlayState = "paused";
+    });
+
+    carouselViewport.addEventListener("mouseleave", () => {
+        activityTrack.style.animationPlayState = "running";
+    });
+
+    carouselViewport.addEventListener("focusin", () => {
+        activityTrack.style.animationPlayState = "paused";
+    });
+
+    carouselViewport.addEventListener("focusout", () => {
+        activityTrack.style.animationPlayState = "running";
+    });
+}
+
+// Carousel navigation buttons
+if (activityPrev) {
+    activityPrev.addEventListener("click", () => moveCarousel(-1));
+}
+
+if (activityNext) {
+    activityNext.addEventListener("click", () => moveCarousel(1));
+}
+
+
+
+
+
+// AGENTGUARD RESPONSIVE NAVIGATION
+const menuToggle = document.getElementById("mobileMenuToggle");
+const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+const sidebarLinks = document.querySelectorAll("#mainSidebar nav a");
+
+function closeMobileMenu() {
+    document.body.classList.remove("nav-open");
+
+    if (menuToggle) {
+        menuToggle.setAttribute("aria-expanded", "false");
+        menuToggle.setAttribute("aria-label", "Open navigation menu");
+    }
+}
+
+if (menuToggle) {
+    menuToggle.addEventListener("click", () => {
+        const isOpen = document.body.classList.toggle("nav-open");
+
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+        menuToggle.setAttribute(
+            "aria-label",
+            isOpen ? "Close navigation menu" : "Open navigation menu"
+        );
+    });
+}
+
+if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener("click", closeMobileMenu);
+}
+
+sidebarLinks.forEach(link => {
+    link.addEventListener("click", closeMobileMenu);
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        closeMobileMenu();
+    }
+});
+
+window.addEventListener("resize", () => {
+    if (window.innerWidth > 900) {
+        closeMobileMenu();
+    }
+});
+
+// AGENTGUARD NETWORK THEME SWITCHER
 function updateNetworkTheme() {
     if (!networkSelector) return;
 
     document.body.dataset.network = networkSelector.value;
 }
 
+// Apply the selected network theme on page load
+updateNetworkTheme();
+
+// Update the theme whenever the network changes
 if (networkSelector) {
-    updateNetworkTheme();
     networkSelector.addEventListener("change", updateNetworkTheme);
-}
-
-// Slide through the security activity cards.
-function slideActivities(direction) {
-    if (!activityTrack) return;
-
-    const card = activityTrack.querySelector(".activity-card");
-    if (!card) return;
-
-    const cardWidth = card.getBoundingClientRect().width;
-    const styles = window.getComputedStyle(activityTrack);
-    const gap = parseFloat(styles.columnGap || styles.gap) || 0;
-
-    activityTrack.scrollBy({
-        left: direction * (cardWidth + gap),
-        behavior: "smooth"
-    });
-}
-
-if (activityPrev) {
-    activityPrev.addEventListener("click", function () {
-        slideActivities(-1);
-    });
-}
-
-if (activityNext) {
-    activityNext.addEventListener("click", function () {
-        slideActivities(1);
-    });
 }

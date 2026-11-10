@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgentGuard AI | Security Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css?v=3">
+    <link rel="stylesheet" href="/static/styles.css?v=4">
 </head>
 
 <body>
 
     <div class="dashboard">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle"
+                type="button" aria-label="Open navigation menu"
+                aria-expanded="false" aria-controls="mainSidebar">
+            <span></span><span></span><span></span>
+        </button>
 
-        <aside class="sidebar">
+        <aside class="sidebar" id="mainSidebar">
             <div class="brand">
                 <div class="brand-icon">A</div>
                 <h2>AgentGuard<span>AI</span></h2>
@@ -28,6 +33,7 @@
                 Security Engine Active
             </div>
         </aside>
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <main class="main-content">
 
