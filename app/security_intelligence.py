@@ -97,8 +97,15 @@ def generate_security_insights(security_report):
     else:
         summary = "No blocking security condition was detected."
 
+    severity_counts = {
+        "CRITICAL": sum(f["severity"] == "CRITICAL" for f in findings),
+        "HIGH": sum(f["severity"] == "HIGH" for f in findings),
+        "MEDIUM": sum(f["severity"] == "MEDIUM" for f in findings)
+    }
+
     return {
         "intelligence_type": "explainable_rules",
+        "severity_counts": severity_counts,
         "risk_score": risk_score,
         "decision": decision,
         "summary": summary,

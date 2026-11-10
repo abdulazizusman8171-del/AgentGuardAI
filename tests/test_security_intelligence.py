@@ -75,5 +75,25 @@ class TestSecurityIntelligence(unittest.TestCase):
             generate_security_insights(report)
 
 
+    def test_severity_counts(self):
+        report = {
+            "risk_score": 90,
+            "decision": "BLOCK",
+            "reasons": [
+                "Unlimited token approval detected",
+                "Large transaction amount",
+                "Recipient is not recognized"
+            ]
+        }
+
+        result = generate_security_insights(report)
+
+        self.assertEqual(result["severity_counts"], {
+            "CRITICAL": 1,
+            "HIGH": 1,
+            "MEDIUM": 1
+        })
+
+
 if __name__ == "__main__":
     unittest.main()
