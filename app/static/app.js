@@ -56,6 +56,7 @@ form.addEventListener("submit", async function (event) {
 function displayResults(data) {
     const report = data.security_report;
     const intelligence = data.intelligence;
+    const findings = intelligence.findings || [];
 
     document.getElementById("risk-score").textContent =
         report.risk_score + "/100";
@@ -64,32 +65,58 @@ function displayResults(data) {
         report.decision;
 
     document.getElementById("finding-count").textContent =
-        intelligence.findings.length;
+        findings.length;
 
     document.getElementById("summary").textContent =
         intelligence.summary;
 
     const intelligenceContainer =
-        document.getElementById("intelligence");
+        document.getElementById("intelligence-results");
 
     intelligenceContainer.replaceChildren();
+
+    const severityCounts = intelligence.severity_counts || {
+        CRITICAL: findings.filter(f => f.severity === "CRITICAL").length,
+        HIGH: findings.filter(f => f.severity === "HIGH").length,
+        MEDIUM: findings.filter(f => f.severity === "MEDIUM").length
+    };
+
+    const severityGrid = document.createElement("div");
+    severityGrid.className = "result-grid severity-grid";
+
+    ["CRITICAL", "HIGH", "MEDIUM"].forEach(function (level) {
+        const card = document.createElement("div");
+        card.className = "result-card severity-card severity-" + level.toLowerCase();
+
+        const label = document.createElement("p");
+        label.textContent = level + " Findings";
+
+        const count = document.createElement("h2");
+        count.textContent = severityCounts[level] ?? 0;
+
+        card.append(label, count);
+        severityGrid.appendChild(card);
+    });
+
+    intelligenceContainer.appendChild(severityGrid);
 
     const heading = document.createElement("h3");
     heading.textContent = "Security Findings";
     intelligenceContainer.appendChild(heading);
 
-    if (intelligence.findings.length === 0) {
+    if (findings.length === 0) {
         const message = document.createElement("p");
         message.textContent = "No security findings detected.";
         intelligenceContainer.appendChild(message);
     }
 
-    intelligence.findings.forEach(function (finding) {
+    findings.forEach(function (finding) {
         const card = document.createElement("div");
         card.className = "finding";
 
         const title = document.createElement("h4");
-        title.textContent = finding.reason || finding.title || "Security finding";
+        title.textContent =
+            finding.reason || finding.title || "Security finding";
 
         const severity = document.createElement("p");
         severity.textContent = "Severity: " + finding.severity;
@@ -106,6 +133,7 @@ function displayResults(data) {
     });
 
     results.classList.remove("hidden");
+
     results.scrollIntoView({
         behavior: "smooth",
         block: "start"
