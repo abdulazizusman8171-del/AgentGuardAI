@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgentGuard AI | Security Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=3">
 </head>
 
 <body>
@@ -49,6 +49,75 @@
                     Protect blockchain transactions with explainable
                     security intelligence and risk assessment.
                 </p>
+            </section>
+
+            <!-- AGENTGUARD ACTIVITY CAROUSEL -->
+            <section class="activity-section" id="intelligence">
+                <div class="section-heading">
+                    <div>
+                        <h2>Security Intelligence</h2>
+                        <p>Explore the protection systems powering AgentGuard AI.</p>
+                    </div>
+                </div>
+
+                <div class="activity-carousel">
+                    <div class="activity-track" id="activityTrack">
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon wallet-icon"><span>▣</span><i></i></div>
+                            </div>
+                            <h3>Wallet Monitoring</h3>
+                            <p>Monitor wallet activity and identify unusual behaviour.</p>
+                        </article>
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon transaction-icon"><span>◆</span><i></i></div>
+                            </div>
+                            <h3>Transaction Security</h3>
+                            <p>Assess transaction risk before simulated execution.</p>
+                        </article>
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon contract-icon"><span>{ }</span><i></i></div>
+                            </div>
+                            <h3>Smart Contract Analysis</h3>
+                            <p>Highlight potentially dangerous contract interactions.</p>
+                        </article>
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon risk-icon"><span>◉</span><i></i></div>
+                            </div>
+                            <h3>Risk Intelligence</h3>
+                            <p>Understand security findings and risk indicators.</p>
+                        </article>
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon approval-icon"><span>✓</span><i></i></div>
+                            </div>
+                            <h3>Approval Monitoring</h3>
+                            <p>Review pending transaction approvals and their status.</p>
+                        </article>
+
+                        <article class="activity-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon blockchain-icon"><span>⬡</span><i></i></div>
+                            </div>
+                            <h3>Blockchain Activity</h3>
+                            <p>Explore supported blockchain network activity.</p>
+                        </article>
+
+                    </div>
+                </div>
+
+                <div class="carousel-controls">
+                    <button type="button" id="activityPrev" aria-label="Previous activities">&#8592;</button>
+                    <button type="button" id="activityNext" aria-label="Next activities">&#8594;</button>
+                </div>
             </section>
 
             <section class="overview">
@@ -113,7 +182,7 @@
                             <select id="network" required>
                                 <option value="ethereum">Ethereum</option>
                                 <option value="bnb">BNB Chain</option>
-                                <option value="near">NEAR</option>
+                                <option value="near" selected>NEAR</option>
                             </select>
                         </div>
 
@@ -197,7 +266,7 @@
 
                 <div id="summary"></div>
 
-                <div id="intelligence"></div>
+                <div id="intelligence-results"></div>
 
             </section>
 <!-- Transaction History -->

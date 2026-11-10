@@ -1,4 +1,4 @@
-﻿const form = document.getElementById("transaction-form");
+const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -266,3 +266,65 @@ approvalStatus.addEventListener("change", loadApprovals);
 
 loadTransactionHistory();
 loadApprovals();
+
+// ==========================================
+// AGENTGUARD CAROUSEL AND NETWORK THEME CONTROLS
+// ==========================================
+
+const networkSelector = document.getElementById("network");
+const activityTrack = document.getElementById("activityTrack");
+const activityPrev = document.getElementById("activityPrev");
+const activityNext = document.getElementById("activityNext");
+// AGENTGUARD INFINITE CAROUSEL
+if (activityTrack && !activityTrack.dataset.loopReady) {
+    const originalCards = Array.from(activityTrack.children);
+
+    originalCards.forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.setAttribute("aria-hidden", "true");
+        activityTrack.appendChild(clone);
+    });
+
+    activityTrack.dataset.loopReady = "true";
+}
+
+// Apply the selected blockchain network theme.
+function updateNetworkTheme() {
+    if (!networkSelector) return;
+
+    document.body.dataset.network = networkSelector.value;
+}
+
+if (networkSelector) {
+    updateNetworkTheme();
+    networkSelector.addEventListener("change", updateNetworkTheme);
+}
+
+// Slide through the security activity cards.
+function slideActivities(direction) {
+    if (!activityTrack) return;
+
+    const card = activityTrack.querySelector(".activity-card");
+    if (!card) return;
+
+    const cardWidth = card.getBoundingClientRect().width;
+    const styles = window.getComputedStyle(activityTrack);
+    const gap = parseFloat(styles.columnGap || styles.gap) || 0;
+
+    activityTrack.scrollBy({
+        left: direction * (cardWidth + gap),
+        behavior: "smooth"
+    });
+}
+
+if (activityPrev) {
+    activityPrev.addEventListener("click", function () {
+        slideActivities(-1);
+    });
+}
+
+if (activityNext) {
+    activityNext.addEventListener("click", function () {
+        slideActivities(1);
+    });
+}
