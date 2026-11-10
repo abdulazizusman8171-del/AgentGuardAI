@@ -10,6 +10,7 @@ from app.approval import ApprovalManager
 from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
 from app.near_client import NearRPCError
+from app.near_market import NearMarketError
 
 
 class TestAgentGuardAPI(unittest.TestCase):
@@ -514,5 +515,65 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    @patch("app.api.NearMarketClient")
+    def test_near_market_success(self, mock_client):
+
+        mock_client.return_value.get_market_data.return_value = {
+            "asset": "NEAR",
+            "currency": "USD",
+            "price": 2.50,
+            "volume_24h": 15000000,
+            "price_change_24h_percent": 4.5,
+            "last_updated": "2026-11-10T12:00:00Z",
+            "source": "CoinGecko"
+        }
+
+        response = self.client.get("/near/market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(
+            response.json()["data"]["price"],
+            2.50
+        )
+
+    @patch("app.api.NearMarketClient")
+    def test_near_market_provider_failure(self, mock_client):
+
+        mock_client.return_value.get_market_data.side_effect = (
+            NearMarketError("Market data unavailable")
+        )
+
+        response = self.client.get("/near/market")
+
+        self.assertEqual(response.status_code, 502)
+
+    @patch("app.api.NearMarketClient")
+    def test_near_large_buys_success(self, mock_client):
+        mock_client.return_value.get_large_buys.return_value = [{
+            "asset": "NEAR",
+            "direction": "BUY",
+            "near_amount": 2000,
+            "usd_value": 6000,
+            "wallet": "example.near",
+            "transaction_hash": "example_hash"
+        }]
+
+        response = self.client.get("/near/large-buys")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(response.json()["source"], "GeckoTerminal")
+        self.assertEqual(len(response.json()["data"]), 1)
+
+    @patch("app.api.NearMarketClient")
+    def test_near_large_buys_provider_failure(self, mock_client):
+        mock_client.return_value.get_large_buys.side_effect = (
+            NearMarketError("Trade data unavailable")
+        )
+
+        response = self.client.get("/near/large-buys")
+
+        self.assertEqual(response.status_code, 502)
 if __name__ == "__main__":
     unittest.main()

@@ -1215,3 +1215,98 @@ html, body {
         transform: none;
     }
 }
+
+/* NEAR MARKET PRICE CARD */
+.near-market-card #near-price {
+    color: var(--text);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.near-market-card #near-price-change {
+    max-width: 100%;
+    font-weight: 600;
+}
+
+.near-market-card #near-price-change[data-direction="up"] {
+    color: #00d68f;
+}
+
+.near-market-card #near-price-change[data-direction="down"] {
+    color: #ff647c;
+}
+
+.near-market-card #near-price-updated {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 10px;
+}
+
+/* NEAR MARKET PRICE CARD */
+.near-market-card #near-price {
+    color: var(--text);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.near-market-card #near-price-change {
+    max-width: 100%;
+    font-weight: 600;
+}
+
+.near-market-card #near-price-change[data-direction="up"] {
+    color: #00d68f;
+}
+
+.near-market-card #near-price-change[data-direction="down"] {
+    color: #ff647c;
+}
+
+.near-market-card #near-price-updated {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 10px;
+}
+
+/* NEAR LARGE BUY ALERTS */
+.near-large-buy-card #near-large-buy-count {
+    color: var(--text);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.near-large-buy-item {
+    padding: 10px;
+    margin: 10px 0;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+}
+
+.near-large-buy-item p {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.near-large-buy-item small {
+    display: block;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.near-large-buy-item a {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.near-large-buy-item a:hover {
+    text-decoration: underline;
+}

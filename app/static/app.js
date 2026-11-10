@@ -428,3 +428,226 @@ updateNetworkTheme();
 if (networkSelector) {
     networkSelector.addEventListener("change", updateNetworkTheme);
 }
+
+// AGENTGUARD NEAR MARKET AND VOLUME MONITOR
+async function loadNearMarket() {
+    const priceElement = document.getElementById("near-price");
+    const changeElement = document.getElementById("near-price-change");
+    const updatedElement = document.getElementById("near-price-updated");
+    const volumeElement = document.getElementById("near-volume");
+    const volumeChangeElement = document.getElementById("near-volume-change");
+    const volumeUpdatedElement = document.getElementById("near-volume-updated");
+
+    if (!priceElement || !changeElement || !updatedElement) return;
+
+    try {
+        const response = await fetch("/near/market");
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.detail || "Market data unavailable");
+        }
+
+        const market = result.data;
+        const price = Number(market.price);
+        const change = Number(market.price_change_24h_percent);
+        const volume = Number(market.volume_24h);
+
+        if (
+            !Number.isFinite(price) ||
+            !Number.isFinite(change) ||
+            !Number.isFinite(volume) ||
+            volume < 0
+        ) {
+            throw new Error("Invalid market data received");
+        }
+
+        priceElement.textContent = "$" + price.toLocaleString(
+            "en-US",
+            { minimumFractionDigits: 2, maximumFractionDigits: 6 }
+        );
+
+        const direction = change >= 0 ? "+" : "";
+
+        changeElement.textContent =
+            "24h change: " + direction + change.toFixed(2) + "%";
+
+        changeElement.dataset.direction =
+            change >= 0 ? "up" : "down";
+
+        if (market.last_updated) {
+            const updated = new Date(market.last_updated);
+
+            updatedElement.textContent = Number.isNaN(updated.getTime())
+                ? "Source: CoinGecko"
+                : "Updated: " + updated.toLocaleTimeString();
+        } else {
+            updatedElement.textContent = "Source: CoinGecko";
+        }
+
+        if (volumeElement && volumeChangeElement && volumeUpdatedElement) {
+            volumeElement.textContent = "$" + volume.toLocaleString(
+                "en-US",
+                { maximumFractionDigits: 0 }
+            );
+
+            const storageKey = "agentguard_near_volume_previous";
+            const currentTime = Date.now();
+            let previous = null;
+
+            try {
+                previous = JSON.parse(localStorage.getItem(storageKey));
+            } catch {
+                previous = null;
+            }
+
+            if (
+                previous &&
+                Number.isFinite(Number(previous.volume)) &&
+                Number(previous.volume) > 0 &&
+                Number.isFinite(Number(previous.timestamp)) &&
+                currentTime > Number(previous.timestamp)
+            ) {
+                const previousVolume = Number(previous.volume);
+                const percentageChange =
+                    ((volume - previousVolume) / previousVolume) * 100;
+
+                const sign = percentageChange >= 0 ? "+" : "";
+
+                volumeChangeElement.textContent =
+                    "Since previous check: " +
+                    sign + percentageChange.toFixed(2) + "%";
+
+                volumeChangeElement.dataset.direction =
+                    percentageChange >= 0 ? "up" : "down";
+
+                const minutes = Math.max(
+                    1,
+                    Math.round(
+                        (currentTime - Number(previous.timestamp)) / 60000
+                    )
+                );
+
+                volumeUpdatedElement.textContent =
+                    "Compared with " + minutes + " minute(s) ago";
+            } else {
+                volumeChangeElement.textContent =
+                    "Baseline saved; comparison starts next check";
+
+                volumeUpdatedElement.textContent =
+                    "Current rolling 24h volume | CoinGecko";
+            }
+
+            try {
+                localStorage.setItem(storageKey, JSON.stringify({
+                    volume: volume,
+                    timestamp: currentTime
+                }));
+            } catch (storageError) {
+                console.warn("Could not save previous volume:", storageError);
+            }
+        }
+
+    } catch (error) {
+        priceElement.textContent = "Unavailable";
+        changeElement.textContent = "Market data unavailable";
+        updatedElement.textContent = "Please try again later";
+
+        if (volumeElement) volumeElement.textContent = "Unavailable";
+        if (volumeChangeElement) {
+            volumeChangeElement.textContent = "Volume data unavailable";
+        }
+        if (volumeUpdatedElement) {
+            volumeUpdatedElement.textContent = "Please try again later";
+        }
+
+        console.error("NEAR market error:", error);
+    }
+}
+
+loadNearMarket();
+
+// Refresh market data every five minutes while the page is visible.
+setInterval(() => {
+    if (!document.hidden) {
+        loadNearMarket();
+    }
+}, 5 * 60 * 1000);
+
+
+// AGENTGUARD NEAR LARGE BUY MONITOR
+async function loadNearLargeBuys() {
+    const countElement = document.getElementById("near-large-buy-count");
+    const listElement = document.getElementById("near-large-buy-list");
+
+    if (!countElement || !listElement) return;
+
+    try {
+        const response = await fetch("/near/large-buys");
+
+        if (!response.ok) {
+            throw new Error("Large-buy API unavailable");
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error("Invalid large-buy response");
+        }
+
+        // Update the card only after a successful API response.
+        listElement.replaceChildren();
+
+        if (result.data.length === 0) {
+            countElement.textContent = "No buy detected";
+
+            const message = document.createElement("p");
+            message.textContent = "No verified NEAR purchases found in the latest feed.";
+            listElement.appendChild(message);
+            return;
+        }
+
+        const buy = result.data[0];
+
+        countElement.textContent = "Largest buy";
+
+        const item = document.createElement("div");
+        item.className = "near-large-buy-item";
+
+        const value = document.createElement("p");
+        value.textContent =
+            "$" + Number(buy.usd_value).toLocaleString("en-US", {
+                maximumFractionDigits: 2
+            }) + " | " +
+            Number(buy.near_amount).toLocaleString("en-US", {
+                maximumFractionDigits: 4
+            }) + " NEAR";
+
+        const wallet = document.createElement("small");
+        wallet.textContent = "Wallet: " + (buy.wallet || "Unknown");
+
+        const link = document.createElement("a");
+        link.textContent = "View transaction";
+        link.href = buy.transaction_url ||
+            "https://nearblocks.io/txns/" +
+            encodeURIComponent(buy.transaction_hash);
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+
+        item.append(value, wallet, link);
+        listElement.appendChild(item);
+
+    } catch (error) {
+        // Keep the last successful result visible if a refresh fails.
+        console.error("NEAR large-buy error:", error);
+    }
+}
+
+loadNearLargeBuys();
+
+// Refresh large-buy data every 60 seconds.
+setInterval(() => {
+    if (!document.hidden) {
+        loadNearLargeBuys();
+    }
+}, 60 * 1000);

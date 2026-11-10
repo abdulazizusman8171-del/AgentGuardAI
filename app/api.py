@@ -12,6 +12,7 @@ from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
 from app.approval import ApprovalManager
 from app.near_client import NearRPCClient, NearRPCError
+from app.near_market import NearMarketClient, NearMarketError
 
 
 app = FastAPI(
@@ -93,6 +94,23 @@ def get_near_account(
             status_code=502,
             detail=str(error)
         )
+@app.get("/near/market")
+def get_near_market():
+    try:
+        client = NearMarketClient()
+        market_data = client.get_market_data()
+
+        return {
+            "success": True,
+            "data": market_data
+        }
+
+    except NearMarketError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
+
 @app.get("/near/transactions/{tx_hash}")
 def get_near_transaction(
     tx_hash: str,
@@ -328,5 +346,27 @@ def process_transaction(payload: dict[str, Any]):
     except ValueError as error:
         raise HTTPException(
             status_code=400,
+            detail=str(error)
+        )
+
+
+
+
+@app.get("/near/large-buys")
+def get_near_large_buys():
+    try:
+        client = NearMarketClient()
+        buys = client.get_large_buys()
+
+        return {
+            "success": True,
+            "data": buys,
+            "source": "GeckoTerminal",
+            "scope": "Ref Finance USDC/wNEAR pool"
+        }
+
+    except NearMarketError as error:
+        raise HTTPException(
+            status_code=502,
             detail=str(error)
         )
