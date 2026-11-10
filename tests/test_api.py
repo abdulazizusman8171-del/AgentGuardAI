@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -8,6 +9,7 @@ import app.api as api
 from app.approval import ApprovalManager
 from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
+from app.near_client import NearRPCError
 
 
 class TestAgentGuardAPI(unittest.TestCase):
@@ -210,6 +212,222 @@ class TestAgentGuardAPI(unittest.TestCase):
             "BLOCKED"
         )
 
+    @patch("app.api.NearRPCClient")
+    def test_near_account_lookup(self, mock_client):
+
+        mock_client.return_value.get_account.return_value = {
+            "network": "mainnet",
+            "account_id": "root.near",
+            "balance_near": "5",
+            "balance_yocto": str(5 * 10**24),
+            "locked_near": "0",
+            "locked_yocto": "0",
+            "storage_usage": 100,
+            "code_hash": "example",
+            "block_height": 12345,
+            "block_hash": "example-hash"
+        }
+
+        response = self.client.get(
+            "/near/accounts/root.near"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(
+            response.json()["data"]["balance_near"],
+            "5"
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_testnet_selection(self, mock_client):
+
+        self.client.get(
+            "/near/accounts/root.near?network=testnet"
+        )
+
+        mock_client.assert_called_once_with(
+            network="testnet"
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_invalid_account(self, mock_client):
+
+        mock_client.return_value.get_account.side_effect = (
+            ValueError("Invalid NEAR account ID")
+        )
+
+        response = self.client.get(
+            "/near/accounts/invalid"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_invalid_network(self, mock_client):
+
+        mock_client.side_effect = ValueError(
+            "Network must be mainnet or testnet"
+        )
+
+        response = self.client.get(
+            "/near/accounts/root.near?network=invalid"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_rpc_failure(self, mock_client):
+
+        mock_client.return_value.get_account.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.get(
+            "/near/accounts/root.near"
+        )
+
+        self.assertEqual(response.status_code, 502)
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_lookup(self, mock_client):
+
+        mock_client.return_value.get_transaction.return_value = {
+            "network": "mainnet",
+            "transaction_hash": "E" * 44,
+            "final_execution_status": "FINAL",
+            "status": {"SuccessValue": ""},
+            "signer_id": "alice.near",
+            "receiver_id": "bob.near",
+            "actions": [{"Transfer": {"deposit": "1000"}}],
+            "block_hash": "example-block",
+            "gas_burnt": 1000,
+            "tokens_burnt": "500",
+            "logs": []
+        }
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}"
+            "?sender_account_id=alice.near"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(
+            response.json()["data"]["signer_id"],
+            "alice.near"
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_testnet_selection(self, mock_client):
+
+        self.client.get(
+            f"/near/transactions/{'E' * 44}"
+            "?sender_account_id=alice.near&network=testnet"
+        )
+
+        mock_client.assert_called_once_with(network="testnet")
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_invalid_hash(self, mock_client):
+
+        mock_client.return_value.get_transaction.side_effect = (
+            ValueError("Invalid NEAR transaction hash")
+        )
+
+        response = self.client.get(
+            "/near/transactions/invalid"
+            "?sender_account_id=alice.near"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_invalid_sender(self, mock_client):
+
+        mock_client.return_value.get_transaction.side_effect = (
+            ValueError("Invalid NEAR account ID")
+        )
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}"
+            "?sender_account_id=invalid"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_invalid_network(self, mock_client):
+
+        mock_client.side_effect = ValueError(
+            "Network must be mainnet or testnet"
+        )
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}"
+            "?sender_account_id=alice.near&network=invalid"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_rpc_failure(self, mock_client):
+
+        mock_client.return_value.get_transaction.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}"
+            "?sender_account_id=alice.near"
+        )
+        self.assertEqual(response.status_code, 502)
+    def test_intelligence_safe_transaction(self):
+        response = self.client.post(
+            "/intelligence",
+            json=self.safe_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertTrue(data["success"])
+        self.assertEqual(
+            data["intelligence"]["decision"],
+            "ALLOW"
+        )
+        self.assertEqual(
+            data["intelligence"]["findings"],
+            []
+        )
+
+    def test_intelligence_unlimited_approval(self):
+        transaction = self.safe_transaction.copy()
+        transaction["unlimited_approval"] = True
+
+        response = self.client.post(
+            "/intelligence",
+            json=transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertEqual(
+            data["intelligence"]["findings"][0]["severity"],
+            "CRITICAL"
+        )
+
+    def test_intelligence_invalid_transaction(self):
+        transaction = self.safe_transaction.copy()
+        transaction["amount"] = "invalid"
+
+        response = self.client.post(
+            "/intelligence",
+            json=transaction
+        )
+        self.assertEqual(response.status_code,400)
 
 if __name__ == "__main__":
     unittest.main()

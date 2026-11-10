@@ -4,9 +4,11 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 
 from app.main import evaluate_transaction
+from app.security_intelligence import generate_security_insights
 from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
 from app.approval import ApprovalManager
+from app.near_client import NearRPCClient, NearRPCError
 
 
 app = FastAPI(
@@ -43,7 +45,62 @@ def health_check():
         "service": "AgentGuard AI",
         "version": "0.3.0"
     }
+@app.get("/near/accounts/{account_id}")
+def get_near_account(
+    account_id: str,
+    network: str = "mainnet"
+):
+    try:
+        client = NearRPCClient(network=network)
 
+        account_data = client.get_account(account_id)
+
+        return {
+            "success": True,
+            "data": account_data
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except NearRPCError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
+@app.get("/near/transactions/{tx_hash}")
+def get_near_transaction(
+    tx_hash: str,
+    sender_account_id: str,
+    network: str = "mainnet"
+):
+    try:
+        client = NearRPCClient(network=network)
+
+        transaction_data = client.get_transaction(
+            tx_hash,
+            sender_account_id
+        )
+
+        return {
+            "success": True,
+            "data": transaction_data
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except NearRPCError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
 
 @app.post("/evaluate")
 def evaluate(payload: dict[str, Any]):
@@ -61,7 +118,31 @@ def evaluate(payload: dict[str, Any]):
             detail=str(error)
         )
 
+@app.post("/intelligence")
+def security_intelligence(payload: dict[str, Any]):
 
+    try:
+        security_report = evaluate_transaction(
+            payload,
+            transaction_tracker=tracker,
+            blocked_recipients=BLOCKED_RECIPIENTS
+        )
+
+        intelligence = generate_security_insights(
+            security_report
+        )
+
+        return {
+            "success": True,
+            "security_report": security_report,
+            "intelligence": intelligence
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
 @app.post("/approvals")
 def create_approval(payload: dict[str, Any]):
 

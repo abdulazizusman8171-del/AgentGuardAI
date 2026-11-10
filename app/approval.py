@@ -70,7 +70,6 @@ class ApprovalManager:
             created_at=current_time,
             expires_at=expires_at
         )
-
         return {
             "approval_id": approval_id,
             "transaction_id": transaction_id,
