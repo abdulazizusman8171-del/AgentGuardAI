@@ -1345,3 +1345,27 @@ html, body {
     background: #f59e0b;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
 }
+
+/* AGENTGUARD AI GENERATED CAROUSEL IMAGES */
+.activity-visual {
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-visual .ai-card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.activity-visual > :not(.ai-card-image) {
+    position: relative;
+    z-index: 1;
+}
+
+.activity-visual .visual-icon {
+    display: none !important;
+}

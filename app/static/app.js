@@ -775,3 +775,34 @@ setInterval(() => {
         checkSystemHealth();
     }
 }, 60 * 1000);
+
+// AGENTGUARD AI GENERATED CAROUSEL IMAGES
+(function () {
+    const imageMap = ["/static/images/wallet-risk.webp","/static/images/transaction-security.webp","/static/images/contract-risk.webp","/static/images/risk-intelligence.webp","/static/images/approval-tracking.webp","/static/images/network-risk.webp","/static/images/near-ecosystem.webp","/static/images/near-market.webp","/static/images/near-large-buy.webp"];
+
+    function applyAIImages() {
+        const cards = document.querySelectorAll(".activity-card");
+
+        cards.forEach((card, index) => {
+            const imagePath = imageMap[index % imageMap.length];
+            if (!imagePath) return;
+
+            const visual = card.querySelector(".activity-visual");
+            if (!visual || visual.querySelector(".ai-card-image")) return;
+
+            const img = document.createElement("img");
+            img.className = "ai-card-image";
+            img.src = imagePath;
+            img.alt = "AI-generated AgentGuard security artwork";
+            img.onerror = () => img.remove();
+
+            visual.prepend(img);
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", applyAIImages);
+    } else {
+        applyAIImages();
+    }
+})();
