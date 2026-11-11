@@ -368,6 +368,13 @@ const activityNext = document.getElementById("activityNext");
 // AGENTGUARD CONTINUOUS INFINITE CAROUSEL
 const carouselViewport = activityTrack?.parentElement;
 
+if (activityTrack) {
+    [".near-market-card", ".near-volume-card", ".near-large-buy-card"].forEach(selector => {
+        const card = activityTrack.querySelector(selector);
+        if (card) activityTrack.prepend(card);
+    });
+}
+
 const originalCards = activityTrack
     ? Array.from(activityTrack.children)
     : [];
@@ -778,7 +785,7 @@ setInterval(() => {
 
 // AGENTGUARD AI GENERATED CAROUSEL IMAGES
 (function () {
-    const imageMap = ["/static/images/wallet-risk.webp","/static/images/transaction-security.webp","/static/images/contract-risk.webp","/static/images/risk-intelligence.webp","/static/images/approval-tracking.webp","/static/images/network-risk.webp","/static/images/near-ecosystem.webp","/static/images/near-market.webp","/static/images/near-large-buy.webp"];
+    const imageMap = ["/static/images/near-market.webp","/static/images/near-ecosystem.webp","/static/images/near-large-buy.webp","/static/images/wallet-risk.webp","/static/images/transaction-security.webp","/static/images/contract-risk.webp","/static/images/risk-intelligence.webp","/static/images/approval-tracking.webp","/static/images/network-risk.webp"];
 
     function applyAIImages() {
         const cards = document.querySelectorAll(".activity-card");
