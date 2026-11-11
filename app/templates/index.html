@@ -66,6 +66,55 @@
                     </div>
                 </div>
 
+                <!-- LIVE NEAR NETWORK ACTIVITY -->
+                <section class="near-network-panel" aria-label="NEAR network activity">
+                    <div class="near-network-heading">
+                        <div>
+                            <span class="near-network-eyebrow">BLOCKCHAIN NETWORK MONITOR</span>
+                            <h3>NEAR Network Activity</h3>
+                            <p>Live information from the latest finalized NEAR block.</p>
+                        </div>
+                        <div class="near-network-status">
+                            <span id="near-network-status-dot"></span>
+                            <span id="near-network-status">Connecting...</span>
+                        </div>
+                    </div>
+
+                    <div class="near-network-grid">
+                        <div class="near-network-metric near-network-primary">
+                            <span>Finalized Block Height</span>
+                            <strong id="near-block-height">Loading...</strong>
+                        </div>
+                        <div class="near-network-metric">
+                            <span>Block Producer</span>
+                            <strong id="near-block-producer">Loading...</strong>
+                        </div>
+                        <div class="near-network-metric">
+                            <span>Shard Chunks</span>
+                            <strong id="near-shard-count">--</strong>
+                        </div>
+                        <div class="near-network-metric">
+                            <span>Included Chunks</span>
+                            <strong id="near-included-count">--</strong>
+                        </div>
+                    </div>
+
+                    <div class="near-network-details">
+                        <div>
+                            <span>Block Hash</span>
+                            <code id="near-block-hash">Waiting for block data...</code>
+                        </div>
+                        <div>
+                            <span>Block Timestamp (UTC)</span>
+                            <strong id="near-block-time">Waiting...</strong>
+                        </div>
+                        <div>
+                            <span>Last Successful Refresh</span>
+                            <strong id="near-network-updated">Not updated yet</strong>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="activity-carousel">
                     <div class="activity-track" id="activityTrack">
 

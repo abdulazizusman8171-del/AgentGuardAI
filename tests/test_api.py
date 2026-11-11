@@ -616,5 +616,58 @@ class TestAgentGuardAPI(unittest.TestCase):
         response = self.client.get("/near/large-buys")
 
         self.assertEqual(response.status_code, 502)
+
+
+    @patch("app.api.NearRPCClient")
+    def test_near_network_activity_success(self, mock_client):
+        mock_client.return_value.get_network_activity.return_value = {
+            "network": "mainnet",
+            "block_height": 123456,
+            "block_hash": "example-block-hash",
+            "block_producer": "validator.near",
+            "block_timestamp": "2023-11-14T22:13:20+00:00",
+            "shard_chunk_count": 2,
+            "included_chunk_count": 1,
+            "data_status": "finalized"
+        }
+
+        response = self.client.get("/near/network-activity")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(
+            response.json()["data"]["block_height"],
+            123456
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_network_activity_testnet(self, mock_client):
+        self.client.get("/near/network-activity?network=testnet")
+
+        mock_client.assert_called_once_with(network="testnet")
+
+    @patch("app.api.NearRPCClient")
+    def test_near_network_activity_invalid_network(self, mock_client):
+        mock_client.side_effect = ValueError(
+            "Network must be mainnet or testnet"
+        )
+
+        response = self.client.get(
+            "/near/network-activity?network=invalid"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_network_activity_rpc_failure(self, mock_client):
+        mock_client.return_value.get_network_activity.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.get("/near/network-activity")
+
+        self.assertEqual(response.status_code, 502)
+
+
 if __name__ == "__main__":
     unittest.main()

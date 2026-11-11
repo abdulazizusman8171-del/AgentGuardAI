@@ -721,6 +721,115 @@ setInterval(() => {
     }
 }, 60 * 1000);
 
+
+// AGENTGUARD LIVE NEAR NETWORK ACTIVITY MONITOR
+let nearNetworkRequestRunning = false;
+let nearNetworkHasSuccessfulData = false;
+
+async function loadNearNetworkActivity() {
+    if (nearNetworkRequestRunning || document.hidden) return;
+
+    const status = document.getElementById("near-network-status");
+    const statusDot = document.getElementById("near-network-status-dot");
+
+    if (!status || !statusDot) return;
+
+    nearNetworkRequestRunning = true;
+
+    if (!nearNetworkHasSuccessfulData) {
+        status.textContent = "Connecting...";
+    }
+
+    try {
+        const response = await fetch("/near/network-activity?network=mainnet", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("NEAR network activity API returned " + response.status);
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            throw new Error("Invalid NEAR network activity response");
+        }
+
+        const block = result.data;
+
+        const requiredFields = [
+            "block_height",
+            "block_hash",
+            "block_producer",
+            "block_timestamp",
+            "shard_chunk_count",
+            "included_chunk_count"
+        ];
+
+        for (const field of requiredFields) {
+            if (block[field] === undefined || block[field] === null) {
+                throw new Error("Missing network activity field: " + field);
+            }
+        }
+
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        };
+
+        setText("near-block-height", Number(block.block_height).toLocaleString());
+        setText("near-block-producer", block.block_producer);
+        setText("near-shard-count", Number(block.shard_chunk_count).toLocaleString());
+        setText("near-included-count", Number(block.included_chunk_count).toLocaleString());
+
+        const hash = String(block.block_hash);
+        setText("near-block-hash", hash);
+        const hashElement = document.getElementById("near-block-hash");
+        if (hashElement) hashElement.title = hash;
+
+        const blockDate = new Date(block.block_timestamp);
+        if (Number.isNaN(blockDate.getTime())) {
+            throw new Error("Invalid block timestamp");
+        }
+
+        setText("near-block-time", blockDate.toLocaleString("en-GB", {
+            timeZone: "UTC",
+            dateStyle: "medium",
+            timeStyle: "medium"
+        }) + " UTC");
+
+        setText("near-network-updated", new Date().toLocaleTimeString());
+
+        status.textContent = "Live ? Finalized";
+        statusDot.classList.remove("is-error");
+        statusDot.classList.add("is-live");
+
+        nearNetworkHasSuccessfulData = true;
+
+    } catch (error) {
+        console.error("NEAR network activity error:", error);
+
+        status.textContent = nearNetworkHasSuccessfulData
+            ? "Connection issue ? Showing last data"
+            : "Network data unavailable";
+
+        statusDot.classList.remove("is-live");
+        statusDot.classList.add("is-error");
+
+    } finally {
+        nearNetworkRequestRunning = false;
+    }
+}
+
+loadNearNetworkActivity();
+
+// Refresh finalized block information every 60 seconds.
+setInterval(() => {
+    if (!document.hidden) {
+        loadNearNetworkActivity();
+    }
+}, 60 * 1000);
+
 // AGENTGUARD BACKEND HEALTH MONITOR
 
 async function checkSystemHealth() {

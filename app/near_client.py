@@ -2,6 +2,7 @@ import json
 import os
 import re
 from decimal import Decimal
+from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -120,6 +121,56 @@ class NearRPCClient:
             )
 
         return result["result"]
+
+
+    def get_network_activity(self):
+        """Return verified information about the latest finalized NEAR block."""
+
+        result = self._rpc(
+            "block",
+            {"finality": "final"}
+        )
+
+        try:
+            header = result["header"]
+            chunks = result["chunks"]
+
+            height = int(header["height"])
+            block_hash = header["hash"]
+            timestamp_ns = int(header["timestamp_nanosec"])
+
+            if height < 0 or timestamp_ns < 0:
+                raise ValueError("Invalid block values")
+
+            if not isinstance(chunks, list):
+                raise ValueError("Invalid block chunks")
+
+            block_time = datetime.fromtimestamp(
+                timestamp_ns / 1_000_000_000,
+                tz=timezone.utc
+            )
+
+            included_chunks = sum(
+                1
+                for chunk in chunks
+                if int(chunk["height_included"]) == height
+            )
+
+        except (KeyError, TypeError, ValueError, OverflowError) as error:
+            raise NearRPCError(
+                "Invalid finalized block data returned by NEAR"
+            ) from error
+
+        return {
+            "network": self.network,
+            "block_height": height,
+            "block_hash": block_hash,
+            "block_producer": result.get("author"),
+            "block_timestamp": block_time.isoformat(),
+            "shard_chunk_count": len(chunks),
+            "included_chunk_count": included_chunks,
+            "data_status": "finalized"
+        }
 
     def get_account(self, account_id):
 

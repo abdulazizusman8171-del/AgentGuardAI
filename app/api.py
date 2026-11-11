@@ -113,6 +113,31 @@ def get_near_account(
             status_code=502,
             detail=str(error)
         )
+
+
+@app.get("/near/network-activity")
+def get_near_network_activity(network: str = "mainnet"):
+    try:
+        client = NearRPCClient(network=network)
+        activity = client.get_network_activity()
+
+        return {
+            "success": True,
+            "data": activity
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except NearRPCError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
+
 @app.get("/near/market")
 def get_near_market():
     try:

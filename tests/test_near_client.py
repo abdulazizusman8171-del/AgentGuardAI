@@ -211,5 +211,68 @@ class TestNearRPCClient(unittest.TestCase):
 
         with self.assertRaises(NearRPCError):
             self.client.get_transaction("E" * 44, "alice.near")
+
+
+    @patch("app.near_client.urlopen")
+    def test_get_network_activity_success(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "result": {
+                "header": {
+                    "height": 123456,
+                    "hash": "example-block-hash",
+                    "timestamp_nanosec": "1700000000000000000"
+                },
+                "author": "validator.near",
+                "chunks": [
+                    {"height_included": 123456},
+                    {"height_included": 123455}
+                ]
+            }
+        })
+
+        result = self.client.get_network_activity()
+
+        self.assertEqual(result["block_height"], 123456)
+        self.assertEqual(result["block_hash"], "example-block-hash")
+        self.assertEqual(result["block_producer"], "validator.near")
+        self.assertEqual(result["shard_chunk_count"], 2)
+        self.assertEqual(result["included_chunk_count"], 1)
+        self.assertEqual(result["data_status"], "finalized")
+
+    @patch("app.near_client.urlopen")
+    def test_network_activity_rpc_error(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "error": {"message": "Block unavailable"}
+        })
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_network_activity()
+
+    @patch("app.near_client.urlopen")
+    def test_network_activity_missing_data(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "result": {}
+        })
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_network_activity()
+
+    @patch("app.near_client.urlopen")
+    def test_network_activity_invalid_chunks(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "result": {
+                "header": {
+                    "height": 123456,
+                    "hash": "example-block-hash",
+                    "timestamp_nanosec": "1700000000000000000"
+                },
+                "chunks": "invalid"
+            }
+        })
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_network_activity()
+
+
 if __name__ == "__main__":
     unittest.main()
