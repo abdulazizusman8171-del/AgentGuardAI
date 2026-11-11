@@ -312,6 +312,67 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         self.assertEqual(response.status_code, 502)
     @patch("app.api.NearRPCClient")
+    def test_near_access_keys_success(self, mock_client):
+        mock_client.return_value.get_access_keys.return_value = {
+            "network": "mainnet",
+            "account_id": "alice.near",
+            "total_keys": 2,
+            "full_access_keys": 1,
+            "restricted_keys": 1,
+            "keys": [
+                {
+                    "public_key": "ed25519:ExampleKey",
+                    "permission": "FullAccess"
+                },
+                {
+                    "public_key": "ed25519:RestrictedKey",
+                    "permission": "FunctionCall",
+                    "receiver_id": "market.near"
+                }
+            ],
+            "data_status": "finalized"
+        }
+
+        response = self.client.get(
+            "/near/accounts/alice.near/access-keys"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(
+            response.json()["data"]["full_access_keys"],
+            1
+        )
+        self.assertEqual(
+            response.json()["data"]["restricted_keys"],
+            1
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_access_keys_invalid_account(self, mock_client):
+        mock_client.return_value.get_access_keys.side_effect = (
+            ValueError("Invalid NEAR account ID")
+        )
+
+        response = self.client.get(
+            "/near/accounts/invalid/access-keys"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_near_access_keys_rpc_failure(self, mock_client):
+        mock_client.return_value.get_access_keys.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.get(
+            "/near/accounts/alice.near/access-keys"
+        )
+
+        self.assertEqual(response.status_code, 502)
+
+    @patch("app.api.NearRPCClient")
     def test_near_transaction_lookup(self, mock_client):
 
         mock_client.return_value.get_transaction.return_value = {

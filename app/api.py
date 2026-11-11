@@ -115,6 +115,32 @@ def get_near_account(
         )
 
 
+@app.get("/near/accounts/{account_id}/access-keys")
+def get_near_access_keys(
+    account_id: str,
+    network: str = "mainnet"
+):
+    try:
+        client = NearRPCClient(network=network)
+        access_key_data = client.get_access_keys(account_id)
+
+        return {
+            "success": True,
+            "data": access_key_data
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except NearRPCError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
+
 @app.get("/near/network-activity")
 def get_near_network_activity(network: str = "mainnet"):
     try:

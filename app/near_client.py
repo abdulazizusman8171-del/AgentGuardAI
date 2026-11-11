@@ -214,6 +214,164 @@ class NearRPCClient:
             "block_height": result.get("block_height"),
             "block_hash": result.get("block_hash")
         }
+    def get_access_keys(self, account_id):
+        """Return all finalized public access-key permissions for a NEAR account."""
+
+        account_id = self.validate_account_id(account_id)
+
+        keys = []
+        cursors = set()
+        page_count = 0
+        block_height = None
+        block_hash = None
+        after_key = None
+
+        try:
+            while True:
+                page_count += 1
+
+                if page_count > 1000:
+                    raise ValueError("Access-key pagination limit exceeded")
+
+                params = {
+                    "request_type": "view_access_key_list",
+                    "account_id": account_id,
+                    "limit": 100
+                }
+
+                if after_key is None:
+                    params["finality"] = "final"
+                else:
+                    params["block_id"] = block_hash or block_height
+                    params["after_key"] = after_key
+
+                result = self._rpc("query", params)
+
+                if not isinstance(result, dict):
+                    raise ValueError("Invalid access-key response")
+
+                if page_count == 1:
+                    block_height = result.get("block_height")
+                    block_hash = result.get("block_hash")
+                else:
+                    if (
+                        result.get("block_hash") is not None
+                        and block_hash is not None
+                        and result["block_hash"] != block_hash
+                    ):
+                        raise ValueError("Access-key snapshot changed")
+
+                raw_keys = result["keys"]
+
+                if not isinstance(raw_keys, list):
+                    raise ValueError("Invalid access-key list")
+
+                for item in raw_keys:
+                    public_key = item["public_key"]
+                    access_key = item["access_key"]
+                    permission = access_key["permission"]
+
+                    if not isinstance(public_key, str) or not public_key:
+                        raise ValueError("Invalid public key")
+
+                    if not isinstance(access_key, dict):
+                        raise ValueError("Invalid access key")
+
+                    nonce = int(access_key["nonce"])
+
+                    if nonce < 0:
+                        raise ValueError("Invalid access-key nonce")
+
+                    receiver_id = None
+                    method_names = []
+                    allowance = None
+
+                    if permission == "FullAccess":
+                        permission_type = "FullAccess"
+
+                    elif isinstance(permission, dict) and len(permission) == 1:
+                        permission_type = next(iter(permission))
+
+                        if permission_type not in (
+                            "FunctionCall",
+                            "GasKeyFullAccess",
+                            "GasKeyFunctionCall"
+                        ):
+                            raise ValueError("Unknown access-key permission")
+
+                        details = permission[permission_type]
+
+                        if permission_type in (
+                            "FunctionCall",
+                            "GasKeyFunctionCall"
+                        ):
+                            receiver_id = self.validate_account_id(
+                                details["receiver_id"]
+                            )
+                            method_names = details["method_names"]
+                            allowance = details.get("allowance")
+
+                            if not isinstance(method_names, list):
+                                raise ValueError("Invalid method names")
+
+                            if not all(
+                                isinstance(name, str)
+                                for name in method_names
+                            ):
+                                raise ValueError("Invalid method name")
+
+                    else:
+                        raise ValueError("Invalid access-key permission")
+
+                    keys.append({
+                        "public_key": public_key,
+                        "nonce": nonce,
+                        "permission": permission_type,
+                        "receiver_id": receiver_id,
+                        "method_names": method_names,
+                        "allowance": allowance
+                    })
+
+                cursor = result.get("last_key")
+
+                if not cursor:
+                    break
+
+                if not isinstance(cursor, str) or cursor in cursors:
+                    raise ValueError("Invalid or repeated pagination cursor")
+
+                if not block_hash and block_height is None:
+                    raise ValueError("Missing block reference for pagination")
+
+                cursors.add(cursor)
+                after_key = cursor
+
+        except (KeyError, TypeError, ValueError) as error:
+            raise NearRPCError(
+                "Invalid access-key data returned by NEAR"
+            ) from error
+
+        full_access_count = sum(
+            1 for key in keys
+            if key["permission"] in (
+                "FullAccess",
+                "GasKeyFullAccess"
+            )
+        )
+
+        return {
+            "network": self.network,
+            "account_id": account_id,
+            "total_keys": len(keys),
+            "full_access_keys": full_access_count,
+            "restricted_keys": len(keys) - full_access_count,
+            "keys": keys,
+            "has_more": False,
+            "pages_scanned": page_count,
+            "block_height": block_height,
+            "block_hash": block_hash,
+            "data_status": "finalized"
+        }
     def get_transaction(self, tx_hash, sender_account_id):
 
         tx_hash = self.validate_transaction_hash(tx_hash)

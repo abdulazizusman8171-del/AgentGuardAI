@@ -115,6 +115,189 @@
                     </div>
                 </section>
 
+                <!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
+                <section class="near-network-panel access-key-panel" aria-label="NEAR access-key security analysis">
+                    <div class="near-network-heading">
+                        <div>
+                            <span class="near-network-eyebrow">READ-ONLY SECURITY SCANNER</span>
+                            <h3>Access-Key Security Analysis</h3>
+                            <p>Inspect public account permissions and identify broad access exposure.</p>
+                        </div>
+                        <div class="near-network-status">
+                            <span id="access-key-status-dot"></span>
+                            <span id="access-key-status">Ready to scan</span>
+                        </div>
+                    </div>
+
+                    <form id="access-key-form" class="access-key-form">
+                        <label for="access-key-account">NEAR Account ID</label>
+                        <div class="access-key-controls">
+                            <input
+                                type="text"
+                                id="access-key-account"
+                                name="account_id"
+                                placeholder="example.near"
+                                maxlength="64"
+                                autocomplete="off"
+                                required
+                            >
+                            <select id="access-key-network" aria-label="NEAR network">
+                                <option value="mainnet">Mainnet</option>
+                                <option value="testnet">Testnet</option>
+                            </select>
+                            <button type="submit" id="access-key-scan-button">Scan Account</button>
+                        </div>
+                    </form>
+
+                    <p id="access-key-message" class="access-key-message" role="status">
+                        Enter a public NEAR account ID to inspect its permissions.
+                    </p>
+
+                    <div id="access-key-results" hidden>
+                        <div class="near-network-grid access-key-metrics">
+                            <div class="near-network-metric near-network-primary">
+                                <span>Total Access Keys</span>
+                                <strong id="access-key-total">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>FullAccess Keys</span>
+                                <strong id="access-key-full">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Restricted Keys</span>
+                                <strong id="access-key-restricted">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Pages Scanned</span>
+                                <strong id="access-key-pages">--</strong>
+                            </div>
+                        </div>
+
+                        <div id="access-key-warning" class="access-key-warning" hidden>
+                            <strong>Broad permission detected</strong>
+                            <p>One or more FullAccess keys were found. Review their ownership and necessity. Their presence alone does not prove compromise.</p>
+                        </div>
+
+                        <div class="near-network-details access-key-details">
+                            <div>
+                                <span>Account</span>
+                                <strong id="access-key-account-result">--</strong>
+                            </div>
+                            <div>
+                                <span>Finalized Block</span>
+                                <strong id="access-key-block">--</strong>
+                            </div>
+                            <div>
+                                <span>Data Status</span>
+                                <strong id="access-key-data-status">--</strong>
+                            </div>
+                        </div>
+
+                        <div class="access-key-table-wrap">
+                            <h4>Permission Breakdown</h4>
+                            <div class="access-key-table-scroll">
+                                <table class="access-key-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Permission</th>
+                                            <th>Receiver</th>
+                                            <th>Allowed Methods</th>
+                                            <th>Allowance (yoctoNEAR)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="access-key-table-body">
+                                        <tr><td colspan="4">No scan results yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p id="access-key-table-note">Showing up to 50 keys.</p>
+                        </div>
+
+                        <p class="access-key-disclaimer">
+                            Read-only inspection of public blockchain data. This scanner does not access private keys,
+                            sign transactions, or execute transactions.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- NEAR MULTI-ACCOUNT SECURITY SCANNER -->
+                <section class="near-network-panel multi-account-panel" aria-label="NEAR multi-account security scanner">
+                    <div class="near-network-heading">
+                        <div>
+                            <span class="near-network-eyebrow">NEAR MAINNET INTELLIGENCE</span>
+                            <h3>Multi-Account Security Scanner</h3>
+                            <p>Inspect seven major NEAR ecosystem accounts in one scan.</p>
+                        </div>
+                        <div class="near-network-status">
+                            <span id="multi-scan-status-dot"></span>
+                            <span id="multi-scan-status">Ready to scan</span>
+                        </div>
+                    </div>
+
+                    <div class="multi-scan-controls">
+                        <button type="button" id="multi-scan-button">
+                            Scan All Seven Accounts
+                        </button>
+                        <span id="multi-scan-progress">Seven public accounts · Read-only inspection</span>
+                    </div>
+
+                    <p id="multi-scan-message" class="access-key-message" role="status">
+                        Start a scan to retrieve live account balances and access-key permissions.
+                    </p>
+
+                    <div id="multi-scan-results" hidden>
+                        <div class="near-network-grid access-key-metrics">
+                            <div class="near-network-metric near-network-primary">
+                                <span>Accounts Scanned</span>
+                                <strong id="multi-total-accounts">0 / 7</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>FullAccess Keys</span>
+                                <strong id="multi-full-access">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Restricted Keys</span>
+                                <strong id="multi-restricted">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Accounts Needing Review</span>
+                                <strong id="multi-review-count">--</strong>
+                            </div>
+                        </div>
+
+                        <div id="multi-scan-warning" class="access-key-warning" hidden>
+                            <strong>FullAccess permissions detected</strong>
+                            <p>Review the affected accounts. FullAccess is a powerful permission, but its presence alone does not prove compromise.</p>
+                        </div>
+
+                        <div class="access-key-table-wrap">
+                            <h4>NEAR Account Security Report</h4>
+                            <div class="access-key-table-scroll">
+                                <table class="access-key-table multi-account-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Account</th>
+                                            <th>Balance (NEAR)</th>
+                                            <th>Total Keys</th>
+                                            <th>FullAccess</th>
+                                            <th>Restricted</th>
+                                            <th>Scan Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="multi-scan-table-body">
+                                        <tr><td colspan="6">No scan results yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p id="multi-scan-table-note">Account information and access-key permissions are retrieved separately.</p>
+                        </div>
+
+                        <p class="access-key-disclaimer">
+                            Read-only public blockchain inspection. No private keys, wallet connections,
+                            transaction signing, or transaction execution.
+                        </p>
+                    </div>
+                </section>
                 <div class="activity-carousel">
                     <div class="activity-track" id="activityTrack">
 

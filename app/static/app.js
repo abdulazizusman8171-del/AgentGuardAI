@@ -922,3 +922,386 @@ setInterval(() => {
         applyAIImages();
     }
 })();
+
+// ==========================================
+// AGENTGUARD NEAR ACCESS-KEY SECURITY SCANNER
+// ==========================================
+
+(() => {
+    const form = document.getElementById("access-key-form");
+    if (!form) return;
+
+    const accountInput = document.getElementById("access-key-account");
+    const networkInput = document.getElementById("access-key-network");
+    const scanButton = document.getElementById("access-key-scan-button");
+    const message = document.getElementById("access-key-message");
+    const results = document.getElementById("access-key-results");
+    const status = document.getElementById("access-key-status");
+    const statusDot = document.getElementById("access-key-status-dot");
+    const tableBody = document.getElementById("access-key-table-body");
+
+    let scanRunning = false;
+
+    function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = String(value);
+    }
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]);
+    }
+
+    function setStatus(label, state) {
+        status.textContent = label;
+        statusDot.classList.remove("is-live", "is-error");
+        if (state) statusDot.classList.add(state);
+    }
+
+    function formatNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toLocaleString() : "--";
+    }
+
+    function renderKeys(keys) {
+        const visibleKeys = keys.slice(0, 50);
+
+        if (!visibleKeys.length) {
+            tableBody.innerHTML =
+                '<tr><td colspan="4">No access keys found for this account.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = visibleKeys.map(key => {
+            const permission = escapeHTML(key.permission || "Unknown");
+            const receiver = escapeHTML(key.receiver_id || "All account permissions");
+            const methods = Array.isArray(key.method_names) && key.method_names.length
+                ? escapeHTML(key.method_names.join(", "))
+                : (key.permission === "FullAccess" ? "Unrestricted" : "Not specified");
+            const allowance = key.allowance === null || key.allowance === undefined
+                ? "Not applicable"
+                : escapeHTML(key.allowance);
+
+            return `
+                <tr>
+                    <td>${permission}</td>
+                    <td>${receiver}</td>
+                    <td>${methods}</td>
+                    <td>${allowance}</td>
+                </tr>
+            `;
+        }).join("");
+
+        const note = keys.length > 50
+            ? `Showing 50 of ${formatNumber(keys.length)} keys.`
+            : `Showing all ${formatNumber(keys.length)} keys.`;
+
+        setText("access-key-table-note", note);
+    }
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        if (scanRunning) return;
+
+        const accountId = accountInput.value.trim();
+        const network = networkInput.value;
+
+        if (!accountId) {
+            message.textContent = "Enter a NEAR account ID.";
+            accountInput.focus();
+            return;
+        }
+
+        scanRunning = true;
+        scanButton.disabled = true;
+        scanButton.textContent = "Scanning...";
+        results.hidden = true;
+        message.textContent = "Reading public access-key permissions. Large accounts may take a little longer...";
+        setStatus("Scanning account...", "");
+
+        try {
+            const endpoint =
+                `/near/accounts/${encodeURIComponent(accountId)}/access-keys` +
+                `?network=${encodeURIComponent(network)}`;
+
+            const response = await fetch(endpoint, {
+                method: "GET",
+                cache: "no-store",
+                headers: { "Accept": "application/json" }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success || !result.data) {
+                throw new Error(
+                    result.detail || result.error || `Scan failed (${response.status})`
+                );
+            }
+
+            const data = result.data;
+
+            if (!Array.isArray(data.keys)) {
+                throw new Error("The API returned an invalid access-key list.");
+            }
+
+            setText("access-key-total", formatNumber(data.total_keys));
+            setText("access-key-full", formatNumber(data.full_access_keys));
+            setText("access-key-restricted", formatNumber(data.restricted_keys));
+            setText("access-key-pages", formatNumber(data.pages_scanned));
+            setText("access-key-account-result", data.account_id);
+            setText("access-key-block", formatNumber(data.block_height));
+            setText("access-key-data-status", data.data_status || "Unknown");
+
+            const warning = document.getElementById("access-key-warning");
+            warning.hidden = Number(data.full_access_keys) === 0;
+
+            renderKeys(data.keys);
+
+            results.hidden = false;
+            message.textContent =
+                `Scan completed for ${data.account_id} on ${data.network}.`;
+            setStatus("Scan complete · Finalized", "is-live");
+
+        } catch (error) {
+            console.error("Access-key security scan failed:", error);
+            message.textContent = error.message || "Unable to scan this account.";
+            setStatus("Scan failed", "is-error");
+        } finally {
+            scanRunning = false;
+            scanButton.disabled = false;
+            scanButton.textContent = "Scan Account";
+        }
+    });
+})();
+
+// ==========================================
+// AGENTGUARD NEAR MULTI-ACCOUNT SECURITY SCANNER
+// ==========================================
+
+(() => {
+    const button = document.getElementById("multi-scan-button");
+    if (!button) return;
+
+    const accounts = [
+        "near",
+        "wrap.near",
+        "intents.near",
+        "social.near",
+        "aurora",
+        "ref-finance.near",
+        "burrow.near"
+    ];
+
+    const message = document.getElementById("multi-scan-message");
+    const progress = document.getElementById("multi-scan-progress");
+    const results = document.getElementById("multi-scan-results");
+    const tableBody = document.getElementById("multi-scan-table-body");
+    const status = document.getElementById("multi-scan-status");
+    const statusDot = document.getElementById("multi-scan-status-dot");
+    const warning = document.getElementById("multi-scan-warning");
+
+    let scanning = false;
+
+    function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = String(value);
+    }
+
+    function setStatus(label, state) {
+        status.textContent = label;
+        statusDot.classList.remove("is-live", "is-error");
+        if (state) statusDot.classList.add(state);
+    }
+
+    function createCell(value) {
+        const cell = document.createElement("td");
+        cell.textContent = String(value ?? "N/A");
+        return cell;
+    }
+
+    async function requestData(url) {
+        let lastError;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const response = await fetch(url, {
+                    method: "GET",
+                    cache: "no-store",
+                    headers: { "Accept": "application/json" }
+                });
+
+                const body = await response.json();
+
+                if (!response.ok || !body.success || !body.data) {
+                    throw new Error(
+                        body.detail || body.error || `HTTP ${response.status}`
+                    );
+                }
+
+                return body.data;
+            } catch (error) {
+                lastError = error;
+
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+
+        throw lastError || new Error("Request failed.");
+    }
+
+    function addAccountRow(account, accountData, keyData, error) {
+        const row = document.createElement("tr");
+
+        const complete = Boolean(accountData && keyData);
+        const partial = Boolean(accountData || keyData);
+
+        row.appendChild(createCell(account));
+
+        row.appendChild(createCell(
+            accountData ? accountData.balance_near : "Unavailable"
+        ));
+
+        row.appendChild(createCell(
+            keyData ? keyData.total_keys.toLocaleString() : "Unavailable"
+        ));
+
+        row.appendChild(createCell(
+            keyData ? keyData.full_access_keys.toLocaleString() : "Unavailable"
+        ));
+
+        row.appendChild(createCell(
+            keyData ? keyData.restricted_keys.toLocaleString() : "Unavailable"
+        ));
+
+        row.appendChild(createCell(
+            complete ? "Complete" : partial ? "Partial" : "Failed"
+        ));
+
+        tableBody.appendChild(row);
+
+        if (error) {
+            console.warn(`NEAR scan issue for ${account}:`, error);
+        }
+    }
+
+    button.addEventListener("click", async () => {
+        if (scanning) return;
+
+        scanning = true;
+        button.disabled = true;
+        button.textContent = "Scanning...";
+        tableBody.replaceChildren();
+        results.hidden = false;
+        warning.hidden = true;
+
+        let fullAccessTotal = 0;
+        let restrictedTotal = 0;
+        let successfulAccounts = 0;
+        let reviewAccounts = 0;
+
+        setText("multi-total-accounts", "0 / 7");
+        setText("multi-full-access", "0");
+        setText("multi-restricted", "0");
+        setText("multi-review-count", "0");
+
+        message.textContent =
+            "Connecting to NEAR Mainnet and inspecting public account data...";
+
+        setStatus("Scanning...", "");
+
+        try {
+            for (let index = 0; index < accounts.length; index++) {
+                const account = accounts[index];
+
+                progress.textContent =
+                    `Scanning ${index + 1} of 7: ${account}`;
+
+                message.textContent =
+                    `Retrieving account details and access-key permissions for ${account}...`;
+
+                let accountData = null;
+                let keyData = null;
+                const errors = [];
+
+                try {
+                    accountData = await requestData(
+                        `/near/accounts/${encodeURIComponent(account)}?network=mainnet`
+                    );
+                } catch (error) {
+                    errors.push(`Account details: ${error.message}`);
+                }
+
+                try {
+                    keyData = await requestData(
+                        `/near/accounts/${encodeURIComponent(account)}/access-keys?network=mainnet`
+                    );
+                } catch (error) {
+                    errors.push(`Access keys: ${error.message}`);
+                }
+
+                if (accountData && keyData) {
+                    successfulAccounts++;
+                }
+
+                if (keyData) {
+                    fullAccessTotal += Number(keyData.full_access_keys) || 0;
+                    restrictedTotal += Number(keyData.restricted_keys) || 0;
+
+                    if (Number(keyData.full_access_keys) > 0) {
+                        reviewAccounts++;
+                    }
+                }
+
+                addAccountRow(
+                    account,
+                    accountData,
+                    keyData,
+                    errors.join("; ")
+                );
+
+                setText(
+                    "multi-total-accounts",
+                    `${successfulAccounts} / 7`
+                );
+
+                setText("multi-full-access", fullAccessTotal.toLocaleString());
+                setText("multi-restricted", restrictedTotal.toLocaleString());
+                setText("multi-review-count", reviewAccounts.toLocaleString());
+
+                warning.hidden = fullAccessTotal === 0;
+            }
+
+            const complete = successfulAccounts === accounts.length;
+
+            progress.textContent =
+                `${successfulAccounts} of 7 accounts fully scanned.`;
+
+            message.textContent = complete
+                ? "All seven accounts have been scanned successfully."
+                : `${successfulAccounts} of 7 accounts completed fully. Check partial or failed rows.`;
+
+            setStatus(
+                complete ? "Scan complete · Mainnet" : "Scan completed with errors",
+                complete ? "is-live" : "is-error"
+            );
+
+        } catch (error) {
+            console.error("Multi-account scan failed:", error);
+            message.textContent = error.message || "Multi-account scan failed.";
+            setStatus("Scan failed", "is-error");
+
+        } finally {
+            scanning = false;
+            button.disabled = false;
+            button.textContent = "Scan All Seven Accounts";
+        }
+    });
+})();

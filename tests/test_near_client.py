@@ -274,5 +274,193 @@ class TestNearRPCClient(unittest.TestCase):
             self.client.get_network_activity()
 
 
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_success(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "result": {
+                "keys": [
+                    {
+                        "public_key": "ed25519:FullAccessExample",
+                        "access_key": {
+                            "nonce": 5,
+                            "permission": "FullAccess"
+                        }
+                    },
+                    {
+                        "public_key": "ed25519:FunctionCallExample",
+                        "access_key": {
+                            "nonce": 2,
+                            "permission": {
+                                "FunctionCall": {
+                                    "receiver_id": "market.near",
+                                    "method_names": ["buy", "sell"],
+                                    "allowance": "100000000000000000000"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "block_height": 123456,
+                "block_hash": "example-block"
+            }
+        })
+
+        result = self.client.get_access_keys("alice.near")
+
+        self.assertEqual(result["total_keys"], 2)
+        self.assertEqual(result["full_access_keys"], 1)
+        self.assertEqual(result["restricted_keys"], 1)
+        self.assertEqual(result["keys"][0]["permission"], "FullAccess")
+        self.assertEqual(
+            result["keys"][1]["permission"],
+            "FunctionCall"
+        )
+        self.assertEqual(
+            result["keys"][1]["receiver_id"],
+            "market.near"
+        )
+        self.assertEqual(result["data_status"], "finalized")
+
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_invalid_data(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "result": {
+                "keys": [
+                    {
+                        "public_key": "example-key",
+                        "access_key": {
+                            "nonce": "invalid",
+                            "permission": "FullAccess"
+                        }
+                    }
+                ]
+            }
+        })
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_access_keys("alice.near")
+
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_rpc_error(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_response({
+            "error": {
+                "message": "Account not found"
+            }
+        })
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_access_keys("missing.near")
+
+
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_pagination(self, mock_urlopen):
+        first_page_keys = [
+            {
+                "public_key": f"ed25519:ExampleKey{i}",
+                "access_key": {
+                    "nonce": i,
+                    "permission": "FullAccess"
+                }
+            }
+            for i in range(100)
+        ]
+
+        second_page_keys = [
+            {
+                "public_key": "ed25519:FinalKey",
+                "access_key": {
+                    "nonce": 101,
+                    "permission": "FullAccess"
+                }
+            }
+        ]
+
+        mock_urlopen.side_effect = [
+            self.mock_response({
+                "result": {
+                    "keys": first_page_keys,
+                    "last_key": "ed25519:CursorKey",
+                    "block_height": 123456,
+                    "block_hash": "fixed-block-hash"
+                }
+            }),
+            self.mock_response({
+                "result": {
+                    "keys": second_page_keys,
+                    "block_height": 123456,
+                    "block_hash": "fixed-block-hash"
+                }
+            })
+        ]
+
+        result = self.client.get_access_keys("alice.near")
+
+        self.assertEqual(result["total_keys"], 101)
+        self.assertEqual(result["pages_scanned"], 2)
+        self.assertEqual(result["full_access_keys"], 101)
+        self.assertFalse(result["has_more"])
+
+        first_request = json.loads(
+            mock_urlopen.call_args_list[0].args[0].data
+        )
+        second_request = json.loads(
+            mock_urlopen.call_args_list[1].args[0].data
+        )
+
+        self.assertEqual(
+            second_request["params"]["block_id"],
+            "fixed-block-hash"
+        )
+        self.assertEqual(
+            second_request["params"]["after_key"],
+            "ed25519:CursorKey"
+        )
+
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_repeated_cursor(self, mock_urlopen):
+        response = {
+            "result": {
+                "keys": [],
+                "last_key": "ed25519:RepeatedCursor",
+                "block_height": 123456,
+                "block_hash": "fixed-block-hash"
+            }
+        }
+
+        mock_urlopen.side_effect = [
+            self.mock_response(response),
+            self.mock_response(response)
+        ]
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_access_keys("alice.near")
+
+        self.assertEqual(mock_urlopen.call_count, 2)
+
+    @patch("app.near_client.urlopen")
+    def test_get_access_keys_changed_block_hash(self, mock_urlopen):
+        mock_urlopen.side_effect = [
+            self.mock_response({
+                "result": {
+                    "keys": [],
+                    "last_key": "ed25519:NextCursor",
+                    "block_height": 123456,
+                    "block_hash": "first-block-hash"
+                }
+            }),
+            self.mock_response({
+                "result": {
+                    "keys": [],
+                    "block_height": 123457,
+                    "block_hash": "different-block-hash"
+                }
+            })
+        ]
+
+        with self.assertRaises(NearRPCError):
+            self.client.get_access_keys("alice.near")
+
+        self.assertEqual(mock_urlopen.call_count, 2)
+
 if __name__ == "__main__":
     unittest.main()
