@@ -1773,3 +1773,33 @@ html, body {
         line-height: 1.5;
     }
 }
+
+/* NEAR access-key risk assessment */
+.risk-badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.risk-high {
+    color: #ffb4b4;
+    background: rgba(220, 38, 38, 0.18);
+}
+
+.risk-medium {
+    color: #ffd58a;
+    background: rgba(217, 119, 6, 0.18);
+}
+
+.risk-low {
+    color: #91e5b1;
+    background: rgba(22, 163, 74, 0.18);
+}
+
+.risk-unknown {
+    color: #cbd5e1;
+    background: rgba(100, 116, 139, 0.18);
+}

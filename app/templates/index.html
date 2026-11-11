@@ -173,6 +173,26 @@
                             </div>
                         </div>
 
+                        <div class="near-network-grid access-key-metrics">
+                            <div class="near-network-metric">
+                                <span>High Risk</span>
+                                <strong id="access-key-high-risk">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Medium Risk</span>
+                                <strong id="access-key-medium-risk">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Low Risk</span>
+                                <strong id="access-key-low-risk">--</strong>
+                            </div>
+                        </div>
+
+                        <p class="access-key-disclaimer">
+                            Risk levels are heuristic assessments based on public key permissions.
+                            They indicate review priorities, not proof of compromise.
+                        </p>
+
                         <div id="access-key-warning" class="access-key-warning" hidden>
                             <strong>Broad permission detected</strong>
                             <p>One or more FullAccess keys were found. Review their ownership and necessity. Their presence alone does not prove compromise.</p>
@@ -203,10 +223,12 @@
                                             <th>Receiver</th>
                                             <th>Allowed Methods</th>
                                             <th>Allowance (yoctoNEAR)</th>
+                                            <th>Risk Level</th>
+                                            <th>Risk Explanation</th>
                                         </tr>
                                     </thead>
                                     <tbody id="access-key-table-body">
-                                        <tr><td colspan="4">No scan results yet.</td></tr>
+                                        <tr><td colspan="6">No scan results yet.</td></tr>
                                     </tbody>
                                 </table>
                             </div>

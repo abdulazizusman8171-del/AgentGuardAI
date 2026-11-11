@@ -327,7 +327,9 @@ class TestAgentGuardAPI(unittest.TestCase):
                 {
                     "public_key": "ed25519:RestrictedKey",
                     "permission": "FunctionCall",
-                    "receiver_id": "market.near"
+                    "receiver_id": "market.near",
+                    "method_names": ["buy", "sell"],
+                    "allowance": "100000000000000000000"
                 }
             ],
             "data_status": "finalized"

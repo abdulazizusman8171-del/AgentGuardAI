@@ -969,11 +969,28 @@ setInterval(() => {
     }
 
     function renderKeys(keys) {
-        const visibleKeys = keys.slice(0, 50);
+        const riskPriority = { HIGH: 0, MEDIUM: 1, LOW: 2, UNKNOWN: 3 };
+
+        const sortedKeys = [...keys].sort((a, b) => {
+            const aRisk = a.risk_assessment?.risk_level || "UNKNOWN";
+            const bRisk = b.risk_assessment?.risk_level || "UNKNOWN";
+
+            const priorityDifference =
+                (riskPriority[aRisk] ?? 3) - (riskPriority[bRisk] ?? 3);
+
+            if (priorityDifference !== 0) {
+                return priorityDifference;
+            }
+
+            return (b.risk_assessment?.risk_score || 0) -
+                   (a.risk_assessment?.risk_score || 0);
+        });
+
+        const visibleKeys = sortedKeys.slice(0, 50);
 
         if (!visibleKeys.length) {
             tableBody.innerHTML =
-                '<tr><td colspan="4">No access keys found for this account.</td></tr>';
+                '<tr><td colspan="6">No access keys found for this account.</td></tr>';
             return;
         }
 
@@ -982,10 +999,36 @@ setInterval(() => {
             const receiver = escapeHTML(key.receiver_id || "All account permissions");
             const methods = Array.isArray(key.method_names) && key.method_names.length
                 ? escapeHTML(key.method_names.join(", "))
-                : (key.permission === "FullAccess" ? "Unrestricted" : "Not specified");
+                : (key.permission === "FullAccess" ||
+                   key.permission === "GasKeyFullAccess"
+                    ? "Unrestricted"
+                    : "All receiver methods");
+
             const allowance = key.allowance === null || key.allowance === undefined
                 ? "Not applicable"
                 : escapeHTML(key.allowance);
+
+            const assessment = key.risk_assessment || {};
+            const riskLevel = ["HIGH", "MEDIUM", "LOW"].includes(assessment.risk_level)
+                ? assessment.risk_level
+                : "UNKNOWN";
+
+            const riskScore = Number.isFinite(Number(assessment.risk_score))
+                ? Number(assessment.risk_score)
+                : "--";
+
+            const reasons = Array.isArray(assessment.reasons)
+                ? assessment.reasons
+                : [];
+
+            const recommendations = Array.isArray(assessment.recommendations)
+                ? assessment.recommendations
+                : [];
+
+            const explanation = [
+                ...reasons,
+                ...recommendations.map(item => `Recommendation: ${item}`)
+            ].map(item => escapeHTML(item)).join("<br>");
 
             return `
                 <tr>
@@ -993,6 +1036,12 @@ setInterval(() => {
                     <td>${receiver}</td>
                     <td>${methods}</td>
                     <td>${allowance}</td>
+                    <td>
+                        <span class="risk-badge risk-${riskLevel.toLowerCase()}">
+                            ${riskLevel} (${riskScore})
+                        </span>
+                    </td>
+                    <td>${explanation || "No assessment available."}</td>
                 </tr>
             `;
         }).join("");
@@ -1054,6 +1103,12 @@ setInterval(() => {
             setText("access-key-full", formatNumber(data.full_access_keys));
             setText("access-key-restricted", formatNumber(data.restricted_keys));
             setText("access-key-pages", formatNumber(data.pages_scanned));
+
+            const riskSummary = data.risk_summary || {};
+            setText("access-key-high-risk", formatNumber(riskSummary.high_risk));
+            setText("access-key-medium-risk", formatNumber(riskSummary.medium_risk));
+            setText("access-key-low-risk", formatNumber(riskSummary.low_risk));
+
             setText("access-key-account-result", data.account_id);
             setText("access-key-block", formatNumber(data.block_height));
             setText("access-key-data-status", data.data_status || "Unknown");

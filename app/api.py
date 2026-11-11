@@ -13,6 +13,7 @@ from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
 from app.approval import ApprovalManager
 from app.near_client import NearRPCClient, NearRPCError
+from app.access_key_analyzer import analyze_access_key
 from app.near_market import NearMarketClient, NearMarketError
 
 
@@ -123,6 +124,25 @@ def get_near_access_keys(
     try:
         client = NearRPCClient(network=network)
         access_key_data = client.get_access_keys(account_id)
+
+        risk_counts = {
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0
+        }
+
+        for key in access_key_data["keys"]:
+            assessment = analyze_access_key(key)
+            key["risk_assessment"] = assessment
+            risk_counts[assessment["risk_level"]] += 1
+
+        access_key_data["risk_summary"] = {
+            "assessed_keys": len(access_key_data["keys"]),
+            "high_risk": risk_counts["HIGH"],
+            "medium_risk": risk_counts["MEDIUM"],
+            "low_risk": risk_counts["LOW"],
+            "assessment_type": "heuristic"
+        }
 
         return {
             "success": True,
