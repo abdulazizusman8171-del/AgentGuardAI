@@ -651,3 +651,65 @@ setInterval(() => {
         loadNearLargeBuys();
     }
 }, 60 * 1000);
+
+// AGENTGUARD BACKEND HEALTH MONITOR
+
+async function checkSystemHealth() {
+    const status = document.getElementById("systemStatus");
+    const statusText = document.getElementById("systemStatusText");
+    const statusDot = document.getElementById("systemStatusDot");
+
+    const sidebarText = document.getElementById("sidebarEngineStatusText");
+    const sidebarDot = document.getElementById("sidebarEngineStatusDot");
+
+    if (!status || !statusText || !statusDot ||
+        !sidebarText || !sidebarDot) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/health", {
+            method: "GET",
+            cache: "no-store"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "healthy") {
+            throw new Error("Backend health check failed.");
+        }
+
+        statusText.textContent = "System Online";
+        sidebarText.textContent = "Backend Online";
+
+        status.classList.remove("status-offline", "status-checking");
+        status.classList.add("status-online");
+
+        [statusDot, sidebarDot].forEach(dot => {
+            dot.classList.remove("status-offline", "status-checking");
+            dot.classList.add("status-online");
+        });
+
+    } catch (error) {
+        statusText.textContent = "System Offline";
+        sidebarText.textContent = "Backend Unavailable";
+
+        status.classList.remove("status-online", "status-checking");
+        status.classList.add("status-offline");
+
+        [statusDot, sidebarDot].forEach(dot => {
+            dot.classList.remove("status-online", "status-checking");
+            dot.classList.add("status-offline");
+        });
+
+        console.error("Backend health check:", error);
+    }
+}
+
+checkSystemHealth();
+
+setInterval(() => {
+    if (!document.hidden) {
+        checkSystemHealth();
+    }
+}, 60 * 1000);

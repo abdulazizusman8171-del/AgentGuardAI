@@ -28,10 +28,10 @@
                 <a href="#intelligence">Security Intelligence</a>
             </nav>
 
-            <div class="sidebar-footer">
-                <span class="status-dot"></span>
-                Security Engine Active
-            </div>
+            <div class="sidebar-footer" id="sidebarEngineStatus" aria-live="polite">
+    <span class="status-dot status-checking" id="sidebarEngineStatusDot"></span>
+    <span id="sidebarEngineStatusText">Checking backend...</span>
+</div>
         </aside>
         <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
@@ -43,10 +43,10 @@
                     <p>Monitor and evaluate blockchain transaction risks.</p>
                 </div>
 
-                <div class="system-status">
-                    <span class="status-dot"></span>
-                    System Online
-                </div>
+                <div class="system-status status-checking" id="systemStatus" role="status" aria-live="polite">
+    <span class="status-dot status-checking" id="systemStatusDot"></span>
+    <span id="systemStatusText">Checking...</span>
+</div>
             </header>
 
             <section class="welcome">
