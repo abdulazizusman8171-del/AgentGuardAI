@@ -1,4 +1,5 @@
 import os
+import hmac
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Query
@@ -20,6 +21,24 @@ app = FastAPI(
     description="Blockchain transaction security API",
     version="0.3.0"
 )
+
+APPROVAL_API_KEY = os.getenv("AGENTGUARD_APPROVAL_API_KEY")
+
+
+def require_approval_key(request: Request):
+    if not APPROVAL_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Approval authorization is not configured."
+        )
+
+    supplied_key = request.headers.get("X-Approval-Key", "")
+
+    if not hmac.compare_digest(supplied_key, APPROVAL_API_KEY):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: valid approval key required."
+        )
 
 tracker = SQLiteTransactionTracker()
 
@@ -205,9 +224,12 @@ def transaction_history(
 
 @app.get("/approvals")
 def list_approvals(
+    request: Request,
     status: str | None = None,
     limit: int = Query(default=50, ge=1, le=200)
 ):
+    require_approval_key(request)
+
     try:
         approvals = tracker.get_approvals(
             status=status,
@@ -259,8 +281,10 @@ def create_approval(payload: dict[str, Any]):
 @app.post("/approvals/{approval_id}/approve")
 def approve_transaction(
     approval_id: str,
-    payload: dict[str, Any]
+    payload: dict[str, Any],
+    request: Request
 ):
+    require_approval_key(request)
 
     try:
         return approval_manager.approve_transaction(

@@ -200,8 +200,13 @@ async function loadTransactionHistory() {
 const approvalList = document.getElementById("approvalList");
 const approvalStatus = document.getElementById("approvalStatus");
 const refreshApprovalsButton = document.getElementById("refreshApprovals");
+const approvalApiKeyInput = document.getElementById("approvalApiKey");
+const unlockApprovalsButton = document.getElementById("unlockApprovals");
+const approvalAuthStatus = document.getElementById("approvalAuthStatus");
 
-// Format approval timestamps
+// Keep the authorization key in memory only.
+let approvalApiKey = "";
+
 function formatTimestamp(value) {
     if (!value) return "Date unavailable";
 
@@ -217,22 +222,36 @@ function formatTimestamp(value) {
 
     return date.toLocaleString();
 }
+
 async function loadApprovals() {
+    if (!approvalApiKey) {
+        approvalList.textContent = "Unlock the Approval Center to view approvals.";
+        return;
+    }
+
     approvalList.textContent = "Loading approvals...";
 
     try {
-        const status = approvalStatus.value;
+        const query = new URLSearchParams({ limit: "50" });
 
-        const query = new URLSearchParams({
-            limit: "50"
-        });
-
-        if (status) {
-            query.set("status", status);
+        if (approvalStatus.value) {
+            query.set("status", approvalStatus.value);
         }
 
-        const response = await fetch("/approvals?" + query.toString());
+        const response = await fetch("/approvals?" + query.toString(), {
+            headers: {
+                "X-Approval-Key": approvalApiKey
+            }
+        });
+
         const data = await response.json();
+
+        if (response.status === 401) {
+            approvalApiKey = "";
+            approvalList.textContent = "Authorization failed. Unlock again.";
+            approvalAuthStatus.textContent = "Your authorization key is invalid.";
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(data.detail || "Could not load approvals.");
@@ -269,7 +288,6 @@ async function loadApprovals() {
 
             details.append(title, id, created);
             item.append(details, badge);
-
             approvalList.appendChild(item);
         });
 
@@ -278,8 +296,45 @@ async function loadApprovals() {
     }
 }
 
+async function unlockApprovalCenter() {
+    const candidateKey = approvalApiKeyInput.value.trim();
 
-// ==========================================
+    if (!candidateKey) {
+        approvalAuthStatus.textContent = "Please enter your authorization key.";
+        return;
+    }
+
+    unlockApprovalsButton.disabled = true;
+    approvalAuthStatus.textContent = "Checking authorization...";
+
+    try {
+        const response = await fetch("/approvals?limit=1", {
+            headers: {
+                "X-Approval-Key": candidateKey
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Authorization failed.");
+        }
+
+        approvalApiKey = candidateKey;
+        approvalAuthStatus.textContent = "Authorization successful. Approval Center unlocked.";
+
+        await loadApprovals();
+
+    } catch (error) {
+        approvalApiKey = "";
+        approvalAuthStatus.textContent = error.message;
+        approvalList.textContent = "Approval Center is locked.";
+
+    } finally {
+        approvalApiKeyInput.value = "";
+        unlockApprovalsButton.disabled = false;
+    }
+}
 // DASHBOARD EVENT LISTENERS
 // ==========================================
 
@@ -289,11 +344,18 @@ refreshApprovalsButton.addEventListener("click", loadApprovals);
 
 approvalStatus.addEventListener("change", loadApprovals);
 
+unlockApprovalsButton.addEventListener("click", unlockApprovalCenter);
+
+approvalApiKeyInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        unlockApprovalCenter();
+    }
+});
+
 
 // Load dashboard records when the page opens.
 
 loadTransactionHistory();
-loadApprovals();
 
 // ==========================================
 // AGENTGUARD CAROUSEL AND NETWORK THEME CONTROLS

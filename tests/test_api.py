@@ -16,6 +16,10 @@ from app.near_market import NearMarketError
 class TestAgentGuardAPI(unittest.TestCase):
 
     def setUp(self):
+        api.APPROVAL_API_KEY = "test-approval-secret"
+        self.approval_headers = {
+            "X-Approval-Key": "test-approval-secret"
+        }
         self.temp_dir = tempfile.TemporaryDirectory()
         database = Path(self.temp_dir.name) / "api_test.db"
 
@@ -133,7 +137,8 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         approve_response = self.client.post(
             f"/approvals/{approval_id}/approve",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.approval_headers
         )
 
         self.assertTrue(approve_response.json()["approved"])
@@ -167,7 +172,8 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         response = self.client.post(
             f"/approvals/{approval_id}/approve",
-            json=modified_transaction
+            json=modified_transaction,
+            headers=self.approval_headers
         )
 
         self.assertFalse(response.json()["approved"])
@@ -477,7 +483,7 @@ class TestAgentGuardAPI(unittest.TestCase):
             json=self.unknown_transaction
         )
 
-        response = self.client.get("/approvals?status=PENDING")
+        response = self.client.get("/approvals?status=PENDING", headers=self.approval_headers)
 
         self.assertEqual(response.status_code, 200)
 
@@ -498,10 +504,11 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         self.client.post(
             f"/approvals/{approval_id}/approve",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.approval_headers
         )
 
-        response = self.client.get("/approvals?status=APPROVED")
+        response = self.client.get("/approvals?status=APPROVED", headers=self.approval_headers)
 
         self.assertEqual(response.status_code, 200)
 
@@ -510,8 +517,42 @@ class TestAgentGuardAPI(unittest.TestCase):
         self.assertEqual(len(approvals), 1)
         self.assertEqual(approvals[0]["status"], "APPROVED")
 
+    def test_approval_list_rejects_missing_and_wrong_keys(self):
+        missing = self.client.get("/approvals")
+        wrong = self.client.get(
+            "/approvals",
+            headers={"X-Approval-Key": "incorrect-key"}
+        )
+
+        self.assertEqual(missing.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
+
+    def test_approval_action_rejects_missing_and_wrong_keys(self):
+        missing = self.client.post(
+            "/approvals/test-id/approve",
+            json=self.unknown_transaction
+        )
+        wrong = self.client.post(
+            "/approvals/test-id/approve",
+            json=self.unknown_transaction,
+            headers={"X-Approval-Key": "incorrect-key"}
+        )
+
+        self.assertEqual(missing.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
+
+    def test_approval_routes_fail_when_key_is_not_configured(self):
+        with patch.object(api, "APPROVAL_API_KEY", None):
+            list_response = self.client.get("/approvals")
+            action_response = self.client.post(
+                "/approvals/test-id/approve",
+                json=self.unknown_transaction
+            )
+
+        self.assertEqual(list_response.status_code, 503)
+        self.assertEqual(action_response.status_code, 503)
     def test_invalid_approval_status_filter(self):
-        response = self.client.get("/approvals?status=INVALID")
+        response = self.client.get("/approvals?status=INVALID", headers=self.approval_headers)
 
         self.assertEqual(response.status_code, 400)
 

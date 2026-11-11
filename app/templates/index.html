@@ -329,6 +329,20 @@
         <button id="refreshApprovals">Refresh</button>
     </div>
 
+    <div class="approval-auth">
+        <label for="approvalApiKey">Approval authorization key:</label>
+        <input
+            id="approvalApiKey"
+            type="password"
+            autocomplete="off"
+            placeholder="Enter your approval key"
+        >
+        <button id="unlockApprovals">Unlock</button>
+        <p id="approvalAuthStatus" role="status">
+            Enter your key to view protected approvals.
+        </p>
+    </div>
+
     <div class="approval-filter">
         <label for="approvalStatus">Filter by status:</label>
         <select id="approvalStatus">
