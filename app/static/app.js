@@ -368,12 +368,7 @@ const activityNext = document.getElementById("activityNext");
 // AGENTGUARD CONTINUOUS INFINITE CAROUSEL
 const carouselViewport = activityTrack?.parentElement;
 
-if (activityTrack) {
-    [".near-market-card", ".near-volume-card", ".near-large-buy-card"].forEach(selector => {
-        const card = activityTrack.querySelector(selector);
-        if (card) activityTrack.prepend(card);
-    });
-}
+
 
 const originalCards = activityTrack
     ? Array.from(activityTrack.children)
@@ -892,27 +887,130 @@ setInterval(() => {
     }
 }, 60 * 1000);
 
-// AGENTGUARD AI GENERATED CAROUSEL IMAGES
+// AGENTGUARD FIVE-IMAGE FEATURE-MATCHED ROTATION
 (function () {
-    const imageMap = ["/static/images/near-market.webp","/static/images/near-ecosystem.webp","/static/images/near-large-buy.webp","/static/images/wallet-risk.webp","/static/images/transaction-security.webp","/static/images/contract-risk.webp","/static/images/risk-intelligence.webp","/static/images/approval-tracking.webp","/static/images/network-risk.webp"];
+    const imageSets = {
+        "Wallet Risk Signals": [
+            "/static/images/wallet-guard.svg",
+            "/static/images/wallet-risk.webp",
+            "/static/images/wallet-feature-1.svg",
+            "/static/images/wallet-feature-2.svg",
+            "/static/images/wallet-feature-3.svg"
+        ],
+        "Transaction Security": [
+            "/static/images/transaction-flow.svg",
+            "/static/images/transaction-security.webp",
+            "/static/images/transaction-feature-1.svg",
+            "/static/images/transaction-feature-2.svg",
+            "/static/images/transaction-feature-3.svg"
+        ],
+        "Contract Risk Checks": [
+            "/static/images/contract-shield.svg",
+            "/static/images/contract-risk.webp",
+            "/static/images/contract-feature-1.svg",
+            "/static/images/contract-feature-2.svg",
+            "/static/images/contract-feature-3.svg"
+        ],
+        "Risk Intelligence": [
+            "/static/images/risk-intelligence.svg",
+            "/static/images/risk-intelligence.webp",
+            "/static/images/intelligence-feature-1.svg",
+            "/static/images/intelligence-feature-2.svg",
+            "/static/images/intelligence-feature-3.svg"
+        ],
+        "Approval Tracking": [
+            "/static/images/approval-security.svg",
+            "/static/images/approval-tracking.webp",
+            "/static/images/approval-feature-1.svg",
+            "/static/images/approval-feature-2.svg",
+            "/static/images/approval-feature-3.svg"
+        ],
+        "Network Risk Assessment": [
+            "/static/images/network-intelligence.svg",
+            "/static/images/network-risk.webp",
+            "/static/images/network-feature-1.svg",
+            "/static/images/network-feature-2.svg",
+            "/static/images/network-feature-3.svg"
+        ],
+        "NEAR Market Price": [
+            "/static/images/near-market-visual.svg",
+            "/static/images/near-market.webp",
+            "/static/images/price-feature-1.svg",
+            "/static/images/price-feature-2.svg",
+            "/static/images/price-feature-3.svg"
+        ],
+        "NEAR Trading Volume": [
+            "/static/images/near-volume-visual.svg",
+            "/static/images/near-volume-activity.svg",
+            "/static/images/volume-feature-1.svg",
+            "/static/images/volume-feature-2.svg",
+            "/static/images/volume-feature-3.svg"
+        ],
+        "Largest NEAR Pool Buy": [
+            "/static/images/near-large-buy-visual.svg",
+            "/static/images/near-large-buy.webp",
+            "/static/images/largebuy-feature-1.svg",
+            "/static/images/largebuy-feature-2.svg",
+            "/static/images/largebuy-feature-3.svg"
+        ]
+    };
+
+    const IMAGE_INTERVAL = 12000;
+    const FADE_DURATION = 700;
 
     function applyAIImages() {
-        const cards = document.querySelectorAll(".activity-card");
+        document.querySelectorAll(".activity-card").forEach(card => {
+            if (card.dataset.imageRotationReady === "true") return;
 
-        cards.forEach((card, index) => {
-            const imagePath = imageMap[index % imageMap.length];
-            if (!imagePath) return;
-
+            const title = card.querySelector("h3")?.textContent.trim();
+            const images = imageSets[title];
             const visual = card.querySelector(".activity-visual");
-            if (!visual || visual.querySelector(".ai-card-image")) return;
 
-            const img = document.createElement("img");
-            img.className = "ai-card-image";
-            img.src = imagePath;
-            img.alt = "AI-generated AgentGuard security artwork";
-            img.onerror = () => img.remove();
+            if (!images || !visual) return;
 
-            visual.prepend(img);
+            let img = visual.querySelector(".ai-card-image");
+
+            if (!img) {
+                img = document.createElement("img");
+                img.className = "ai-card-image";
+                img.alt = title + " feature illustration";
+                img.loading = "lazy";
+                visual.prepend(img);
+            }
+
+            card.dataset.imageRotationReady = "true";
+
+            let index = 0;
+            img.src = images[index];
+
+            images.forEach(src => {
+                const preload = new Image();
+                preload.src = src;
+            });
+
+            window.setInterval(() => {
+                if (document.hidden || !img.isConnected) return;
+
+                const nextIndex = (index + 1) % images.length;
+                const nextImage = new Image();
+
+                nextImage.onload = () => {
+                    img.classList.add("is-changing");
+
+                    window.setTimeout(() => {
+                        if (!img.isConnected) return;
+
+                        img.src = nextImage.src;
+                        index = nextIndex;
+
+                        requestAnimationFrame(() => {
+                            img.classList.remove("is-changing");
+                        });
+                    }, FADE_DURATION);
+                };
+
+                nextImage.src = images[nextIndex];
+            }, IMAGE_INTERVAL);
         });
     }
 
@@ -922,8 +1020,6 @@ setInterval(() => {
         applyAIImages();
     }
 })();
-
-// ==========================================
 // AGENTGUARD NEAR ACCESS-KEY SECURITY SCANNER
 // ==========================================
 

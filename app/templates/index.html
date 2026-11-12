@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgentGuard AI | Security Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css?v=4">
+    <link rel="stylesheet" href="/static/styles.css?v=5">
 </head>
 
 <body>
@@ -23,10 +23,31 @@
             </div>
 
             <nav>
-                <a href="#" class="active">Dashboard</a>
-                <a href="#transaction">Transaction Security</a>
-                <a href="#intelligence">Security Intelligence</a>
-            </nav>
+    <div class="nav-group">
+        <span class="nav-group-label">MAIN</span>
+        <a href="#dashboard" class="active">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label">NEAR SECURITY</span>
+        <a href="#near-network">Network Activity</a>
+        <a href="#access-keys">Access-Key Scanner</a>
+        <a href="#multi-account">Multi-Account Scanner</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label">PROTECTION</span>
+        <a href="#transaction">Transaction Security</a>
+        <a href="#history">Transaction History</a>
+        <a href="#approvals">Approval Center</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-label">INTELLIGENCE</span>
+        <a href="#security-intelligence">Security Intelligence</a>
+        <a href="#near-market-dashboard">NEAR Market</a>
+    </div>
+</nav>
 
             <div class="sidebar-footer" id="sidebarEngineStatus" aria-live="polite">
     <span class="status-dot status-checking" id="sidebarEngineStatusDot"></span>
@@ -49,7 +70,7 @@
 </div>
             </header>
 
-            <section class="welcome">
+            <section class="welcome" id="dashboard">
                 <h2>Welcome to AgentGuard AI</h2>
                 <p>
                     Protect blockchain transactions with explainable
@@ -57,17 +78,37 @@
                 </p>
             </section>
 
+            <section class="overview">
+                <div class="stat-card">
+                    <p>Risk Engine</p>
+                    <h3>RULE-BASED</h3>
+                    <span>Evaluates configured transaction risk signals</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Supported Networks</p>
+                    <h3>3</h3>
+                    <span>NEAR, BNB Chain, Ethereum</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Execution Mode</p>
+                    <h3>SIMULATED</h3>
+                    <span>No real transactions submitted</span>
+                </div>
+            </section>
+
             <!-- AGENTGUARD ACTIVITY CAROUSEL -->
             <section class="activity-section" id="intelligence">
                 <div class="section-heading">
                     <div>
-                        <h2>NEAR-First Intelligence</h2>
+                        <h2>NEAR Security &amp; Network Monitoring</h2>
                         <p>Explore the protection systems powering AgentGuard AI.</p>
                     </div>
                 </div>
 
                 <!-- LIVE NEAR NETWORK ACTIVITY -->
-                <section class="near-network-panel" aria-label="NEAR network activity">
+                <section class="near-network-panel" id="near-network" aria-label="NEAR network activity">
                     <div class="near-network-heading">
                         <div>
                             <span class="near-network-eyebrow">BLOCKCHAIN NETWORK MONITOR</span>
@@ -116,7 +157,7 @@
                 </section>
 
                 <!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
-                <section class="near-network-panel access-key-panel" aria-label="NEAR access-key security analysis">
+                <section class="near-network-panel access-key-panel" id="access-keys" aria-label="NEAR access-key security analysis">
                     <div class="near-network-heading">
                         <div>
                             <span class="near-network-eyebrow">READ-ONLY SECURITY SCANNER</span>
@@ -243,7 +284,7 @@
                 </section>
 
                 <!-- NEAR MULTI-ACCOUNT SECURITY SCANNER -->
-                <section class="near-network-panel multi-account-panel" aria-label="NEAR multi-account security scanner">
+                <section class="near-network-panel multi-account-panel" id="multi-account" aria-label="NEAR multi-account security scanner">
                     <div class="near-network-heading">
                         <div>
                             <span class="near-network-eyebrow">NEAR MAINNET INTELLIGENCE</span>
@@ -320,7 +361,14 @@
                         </p>
                     </div>
                 </section>
-                <div class="activity-carousel">
+                <div class="section-heading dashboard-subheading">
+    <div>
+        <h2>Security Intelligence Center</h2>
+        <p>Explore security signals, transaction insights and protection intelligence.</p>
+    </div>
+</div>
+
+<div class="activity-carousel" id="security-intelligence">
                     <div class="activity-track" id="activityTrack">
 
                         <article class="activity-card">
@@ -370,35 +418,9 @@
                             <h3>Network Risk Assessment</h3>
                             <p>Assess transaction risks across Ethereum, BNB Chain, and NEAR. Live read-only blockchain data is currently available for NEAR.</p>
                         </article>
-                        <article class="activity-card near-market-card">
-                            <div class="activity-visual">
-                                <div class="visual-icon blockchain-icon"><span>◈</span><i></i></div>
-                            </div>
-                            <h3>NEAR Market Price</h3>
-                            <h2 id="near-price">Loading...</h2>
-                            <p id="near-price-change">24h change: Loading...</p>
-                            <small id="near-price-updated">Waiting for market data</small>
-                        </article>
-                        <article class="activity-card near-volume-card">
-                            <div class="activity-visual">
-                                <div class="visual-icon blockchain-icon"><span>▥</span><i></i></div>
-                            </div>
-                            <h3>NEAR Trading Volume</h3>
-                            <h2 id="near-volume">Loading...</h2>
-                            <p id="near-volume-change">Change since previous check: Waiting...</p>
-                            <small id="near-volume-updated">Waiting for market data</small>
-                        </article>
-                        <article class="activity-card near-large-buy-card">
-                            <div class="activity-visual">
-                                <div class="visual-icon blockchain-icon"><span>↗</span><i></i></div>
-                            </div>
-                            <h3>Largest NEAR Pool Buy</h3>
-                            <h2 id="near-large-buy-count">Loading...</h2>
-                            <div id="near-large-buy-list">
-                                <p>Checking recent qualifying USDC-to-wNEAR trades...</p>
-                            </div>
-                            <small>Ref Finance USDC/wNEAR · GeckoTerminal</small>
-                        </article>
+
+
+
 
                     </div>
                 </div>
@@ -409,27 +431,58 @@
                 </div>
             </section>
 
-            <section class="overview">
-                <div class="stat-card">
-                    <p>Risk Engine</p>
-                    <h3>RULE-BASED</h3>
-                    <span>Evaluates configured transaction risk signals</span>
-                </div>
+<section class="near-market-section" id="near-market-dashboard">
+    <div class="section-heading market-section-heading">
+        <div>
+            <h2>NEAR Market Intelligence</h2>
+            <p>Live price, trading volume and large-purchase activity.</p>
+        </div>
+    </div>
+    <div class="near-market-grid">
+        <article class="activity-card near-market-card" id="near-market">
+                            <div class="activity-visual">
+                                <div class="visual-icon blockchain-icon"><span>◈</span><i></i></div>
+                            </div>
+                            <h3>NEAR Market Price</h3>
+                            <h2 id="near-price">Loading...</h2>
+                            <p id="near-price-change">24h change: Loading...</p>
+                            <small id="near-price-updated">Waiting for market data</small>
+                        </article>
 
-                <div class="stat-card">
-                    <p>Supported Networks</p>
-                    <h3>3</h3>
-                    <span>Ethereum, BNB Chain, NEAR</span>
-                </div>
+<article class="activity-card near-volume-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon blockchain-icon"><span>▥</span><i></i></div>
+                            </div>
+                            <h3>NEAR Trading Volume</h3>
+                            <h2 id="near-volume">Loading...</h2>
+                            <p id="near-volume-change">Change since previous check: Waiting...</p>
+                            <small id="near-volume-updated">Waiting for market data</small>
+                        </article>
 
-                <div class="stat-card">
-                    <p>Execution Mode</p>
-                    <h3>SIMULATED</h3>
-                    <span>No real transactions submitted</span>
-                </div>
-            </section>
+<article class="activity-card near-large-buy-card">
+                            <div class="activity-visual">
+                                <div class="visual-icon blockchain-icon"><span>↗</span><i></i></div>
+                            </div>
+                            <h3>Largest NEAR Pool Buy</h3>
+                            <h2 id="near-large-buy-count">Loading...</h2>
+                            <div id="near-large-buy-list">
+                                <p>Checking recent qualifying USDC-to-wNEAR trades...</p>
+                            </div>
+                            <small>Ref Finance USDC/wNEAR · GeckoTerminal</small>
+                        </article>
+    </div>
+</section>
 
-            <section class="panel" id="transaction">
+
+            <div class="protection-section">
+    <div class="section-heading dashboard-section-title">
+        <div>
+            <h2>Transaction Protection Center</h2>
+            <p>Evaluate transactions, review history and manage authorization.</p>
+        </div>
+    </div>
+
+    <section class="panel" id="transaction">
 
                 <div class="panel-heading">
                     <div>
@@ -469,9 +522,9 @@
                         <div class="form-group">
                             <label for="network">Blockchain Network</label>
                             <select id="network" required>
-                                <option value="ethereum">Ethereum</option>
-                                <option value="bnb">BNB Chain</option>
                                 <option value="near" selected>NEAR</option>
+                                <option value="bnb">BNB Chain</option>
+                                <option value="ethereum">Ethereum</option>
                             </select>
                         </div>
 
@@ -612,6 +665,7 @@
         <p class="empty-state">Loading approvals...</p>
     </div>
 </section>
+            </div>
             <footer>
                 AgentGuard AI © 2026 |
                 Blockchain Transaction Security
@@ -621,7 +675,7 @@
 
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=20261112-images2"></script>
 
 </body>
 </html>

@@ -1803,3 +1803,755 @@ html, body {
     color: #cbd5e1;
     background: rgba(100, 116, 139, 0.18);
 }
+
+/* AGENTGUARD SIDEBAR CATEGORY STYLING */
+
+.sidebar nav {
+    gap: 20px;
+}
+
+.sidebar .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sidebar .nav-group-label {
+    display: block;
+    padding: 0 12px;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+}
+
+.sidebar nav a {
+    padding: 11px 12px;
+    font-size: 13px;
+}
+
+.sidebar nav a:focus-visible {
+    outline: 2px solid var(--accent, #3b82f6);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   AGENTGUARD DASHBOARD LAYOUT REDESIGN
+========================================== */
+
+.main-content {
+    min-width: 0;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.welcome {
+    position: relative;
+    overflow: hidden;
+    padding: 34px;
+    margin-bottom: 28px;
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    background: linear-gradient(120deg, #172554, #1e40af);
+}
+
+.welcome h2 {
+    font-size: clamp(22px, 3vw, 30px);
+    margin-bottom: 10px;
+}
+
+.welcome p {
+    max-width: 650px;
+    font-size: 14px;
+}
+
+/* Security overview */
+
+.overview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+}
+
+.overview .stat-card {
+    min-width: 0;
+    min-height: 125px;
+    padding: 22px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #111a2e, #151f35);
+}
+
+.overview .stat-card h3 {
+    margin: 12px 0 8px;
+    font-size: 21px;
+}
+
+.overview .stat-card span {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Consistent section headings */
+
+.activity-section > .section-heading,
+.dashboard-subheading,
+.dashboard-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 30px 0 18px;
+}
+
+.section-heading h2 {
+    margin: 0 0 7px;
+    color: var(--text);
+    font-size: 21px;
+    font-weight: 750;
+}
+
+.section-heading p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.dashboard-subheading {
+    padding-top: 25px;
+    border-top: 1px solid var(--border);
+}
+
+/* NEAR security section */
+
+.activity-section {
+    margin-bottom: 38px;
+}
+
+.near-network-panel {
+    margin-top: 18px;
+    margin-bottom: 22px;
+}
+
+/* Protection center */
+
+.protection-section {
+    min-width: 0;
+    margin-top: 38px;
+    padding: 26px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(17, 26, 46, 0.38);
+}
+
+.protection-section .dashboard-section-title {
+    margin-top: 0;
+    margin-bottom: 22px;
+}
+
+.protection-section .panel {
+    margin-bottom: 20px;
+    background: var(--surface);
+}
+
+.protection-section .panel:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive layout */
+
+@media (max-width: 900px) {
+    .main-content {
+        padding: 24px;
+    }
+
+    .overview {
+        gap: 12px;
+    }
+
+    .protection-section {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 650px) {
+    .main-content {
+        padding: 18px 14px;
+    }
+
+    .welcome {
+        padding: 24px 20px;
+    }
+
+    .overview {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .overview .stat-card {
+        min-height: auto;
+    }
+
+    .activity-section > .section-heading,
+    .dashboard-subheading,
+    .dashboard-section-title {
+        margin-top: 24px;
+    }
+
+    .section-heading h2 {
+        font-size: 18px;
+    }
+
+    .protection-section {
+        padding: 14px;
+        margin-top: 25px;
+    }
+}
+
+/* ==========================================
+   AGENTGUARD NEAR MARKET INTELLIGENCE GRID
+========================================== */
+
+.near-market-section {
+    width: 100%;
+    min-width: 0;
+    margin: 36px 0;
+    padding: 26px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(17, 26, 46, 0.38);
+}
+
+.market-section-heading {
+    margin: 0 0 22px;
+}
+
+.near-market-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+}
+
+.near-market-grid .activity-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 290px;
+    padding: 18px;
+    flex: initial;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.near-market-grid .activity-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+}
+
+.near-market-grid .activity-visual {
+    width: 100%;
+    height: 145px;
+    min-height: 145px;
+    margin-bottom: 17px;
+    border-radius: 10px;
+}
+
+.near-market-grid .activity-card h3 {
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.near-market-grid .activity-card h2 {
+    margin: 8px 0;
+    font-size: 25px;
+    overflow-wrap: anywhere;
+}
+
+.near-market-grid .activity-card p {
+    max-width: 100%;
+    font-size: 13px;
+}
+
+.near-market-grid .activity-card small {
+    display: block;
+    margin-top: auto;
+    padding-top: 12px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+@media (max-width: 1000px) {
+    .near-market-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .near-market-section {
+        padding: 17px;
+        margin: 25px 0;
+    }
+
+    .near-market-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .near-market-grid .activity-card {
+        min-height: 270px;
+    }
+
+    .near-market-grid .activity-visual {
+        height: 155px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .near-market-grid .activity-card {
+        transition: none;
+    }
+
+    .near-market-grid .activity-card:hover {
+        transform: none;
+    }
+}
+
+
+/* MOBILE MENU OVERLAP FIX */
+@media (max-width: 900px) {
+    .main-content {
+        padding-top: 82px !important;
+    }
+}
+
+@media (max-width: 650px) {
+    .main-content {
+        padding: 82px 14px 24px !important;
+    }
+}
+
+/* FINAL ANDROID MOBILE HEADER AND SPACING FIX */
+@media (max-width: 650px) {
+    .main-content {
+        width: 100%;
+        min-width: 0;
+        padding: 90px 14px 24px !important;
+    }
+
+    .topbar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .topbar > div:first-child {
+        width: 100%;
+        text-align: center;
+    }
+
+    .topbar h1,
+    .topbar p {
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    .system-status {
+        justify-content: center;
+    }
+
+    .welcome {
+        width: 100%;
+        text-align: center;
+    }
+
+    .welcome h2,
+    .welcome p {
+        text-align: center;
+    }
+
+    .mobile-menu-toggle {
+        top: 14px;
+        left: 14px;
+        z-index: 1200;
+    }
+}
+/* COMPACT ANDROID HEADER LAYOUT */
+@media (max-width: 650px) {
+    .main-content {
+        padding: 14px 14px 24px !important;
+    }
+
+    .topbar {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        gap: 0;
+        margin-bottom: 18px;
+        padding-top: 52px;
+        text-align: center;
+    }
+
+    .topbar > div:first-child {
+        width: 100%;
+        text-align: center;
+    }
+
+    .topbar h1 {
+        margin-bottom: 6px;
+        font-size: 23px;
+        text-align: center;
+    }
+
+    .topbar p {
+        text-align: center;
+    }
+
+    .system-status {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 9px 10px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .mobile-menu-toggle {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 1200;
+    }
+
+    .welcome {
+        margin-top: 0;
+        width: 100%;
+        text-align: center;
+    }
+}
+
+
+/* AGENTGUARD AI CARD IMAGE ROTATION */
+.activity-visual .ai-card-image {
+    transition: opacity 0.45s ease;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-visual .ai-card-image {
+        transition: none;
+    }
+}
+
+/* AGENTGUARD PREMIUM IMAGE CROSSFADE */
+.activity-visual {
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-visual .ai-card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    transition: opacity 650ms ease-in-out;
+    will-change: opacity;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-visual .ai-card-image {
+        transition: none;
+    }
+}
+
+/* AGENTGUARD SLOW PREMIUM CARD IMAGE TRANSITIONS */
+.activity-visual .ai-card-image {
+    transition: opacity 2s ease-in-out !important;
+    will-change: opacity;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-visual .ai-card-image {
+        transition: none !important;
+    }
+}
+
+/* AGENTGUARD FIVE-IMAGE SLOW CROSSFADE */
+.activity-visual .ai-card-image {
+    transition: opacity 1.5s ease-in-out !important;
+    will-change: opacity;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-visual .ai-card-image {
+        transition: none !important;
+    }
+}
+
+/* AGENTGUARD CINEMATIC 3D IMAGE TRANSITION */
+.activity-visual {
+    perspective: 1100px;
+    overflow: hidden;
+}
+
+.activity-visual .ai-card-image {
+    opacity: 1 !important;
+    transform-origin: center center;
+    transform: perspective(1100px) rotateY(0deg) scale(1);
+    filter: blur(0) saturate(1);
+    backface-visibility: hidden;
+    transition:
+        transform 700ms cubic-bezier(.22, .75, .25, 1),
+        filter 700ms ease-in-out !important;
+    will-change: transform, filter;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    opacity: 1 !important;
+    transform: perspective(1100px) rotateY(88deg) scale(.92);
+    filter: blur(8px) saturate(.65);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-visual .ai-card-image {
+        transition: none !important;
+    }
+}
+
+/* AGENTGUARD PREMIUM CINEMATIC MOTION */
+
+.activity-visual {
+    perspective: 1400px;
+    transform-style: preserve-3d;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.activity-visual .ai-card-image {
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    transform-origin: center center;
+
+    transition:
+        transform 700ms cubic-bezier(.16, 1, .3, 1),
+        filter 700ms ease,
+        opacity 700ms ease !important;
+
+    filter:
+        drop-shadow(0 0 10px rgba(74, 222, 208, .12))
+        saturate(1.08);
+
+    will-change: transform, filter;
+}
+
+.activity-visual .ai-card-image.is-changing {
+    transform:
+        perspective(1400px)
+        rotateY(90deg)
+        rotateX(4deg)
+        scale(.86) !important;
+
+    filter:
+        blur(12px)
+        brightness(1.5)
+        drop-shadow(0 0 25px rgba(74, 222, 208, .65)) !important;
+}
+
+/* Subtle premium card interaction */
+.activity-card {
+    transition:
+        transform 350ms ease,
+        box-shadow 350ms ease,
+        border-color 350ms ease;
+}
+
+.activity-card:hover {
+    transform: translateY(-5px);
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, .28),
+        0 0 22px rgba(74, 222, 208, .09);
+}
+
+/* Keep animations accessible */
+@media (prefers-reduced-motion: reduce) {
+    .activity-card,
+    .activity-visual .ai-card-image {
+        transition: none !important;
+        transform: none !important;
+        filter: none !important;
+    }
+}
+
+/* ==========================================
+   AGENTGUARD AI - FUTURISTIC COMMAND CENTER
+   ========================================== */
+
+.activity-card {
+    position: relative;
+    isolation: isolate;
+    border-color: rgba(72, 220, 205, .28) !important;
+    transition:
+        border-color .4s ease,
+        box-shadow .4s ease,
+        filter .4s ease !important;
+}
+
+/* Animated energy surrounding each card */
+.activity-card::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+        125deg,
+        #20e3d2,
+        #7257ff,
+        #00aaff,
+        #20e3d2
+    );
+    background-size: 300% 300%;
+    opacity: .35;
+    filter: blur(13px);
+    animation: ag-energy-flow 7s ease infinite,
+               ag-energy-pulse 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.activity-card:hover {
+    border-color: rgba(60, 255, 230, .85) !important;
+    box-shadow:
+        0 0 12px rgba(32, 227, 210, .35),
+        0 0 35px rgba(32, 227, 210, .22),
+        0 15px 45px rgba(0, 0, 0, .35) !important;
+    filter: brightness(1.08);
+}
+
+.activity-card:hover::before {
+    opacity: .85;
+    filter: blur(19px);
+}
+
+/* Holographic image chamber */
+.activity-visual {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: inherit;
+}
+
+/* Moving holographic light */
+.activity-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(
+        115deg,
+        transparent 15%,
+        rgba(255,255,255,0) 35%,
+        rgba(70,255,235,.13) 48%,
+        rgba(130,100,255,.16) 51%,
+        rgba(255,255,255,0) 65%,
+        transparent 85%
+    );
+    transform: translateX(-130%);
+    animation: ag-hologram-sweep 8s ease-in-out infinite;
+    mix-blend-mode: screen;
+}
+
+/* Neon image lighting */
+.activity-visual .ai-card-image {
+    filter:
+        saturate(1.25)
+        contrast(1.08)
+        drop-shadow(0 0 8px rgba(40, 240, 220, .25))
+        drop-shadow(0 0 20px rgba(100, 80, 255, .12)) !important;
+    transition:
+        transform 700ms cubic-bezier(.16, 1, .3, 1),
+        filter 700ms ease !important;
+}
+
+.activity-visual:hover .ai-card-image:not(.is-changing) {
+    transform: scale(1.055) rotateY(-3deg) !important;
+    filter:
+        saturate(1.5)
+        brightness(1.12)
+        drop-shadow(0 0 15px rgba(40, 240, 220, .55))
+        drop-shadow(0 0 30px rgba(100, 80, 255, .3)) !important;
+}
+
+/* Cinematic 3D image change */
+.activity-visual .ai-card-image.is-changing {
+    transform:
+        perspective(1400px)
+        rotateY(88deg)
+        rotateX(5deg)
+        scale(.82) !important;
+    filter:
+        blur(10px)
+        brightness(1.6)
+        saturate(1.5)
+        drop-shadow(0 0 30px rgba(40, 240, 220, .7)) !important;
+}
+
+/* Animated energy */
+@keyframes ag-energy-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes ag-energy-pulse {
+    0%, 100% { opacity: .22; }
+    50% { opacity: .55; }
+}
+
+/* Holographic sweep */
+@keyframes ag-hologram-sweep {
+    0%, 15% { transform: translateX(-130%); }
+    55%, 100% { transform: translateX(130%); }
+}
+
+/* Accessible motion settings */
+@media (prefers-reduced-motion: reduce) {
+    .activity-card::before,
+    .activity-visual::after {
+        animation: none !important;
+    }
+
+    .activity-card,
+    .activity-visual .ai-card-image {
+        transition: none !important;
+    }
+}
