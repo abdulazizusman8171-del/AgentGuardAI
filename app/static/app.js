@@ -1,4 +1,4 @@
-﻿const form = document.getElementById("transaction-form");
+const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -1036,6 +1036,42 @@ setInterval(() => {
     const statusDot = document.getElementById("access-key-status-dot");
     const tableBody = document.getElementById("access-key-table-body");
 
+    tableBody.addEventListener("click", async (event) => {
+        const copyButton = event.target.closest(".copy-public-key-button");
+
+        if (!copyButton || !tableBody.contains(copyButton)) return;
+
+        const publicKey = copyButton.dataset.publicKey;
+        if (!publicKey) return;
+
+        const originalText = copyButton.textContent;
+        let copied = false;
+
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(publicKey);
+                copied = true;
+            } else {
+                const temporaryInput = document.createElement("textarea");
+                temporaryInput.value = publicKey;
+                temporaryInput.style.position = "fixed";
+                temporaryInput.style.opacity = "0";
+                document.body.appendChild(temporaryInput);
+                temporaryInput.select();
+                copied = document.execCommand("copy");
+                temporaryInput.remove();
+            }
+        } catch (error) {
+            console.warn("Public key copy failed:", error);
+        }
+
+        copyButton.textContent = copied ? "Copied" : "Copy failed";
+
+        setTimeout(() => {
+            copyButton.textContent = originalText;
+        }, 1600);
+    });
+
     let scanRunning = false;
 
     function setText(id, value) {
@@ -1086,11 +1122,27 @@ setInterval(() => {
 
         if (!visibleKeys.length) {
             tableBody.innerHTML =
-                '<tr><td colspan="6">No access keys found for this account.</td></tr>';
+                '<tr><td colspan="7">No access keys found for this account.</td></tr>';
             return;
         }
 
         tableBody.innerHTML = visibleKeys.map(key => {
+                        const publicKey = String(key.public_key || "");
+            const publicKeyDisplay = publicKey
+                ? `${escapeHTML(publicKey.slice(0, 12))}…${escapeHTML(publicKey.slice(-8))}`
+                : "Unavailable";
+
+            const publicKeyCell = publicKey
+                ? `
+                    <div class="public-key-value" title="${escapeHTML(publicKey)}">${publicKeyDisplay}</div>
+                    <button
+                        type="button"
+                        class="copy-public-key-button"
+                        data-public-key="${escapeHTML(publicKey)}"
+                        aria-label="Copy full public key"
+                    >Copy</button>
+                `
+                : "Unavailable";
             const permission = escapeHTML(key.permission || "Unknown");
             const receiver = escapeHTML(key.receiver_id || "All account permissions");
             const methods = Array.isArray(key.method_names) && key.method_names.length
@@ -1113,6 +1165,10 @@ setInterval(() => {
                 ? Number(assessment.risk_score)
                 : "--";
 
+            const findings = Array.isArray(assessment.findings)
+                ? assessment.findings
+                : [];
+
             const reasons = Array.isArray(assessment.reasons)
                 ? assessment.reasons
                 : [];
@@ -1121,14 +1177,66 @@ setInterval(() => {
                 ? assessment.recommendations
                 : [];
 
-            const explanation = [
+            const findingHTML = findings.map(finding => {
+                const severity = ["HIGH", "MEDIUM", "LOW", "INFO"].includes(
+                    finding.severity
+                ) ? finding.severity : "INFO";
+
+                const evidence = finding.evidence &&
+                    typeof finding.evidence === "object"
+                    ? Object.entries(finding.evidence).map(([label, value]) => {
+                        const displayValue = Array.isArray(value)
+                            ? value.join(", ")
+                            : value !== null && typeof value === "object"
+                                ? JSON.stringify(value)
+                                : String(value ?? "Not available");
+
+                        return `<div><strong>${escapeHTML(label)}:</strong> ${escapeHTML(displayValue)}</div>`;
+                    }).join("")
+                    : "";
+
+                return `
+                    <div class="access-key-finding">
+                        <div class="access-key-finding-heading">
+                            <strong>${escapeHTML(finding.title || finding.code || "Security finding")}</strong>
+                            <span class="finding-severity finding-${severity.toLowerCase()}">${severity}</span>
+                        </div>
+                        <p>${escapeHTML(finding.description || "No explanation provided.")}</p>
+                        ${evidence ? `
+                            <div class="access-key-evidence">
+                                <strong>Evidence</strong>
+                                ${evidence}
+                            </div>
+                        ` : ""}
+                        ${finding.recommendation ? `
+                            <p class="access-key-recommendation">
+                                <strong>Recommendation:</strong>
+                                ${escapeHTML(finding.recommendation)}
+                            </p>
+                        ` : ""}
+                    </div>
+                `;
+            }).join("");
+
+            const fallbackHTML = [
                 ...reasons,
                 ...recommendations.map(item => `Recommendation: ${item}`)
-            ].map(item => escapeHTML(item)).join("<br>");
+            ].map(item => `<div>${escapeHTML(item)}</div>`).join("");
+
+            const explanation = findings.length
+                ? findingHTML
+                : fallbackHTML;
+
+            const assessmentNote = `
+                <div class="access-key-assessment-note">
+                    Heuristic assessment: these indicators do not prove compromise.
+                </div>
+            `;
 
             return `
                 <tr>
-                    <td>${permission}</td>
+                <td class="access-key-public-key">${publicKeyCell}</td>
+                <td>${permission}</td>
                     <td>${receiver}</td>
                     <td>${methods}</td>
                     <td>${allowance}</td>
@@ -1137,7 +1245,7 @@ setInterval(() => {
                             ${riskLevel} (${riskScore})
                         </span>
                     </td>
-                    <td>${explanation || "No assessment available."}</td>
+                    <td>${explanation || "No assessment available."}${assessmentNote}</td>
                 </tr>
             `;
         }).join("");

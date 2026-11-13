@@ -2924,3 +2924,101 @@ html, body {
         grid-column: auto;
     }
 }
+
+/* ACCESS-KEY STRUCTURED SECURITY FINDINGS */
+.access-key-finding {
+    padding: 10px;
+    margin-bottom: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.28);
+}
+
+.access-key-finding-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+}
+
+.finding-severity {
+    display: inline-block;
+    padding: 3px 7px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.finding-high {
+    color: #ffb4b4;
+    background: rgba(220, 38, 38, 0.18);
+}
+
+.finding-medium {
+    color: #ffd58a;
+    background: rgba(217, 119, 6, 0.18);
+}
+
+.finding-low {
+    color: #91e5b1;
+    background: rgba(22, 163, 74, 0.18);
+}
+
+.finding-info {
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.16);
+}
+
+.access-key-evidence {
+    margin-top: 8px;
+    padding: 8px;
+    border-left: 2px solid var(--accent, #3b82f6);
+    background: rgba(15, 23, 42, 0.25);
+    overflow-wrap: anywhere;
+}
+
+.access-key-recommendation {
+    margin-top: 8px;
+}
+
+.access-key-assessment-note {
+    margin-top: 8px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    line-height: 1.5;
+}
+
+/* Public-key identification and copy control */
+.access-key-public-key {
+    min-width: 150px;
+}
+
+.public-key-value {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 10px;
+    margin-bottom: 7px;
+}
+
+.copy-public-key-button {
+    padding: 5px 9px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.copy-public-key-button:hover,
+.copy-public-key-button:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
