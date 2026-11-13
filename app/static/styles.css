@@ -2834,3 +2834,30 @@ html, body {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* AUTHORIZATION AND EXECUTION EVIDENCE CORRELATION */
+
+.near-investigator-correlation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.near-investigator-correlation span {
+    padding: 6px 9px;
+    color: var(--text);
+    background: rgba(69, 220, 170, 0.08);
+    border: 1px solid rgba(69, 220, 170, 0.2);
+    border-radius: 7px;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.near-investigator-evidence-reference {
+    display: block;
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}

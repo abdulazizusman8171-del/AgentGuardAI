@@ -1,4 +1,6 @@
-﻿from decimal import Decimal, InvalidOperation
+﻿import hashlib
+import json
+from decimal import Decimal, InvalidOperation
 
 
 def _execution_status(value):
@@ -58,19 +60,170 @@ def _full_access_permission(permission):
     return False
 
 
-def _analyze_actions(actions, receiver_id, source, findings, interactions):
-    """Extract observable behaviour from transaction or receipt actions."""
+
+def _analyze_actions(
+    actions,
+    receiver_id,
+    source,
+    findings,
+    interactions,
+    delegations,
+    seen_delegates,
+    stage
+):
+    """Inspect ordinary actions and NEAR Delegate Actions."""
 
     for index, raw_action in enumerate(actions):
 
         name, details = _format_action(raw_action)
-
         evidence_location = f"{source}[{index}]"
+
+        if name == "Delegate":
+
+            delegate = details.get("delegate_action")
+            signature = details.get("signature")
+
+            if not isinstance(delegate, dict):
+                raise ValueError("Invalid delegate action")
+
+            sender_id = delegate.get("sender_id")
+            delegated_receiver = delegate.get("receiver_id")
+            public_key = delegate.get("public_key")
+            nonce = delegate.get("nonce")
+            max_height = delegate.get("max_block_height")
+            nested_actions = delegate.get("actions")
+
+            if not all(
+                isinstance(value, str) and value
+                for value in (
+                    sender_id,
+                    delegated_receiver,
+                    public_key,
+                    signature
+                )
+            ):
+                raise ValueError("Invalid delegated identity or signature")
+
+            if sender_id != receiver_id:
+                raise ValueError(
+                    "Delegate sender does not match transaction receiver"
+                )
+
+            if type(nonce) is not int or nonce < 0:
+                raise ValueError("Invalid delegate nonce")
+
+            if type(max_height) is not int or max_height <= 0:
+                raise ValueError("Invalid delegate block height")
+
+            if not isinstance(nested_actions, list) or not nested_actions:
+                raise ValueError("Invalid delegated action list")
+
+            action_types = []
+
+            for nested in nested_actions:
+                nested_name, _ = _format_action(nested)
+
+                if nested_name == "Delegate":
+                    raise ValueError("Nested Delegate Actions are not supported")
+
+                action_types.append(nested_name)
+
+            fingerprint_data = json.dumps(
+                {
+                    "delegate_action": delegate,
+                    "signature": signature
+                },
+                sort_keys=True,
+                separators=(",", ":")
+            )
+
+            fingerprint = hashlib.sha256(
+                fingerprint_data.encode("utf-8")
+            ).hexdigest()
+
+            if fingerprint in seen_delegates:
+
+                record = seen_delegates[fingerprint]
+
+                if evidence_location not in record["source_locations"]:
+                    record["source_locations"].append(evidence_location)
+
+            else:
+
+                record = {
+                    "sender_id": sender_id,
+                    "receiver_id": delegated_receiver,
+                    "public_key": public_key,
+                    "nonce": nonce,
+                    "max_block_height": max_height,
+                    "signature_present": True,
+                    "signature_scheme": signature.split(":", 1)[0],
+                    "authorized_action_types": action_types,
+                    "source_locations": [evidence_location]
+                }
+
+                seen_delegates[fingerprint] = record
+                delegations.append(record)
+
+                findings.append({
+                    "id": "delegated_authorization_observed",
+                    "category": "DELEGATED_AUTHORIZATION",
+                    "severity": "INFO",
+                    "title": "NEAR delegated authorization observed",
+                    "description": (
+                        "A signed Delegate Action authorizes another account "
+                        "to submit the listed operations. Its contents are "
+                        "analyzed separately. Delegation alone does not "
+                        "indicate malicious activity."
+                    ),
+                    "evidence": {
+                        "sender_id": sender_id,
+                        "receiver_id": delegated_receiver,
+                        "public_key": public_key,
+                        "nonce": nonce,
+                        "max_block_height": max_height,
+                        "authorized_actions": action_types
+                    }
+                })
+
+                # Inspect the operations authorized by the delegate.
+                _analyze_actions(
+                    nested_actions,
+                    delegated_receiver,
+                    evidence_location + ".delegate_action.actions",
+                    findings,
+                    interactions,
+                    delegations,
+                    seen_delegates,
+                    "DELEGATED_AUTHORIZATION"
+                )
+
+            interactions.append({
+                "action": "Delegate",
+                "sender_id": sender_id,
+                "receiver_id": delegated_receiver,
+                "public_key": public_key,
+                "evidence_source": evidence_location,
+                "stage": stage,
+                "_delegate_fingerprint": fingerprint
+            })
+
+            continue
+
+        correlation_payload = json.dumps(
+            {"receiver_id": receiver_id, "action": raw_action},
+            sort_keys=True,
+            separators=(",", ":")
+        )
 
         interaction = {
             "action": name,
             "receiver_id": receiver_id,
-            "evidence_source": evidence_location
+            "evidence_source": evidence_location,
+            "stage": stage,
+            "_correlation_key": hashlib.sha256(
+                correlation_payload.encode("utf-8")
+            ).hexdigest()
         }
 
         if name == "FunctionCall":
@@ -102,8 +255,8 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                     "title": "Contract call includes an attached deposit",
                     "description": (
                         "The function call includes a positive attached "
-                        "deposit. This records value movement, not evidence "
-                        "of malicious behaviour."
+                        "deposit. This records value movement, not proof "
+                        "of malicious activity."
                     ),
                     "evidence": {
                         "source": evidence_location,
@@ -129,9 +282,8 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                     "severity": "HIGH",
                     "title": "A full-access key was added",
                     "description": (
-                        "The transaction adds a key with powerful "
-                        "account-level permissions. Verify that the key "
-                        "belongs to an authorized owner."
+                        "The action adds a key with powerful account-level "
+                        "permissions. Verify its ownership and necessity."
                     ),
                     "evidence": {
                         "source": evidence_location,
@@ -146,10 +298,7 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                     "category": "ACCOUNT_AUTHORITY_CHANGE",
                     "severity": "INFO",
                     "title": "An access key was added",
-                    "description": (
-                        "The transaction adds an access key. Review its "
-                        "permissions and intended purpose."
-                    ),
+                    "description": "The action adds an access key.",
                     "evidence": {
                         "source": evidence_location,
                         "public_key": details.get("public_key"),
@@ -164,9 +313,7 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                 "category": "ACCOUNT_AUTHORITY_CHANGE",
                 "severity": "INFO",
                 "title": "An access key was deleted",
-                "description": (
-                    "The transaction removes an access key from an account."
-                ),
+                "description": "The transaction removes an access key.",
                 "evidence": {
                     "source": evidence_location,
                     "public_key": details.get("public_key")
@@ -182,8 +329,7 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                 "title": "A smart contract deployment was observed",
                 "description": (
                     "Contract code was submitted for deployment. "
-                    "This is a high-impact operation, but does not by "
-                    "itself establish that the code is malicious."
+                    "This does not establish that the code is malicious."
                 ),
                 "evidence": {
                     "source": evidence_location,
@@ -200,7 +346,7 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
                 "title": "An account deletion action was observed",
                 "description": (
                     "The transaction contains an account deletion action. "
-                    "Verify that this irreversible operation was intended."
+                    "Verify that this operation was intended."
                 ),
                 "evidence": {
                     "source": evidence_location,
@@ -214,15 +360,174 @@ def _analyze_actions(actions, receiver_id, source, findings, interactions):
             deposit = details.get("deposit")
 
             if deposit is not None:
-                if (
-                    not isinstance(deposit, str)
-                    or not deposit.isdigit()
-                ):
+                if not isinstance(deposit, str) or not deposit.isdigit():
                     raise ValueError("Invalid transfer deposit")
 
                 interaction["transfer_yocto"] = deposit
 
         interactions.append(interaction)
+
+
+def _correlate_interactions(interactions):
+    """
+    Match delegated authorized actions with their observed receipt actions.
+
+    Identical actions are paired one-to-one so repeated legitimate calls
+    are not accidentally collapsed into a single operation.
+    """
+
+    groups = {}
+    output = []
+
+    for position, interaction in enumerate(interactions):
+
+        if "_delegate_fingerprint" in interaction:
+            key = ("delegate", interaction["_delegate_fingerprint"])
+            kind = "delegate"
+
+        elif (
+            interaction.get("_correlation_key")
+            and interaction.get("stage") in (
+                "DELEGATED_AUTHORIZATION",
+                "RECEIPT_EXECUTION"
+            )
+        ):
+            key = ("action", interaction["_correlation_key"])
+            kind = "action"
+
+        else:
+            clean = {
+                key: value
+                for key, value in interaction.items()
+                if not key.startswith("_")
+            }
+            output.append((position, clean))
+            continue
+
+        group = groups.setdefault(
+            key,
+            {
+                "kind": kind,
+                "first": position,
+                "items": []
+            }
+        )
+
+        group["items"].append((position, interaction))
+
+    for group in groups.values():
+
+        items = group["items"]
+
+        if group["kind"] == "delegate":
+
+            base = dict(items[0][1])
+
+            authorization_sources = [
+                item["evidence_source"]
+                for _, item in items
+                if item.get("stage") == "TRANSACTION"
+            ]
+
+            execution_sources = [
+                item["evidence_source"]
+                for _, item in items
+                if item.get("stage") == "RECEIPT_EXECUTION"
+            ]
+
+            base["authorization_observed"] = bool(authorization_sources)
+            base["execution_observed"] = bool(execution_sources)
+
+            base["authorization_evidence"] = (
+                authorization_sources[0]
+                if authorization_sources else None
+            )
+
+            base["execution_evidence"] = (
+                execution_sources[0]
+                if execution_sources else None
+            )
+
+            base["evidence_source"] = (
+                base["authorization_evidence"]
+                or base["execution_evidence"]
+            )
+
+            if authorization_sources and execution_sources:
+                base["stage"] = "AUTHORIZED_AND_EXECUTED"
+            elif authorization_sources:
+                base["stage"] = "AUTHORIZED_ONLY"
+            else:
+                base["stage"] = "RECEIPT_EXECUTION_ONLY"
+
+            base.pop("_delegate_fingerprint", None)
+
+            output.append((group["first"], base))
+            continue
+
+        authorization_items = [
+            (position, item)
+            for position, item in items
+            if item.get("stage") == "DELEGATED_AUTHORIZATION"
+        ]
+
+        execution_items = [
+            (position, item)
+            for position, item in items
+            if item.get("stage") == "RECEIPT_EXECUTION"
+        ]
+
+        for index, (position, authorized) in enumerate(authorization_items):
+
+            executed = (
+                execution_items[index][1]
+                if index < len(execution_items)
+                else None
+            )
+
+            merged = {
+                key: value
+                for key, value in authorized.items()
+                if not key.startswith("_")
+            }
+
+            merged["authorization_observed"] = True
+            merged["execution_observed"] = executed is not None
+
+            merged["authorization_evidence"] = authorized["evidence_source"]
+            merged["execution_evidence"] = (
+                executed["evidence_source"]
+                if executed is not None else None
+            )
+
+            merged["stage"] = (
+                "AUTHORIZED_AND_EXECUTED"
+                if executed is not None
+                else "AUTHORIZED_ONLY"
+            )
+
+            output.append((position, merged))
+
+        for position, executed in execution_items[len(authorization_items):]:
+
+            merged = {
+                key: value
+                for key, value in executed.items()
+                if not key.startswith("_")
+            }
+
+            merged["authorization_observed"] = False
+            merged["execution_observed"] = True
+            merged["authorization_evidence"] = None
+            merged["execution_evidence"] = executed["evidence_source"]
+            merged["stage"] = "RECEIPT_EXECUTION_ONLY"
+
+            output.append((position, merged))
+
+    return [
+        interaction
+        for _, interaction in sorted(output, key=lambda item: item[0])
+    ]
 
 
 def analyze_near_transaction(transaction_data):
@@ -278,6 +583,8 @@ def analyze_near_transaction(transaction_data):
 
     findings = []
     interactions = []
+    delegations = []
+    seen_delegates = {}
 
     transaction_status = _execution_status(transaction_data["status"])
 
@@ -286,7 +593,10 @@ def analyze_near_transaction(transaction_data):
         transaction_data["receiver_id"],
         "transaction.actions",
         findings,
-        interactions
+        interactions,
+        delegations,
+        seen_delegates,
+        "TRANSACTION"
     )
 
     receipt_counts = {
@@ -339,7 +649,10 @@ def analyze_near_transaction(transaction_data):
                 receiver,
                 source,
                 findings,
-                interactions
+                interactions,
+                delegations,
+                seen_delegates,
+                "RECEIPT_EXECUTION"
             )
 
         if status == "FAILED":
@@ -392,6 +705,12 @@ def analyze_near_transaction(transaction_data):
                 }
             })
 
+    interactions = _correlate_interactions(interactions)
+
+    for delegation in delegations:
+        involved_accounts.add(delegation["sender_id"])
+        involved_accounts.add(delegation["receiver_id"])
+
     incomplete_count = (
         receipt_counts["UNKNOWN"] + receipt_counts["UNRESOLVED"]
     )
@@ -440,5 +759,7 @@ def analyze_near_transaction(transaction_data):
         },
         "involved_accounts": sorted(involved_accounts),
         "contract_interactions": interactions,
+        "delegated_action_count": len(delegations),
+        "delegated_actions": delegations,
         "findings": findings
     }

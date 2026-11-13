@@ -1563,6 +1563,7 @@ setInterval(() => {
         });
     }
 
+
     function renderInteractions(interactions) {
         const container = document.getElementById("near-investigator-interactions");
         container.replaceChildren();
@@ -1574,16 +1575,40 @@ setInterval(() => {
             return;
         }
 
+        const stageLabels = {
+            AUTHORIZED_AND_EXECUTED: "Authorized + executed",
+            AUTHORIZED_ONLY: "Authorization observed",
+            RECEIPT_EXECUTION_ONLY: "Receipt execution observed"
+        };
+
         interactions.forEach((interaction) => {
-            const card = makeElement("article", null, "near-investigator-interaction");
+            const card = makeElement(
+                "article",
+                null,
+                "near-investigator-interaction"
+            );
 
             card.appendChild(
                 makeElement("strong", interaction.action || "Action")
             );
 
-            card.appendChild(
-                makeElement("span", "Receiver: " + (interaction.receiver_id || "Unknown"))
-            );
+            if (interaction.sender_id) {
+                card.appendChild(
+                    makeElement("span", "Delegated sender: " + interaction.sender_id)
+                );
+            }
+
+            if (interaction.receiver_id) {
+                card.appendChild(
+                    makeElement("span", "Receiver: " + interaction.receiver_id)
+                );
+            }
+
+            if (interaction.public_key) {
+                card.appendChild(
+                    makeElement("span", "Authorizing public key: " + interaction.public_key)
+                );
+            }
 
             if (interaction.method_name) {
                 card.appendChild(
@@ -1595,7 +1620,9 @@ setInterval(() => {
                 card.appendChild(
                     makeElement(
                         "span",
-                        "Attached deposit: " + interaction.attached_deposit_yocto + " yoctoNEAR"
+                        "Attached deposit: " +
+                        interaction.attached_deposit_yocto +
+                        " yoctoNEAR"
                     )
                 );
             }
@@ -1609,13 +1636,75 @@ setInterval(() => {
                 );
             }
 
-            card.appendChild(
-                makeElement("small", "Evidence: " + (interaction.evidence_source || "Transaction data"))
-            );
+            const hasCorrelation =
+                typeof interaction.authorization_observed === "boolean" ||
+                typeof interaction.execution_observed === "boolean";
+
+            if (hasCorrelation) {
+                const correlation = makeElement(
+                    "div",
+                    null,
+                    "near-investigator-correlation"
+                );
+
+                const authorizationState =
+                    interaction.authorization_observed === true
+                        ? "Observed"
+                        : "Not observed";
+
+                const executionState =
+                    interaction.execution_observed === true
+                        ? "Observed"
+                        : "Not observed";
+
+                correlation.append(
+                    makeElement("span", "Authorization: " + authorizationState),
+                    makeElement("span", "Execution: " + executionState)
+                );
+
+                card.appendChild(correlation);
+
+                if (stageLabels[interaction.stage]) {
+                    card.appendChild(
+                        makeElement("small", stageLabels[interaction.stage])
+                    );
+                }
+
+                if (interaction.authorization_evidence) {
+                    card.appendChild(
+                        makeElement(
+                            "small",
+                            "Authorization evidence: " +
+                            interaction.authorization_evidence,
+                            "near-investigator-evidence-reference"
+                        )
+                    );
+                }
+
+                if (interaction.execution_evidence) {
+                    card.appendChild(
+                        makeElement(
+                            "small",
+                            "Execution evidence: " +
+                            interaction.execution_evidence,
+                            "near-investigator-evidence-reference"
+                        )
+                    );
+                }
+
+            } else if (interaction.evidence_source) {
+                card.appendChild(
+                    makeElement(
+                        "small",
+                        "Evidence: " + interaction.evidence_source
+                    )
+                );
+            }
 
             container.appendChild(card);
         });
     }
+
 
     function renderAccounts(accounts) {
         const container = document.getElementById("near-investigator-accounts");
