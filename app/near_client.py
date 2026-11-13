@@ -286,6 +286,9 @@ class NearRPCClient:
                     method_names = []
                     allowance = None
 
+                    gas_key_balance_yocto = None
+                    gas_key_num_nonces = None
+
                     if permission == "FullAccess":
                         permission_type = "FullAccess"
 
@@ -300,6 +303,9 @@ class NearRPCClient:
                             raise ValueError("Unknown access-key permission")
 
                         details = permission[permission_type]
+
+                        if not isinstance(details, dict):
+                            raise ValueError("Invalid permission details")
 
                         if permission_type in (
                             "FunctionCall",
@@ -320,17 +326,61 @@ class NearRPCClient:
                             ):
                                 raise ValueError("Invalid method name")
 
+                            if (
+                                permission_type == "GasKeyFunctionCall"
+                                and allowance is not None
+                            ):
+                                raise ValueError(
+                                    "GasKeyFunctionCall allowance must be None"
+                                )
+
+                        if permission_type in (
+                            "GasKeyFullAccess",
+                            "GasKeyFunctionCall"
+                        ):
+                            raw_balance = details.get("balance")
+
+                            if (
+                                not isinstance(raw_balance, str)
+                                or not re.fullmatch(
+                                    r"(0|[1-9][0-9]*)",
+                                    raw_balance
+                                )
+                            ):
+                                raise ValueError("Invalid Gas Key balance")
+
+                            gas_key_balance_yocto = int(raw_balance)
+
+                            gas_key_num_nonces = details.get("num_nonces")
+
+                            if (
+                                type(gas_key_num_nonces) is not int
+                                or not 1 <= gas_key_num_nonces <= 1024
+                            ):
+                                raise ValueError("Invalid Gas Key nonce count")
+
                     else:
                         raise ValueError("Invalid access-key permission")
 
-                    keys.append({
+                    key_record = {
                         "public_key": public_key,
                         "nonce": nonce,
                         "permission": permission_type,
                         "receiver_id": receiver_id,
                         "method_names": method_names,
                         "allowance": allowance
-                    })
+                    }
+
+                    if gas_key_balance_yocto is not None:
+                        key_record.update({
+                            "balance_yocto": str(gas_key_balance_yocto),
+                            "balance_near": str(
+                                Decimal(gas_key_balance_yocto) / Decimal(10**24)
+                            ),
+                            "num_nonces": gas_key_num_nonces
+                        })
+
+                    keys.append(key_record)
 
                 cursor = result.get("last_key")
 
