@@ -1,4 +1,4 @@
-const form = document.getElementById("transaction-form");
+﻿const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -1270,10 +1270,19 @@ setInterval(() => {
         if (state) statusDot.classList.add(state);
     }
 
+    function createElement(tag, text, className) {
+        const element = document.createElement(tag);
+
+        if (text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
+
+        if (className) element.className = className;
+        return element;
+    }
+
     function createCell(value) {
-        const cell = document.createElement("td");
-        cell.textContent = String(value ?? "N/A");
-        return cell;
+        return createElement("td", value ?? "N/A");
     }
 
     async function requestData(url) {
@@ -1308,11 +1317,113 @@ setInterval(() => {
         throw lastError || new Error("Request failed.");
     }
 
-    function addAccountRow(account, accountData, keyData, error) {
-        const row = document.createElement("tr");
+    function assessAccount(keyData) {
+        const invalid = {
+            valid: false,
+            level: "UNASSESSED",
+            score: null,
+            findings: [],
+            recommendations: []
+        };
 
-        const complete = Boolean(accountData && keyData);
+        if (!keyData ||
+            keyData.data_status !== "finalized" ||
+            keyData.has_more !== false ||
+            !Array.isArray(keyData.keys) ||
+            !keyData.risk_summary) {
+            return invalid;
+        }
+
+        const keys = keyData.keys;
+        const total = Number(keyData.total_keys);
+        const assessed = Number(keyData.risk_summary.assessed_keys);
+
+        if (!Number.isInteger(total) ||
+            total !== keys.length ||
+            assessed !== keys.length) {
+            return invalid;
+        }
+
+        const levels = ["LOW", "MEDIUM", "HIGH"];
+
+        const validKeys = keys.every(key => {
+            const assessment = key && key.risk_assessment;
+
+            return assessment &&
+                levels.includes(assessment.risk_level) &&
+                Number.isFinite(Number(assessment.risk_score)) &&
+                Number(assessment.risk_score) >= 0 &&
+                Number(assessment.risk_score) <= 100;
+        });
+
+        if (!validKeys) return invalid;
+
+        const assessments = keys.map(key => key.risk_assessment);
+
+        const score = assessments.length
+            ? Math.max(...assessments.map(item => Number(item.risk_score)))
+            : 0;
+
+        let level = "LOW";
+
+        if (assessments.some(item => item.risk_level === "HIGH")) {
+            level = "HIGH";
+        } else if (assessments.some(item => item.risk_level === "MEDIUM")) {
+            level = "MEDIUM";
+        }
+
+        const unique = values => [...new Set(
+            values.filter(value => typeof value === "string" && value.trim())
+        )];
+
+        const findings = unique(
+            assessments.flatMap(item => item.reasons || [])
+        );
+
+        const recommendations = unique(
+            assessments.flatMap(item => item.recommendations || [])
+        );
+
+        if (!findings.length) {
+            findings.push(
+                "No access-key risk findings were returned for this finalized snapshot."
+            );
+        }
+
+        if (!recommendations.length) {
+            recommendations.push(
+                "Continue monitoring permissions and re-scan after account changes."
+            );
+        }
+
+        return {
+            valid: true,
+            level,
+            score,
+            findings,
+            recommendations
+        };
+    }
+
+    function addList(container, title, items) {
+        container.appendChild(createElement("h5", title));
+
+        const list = document.createElement("ul");
+
+        items.forEach(item => {
+            list.appendChild(createElement("li", item));
+        });
+
+        container.appendChild(list);
+    }
+
+    function addAccountRow(account, accountData, keyData, error) {
+        const assessment = assessAccount(keyData);
+
+        const complete = Boolean(accountData && assessment.valid);
         const partial = Boolean(accountData || keyData);
+
+        const row = document.createElement("tr");
 
         row.appendChild(createCell(account));
 
@@ -1321,15 +1432,30 @@ setInterval(() => {
         ));
 
         row.appendChild(createCell(
-            keyData ? keyData.total_keys.toLocaleString() : "Unavailable"
+            keyData && Array.isArray(keyData.keys)
+                ? keyData.keys.length.toLocaleString()
+                : "Unavailable"
         ));
 
         row.appendChild(createCell(
-            keyData ? keyData.full_access_keys.toLocaleString() : "Unavailable"
+            keyData ? Number(keyData.full_access_keys || 0).toLocaleString() : "Unavailable"
         ));
 
         row.appendChild(createCell(
-            keyData ? keyData.restricted_keys.toLocaleString() : "Unavailable"
+            keyData ? Number(keyData.restricted_keys || 0).toLocaleString() : "Unavailable"
+        ));
+
+        const riskCell = document.createElement("td");
+        const badge = createElement(
+            "span",
+            assessment.level,
+            "risk-badge risk-" + assessment.level.toLowerCase()
+        );
+        riskCell.appendChild(badge);
+        row.appendChild(riskCell);
+
+        row.appendChild(createCell(
+            assessment.valid ? assessment.score + " / 100" : "N/A"
         ));
 
         row.appendChild(createCell(
@@ -1338,9 +1464,79 @@ setInterval(() => {
 
         tableBody.appendChild(row);
 
+        // Expandable evidence and recommendations.
+        const detailRow = document.createElement("tr");
+        detailRow.className = "multi-account-details-row";
+        const detailCell = document.createElement("td");
+        detailCell.colSpan = 8;
+
+        const details = document.createElement("details");
+        details.className = "multi-account-details";
+
+        const summary = createElement(
+            "summary",
+            "View findings, recommendations and evidence"
+        );
+        details.appendChild(summary);
+
+        const content = createElement("div", null, "multi-account-details-content");
+
+        if (assessment.valid) {
+            addList(content, "Findings", assessment.findings);
+            addList(content, "Recommendations", assessment.recommendations);
+
+            const evidence = createElement("div", null, "multi-account-evidence");
+
+            evidence.appendChild(createElement(
+                "p",
+                `Assessed keys: ${keyData.risk_summary.assessed_keys}`
+            ));
+
+            evidence.appendChild(createElement(
+                "p",
+                `Pages scanned: ${keyData.pages_scanned ?? "N/A"}`
+            ));
+
+            evidence.appendChild(createElement(
+                "p",
+                `Finalized block height: ${keyData.block_height ?? "N/A"}`
+            ));
+
+            evidence.appendChild(createElement(
+                "p",
+                `Finalized block hash: ${keyData.block_hash ?? "N/A"}`
+            ));
+
+            evidence.appendChild(createElement(
+                "p",
+                `Data status: ${keyData.data_status}`
+            ));
+
+            content.appendChild(evidence);
+        } else {
+            content.appendChild(createElement(
+                "p",
+                "Risk assessment unavailable. Complete account information and validated finalized access-key data are required."
+            ));
+
+            if (error) {
+                content.appendChild(createElement("p", error));
+            }
+        }
+
+        details.appendChild(content);
+        detailCell.appendChild(details);
+        detailRow.appendChild(detailCell);
+        tableBody.appendChild(detailRow);
+
         if (error) {
             console.warn(`NEAR scan issue for ${account}:`, error);
         }
+
+        return {
+            complete,
+            assessment
+        };
     }
 
     button.addEventListener("click", async () => {
@@ -1357,6 +1553,7 @@ setInterval(() => {
         let restrictedTotal = 0;
         let successfulAccounts = 0;
         let reviewAccounts = 0;
+        let unassessedAccounts = 0;
 
         setText("multi-total-accounts", "0 / 7");
         setText("multi-full-access", "0");
@@ -1398,46 +1595,44 @@ setInterval(() => {
                     errors.push(`Access keys: ${error.message}`);
                 }
 
-                if (accountData && keyData) {
-                    successfulAccounts++;
-                }
-
-                if (keyData) {
-                    fullAccessTotal += Number(keyData.full_access_keys) || 0;
-                    restrictedTotal += Number(keyData.restricted_keys) || 0;
-
-                    if (Number(keyData.full_access_keys) > 0) {
-                        reviewAccounts++;
-                    }
-                }
-
-                addAccountRow(
+                const result = addAccountRow(
                     account,
                     accountData,
                     keyData,
                     errors.join("; ")
                 );
 
-                setText(
-                    "multi-total-accounts",
-                    `${successfulAccounts} / 7`
-                );
+                if (result.complete) successfulAccounts++;
 
+                if (!result.assessment.valid) {
+                    unassessedAccounts++;
+                } else {
+                    if (keyData) {
+                        fullAccessTotal += Number(keyData.full_access_keys) || 0;
+                        restrictedTotal += Number(keyData.restricted_keys) || 0;
+                    }
+
+                    if (["HIGH", "MEDIUM"].includes(result.assessment.level)) {
+                        reviewAccounts++;
+                    }
+                }
+
+                setText("multi-total-accounts", `${successfulAccounts} / 7`);
                 setText("multi-full-access", fullAccessTotal.toLocaleString());
                 setText("multi-restricted", restrictedTotal.toLocaleString());
                 setText("multi-review-count", reviewAccounts.toLocaleString());
 
-                warning.hidden = fullAccessTotal === 0;
+                warning.hidden = fullAccessTotal === 0 && reviewAccounts === 0;
             }
 
             const complete = successfulAccounts === accounts.length;
 
             progress.textContent =
-                `${successfulAccounts} of 7 accounts fully scanned.`;
+                `${successfulAccounts} of 7 accounts fully scanned · ${unassessedAccounts} unassessed.`;
 
             message.textContent = complete
-                ? "All seven accounts have been scanned successfully."
-                : `${successfulAccounts} of 7 accounts completed fully. Check partial or failed rows.`;
+                ? "All seven accounts have been scanned and their finalized access-key assessments validated."
+                : `${successfulAccounts} of 7 accounts completed fully. ${unassessedAccounts} account assessments are unavailable or incomplete.`;
 
             setStatus(
                 complete ? "Scan complete · Mainnet" : "Scan completed with errors",
@@ -1456,8 +1651,6 @@ setInterval(() => {
         }
     });
 })();
-
-// ==========================================
 // AGENTGUARD NEAR TRANSACTION INVESTIGATOR
 // ==========================================
 

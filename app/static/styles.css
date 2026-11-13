@@ -2861,3 +2861,66 @@ html, body {
     overflow-wrap: anywhere;
     line-height: 1.5;
 }
+
+/* MULTI-ACCOUNT RISK INTELLIGENCE DETAILS */
+
+.multi-account-table {
+    min-width: 1100px;
+}
+
+.multi-account-details-row > td {
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.35);
+}
+
+.multi-account-details {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 12px 15px;
+}
+
+.multi-account-details summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.multi-account-details-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.multi-account-details-content h5 {
+    margin: 0 0 8px;
+    color: #e2e8f0;
+}
+
+.multi-account-details-content ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #cbd5e1;
+}
+
+.multi-account-evidence {
+    grid-column: 1 / -1;
+    overflow-wrap: anywhere;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.risk-unassessed {
+    color: #cbd5e1;
+    background: rgba(100, 116, 139, 0.18);
+}
+
+@media (max-width: 700px) {
+    .multi-account-details-content {
+        grid-template-columns: 1fr;
+    }
+
+    .multi-account-evidence {
+        grid-column: auto;
+    }
+}
