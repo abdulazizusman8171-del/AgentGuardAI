@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import json
 from decimal import Decimal, InvalidOperation
 
@@ -430,14 +430,26 @@ def _correlate_interactions(interactions):
                 if item.get("stage") == "TRANSACTION"
             ]
 
-            execution_sources = [
-                item["evidence_source"]
+            execution_items = [
+                item
                 for _, item in items
                 if item.get("stage") == "RECEIPT_EXECUTION"
             ]
 
+            execution_sources = [
+                item["evidence_source"]
+                for item in execution_items
+            ]
+
+            outcomes = [
+                item.get("execution_outcome")
+                for item in execution_items
+            ]
+
+            unique_outcomes = list(dict.fromkeys(outcomes))
+
             base["authorization_observed"] = bool(authorization_sources)
-            base["execution_observed"] = bool(execution_sources)
+            base["execution_observed"] = bool(execution_items)
             base["authorization_evidence_sources"] = authorization_sources
             base["execution_evidence_sources"] = execution_sources
 
@@ -456,18 +468,46 @@ def _correlate_interactions(interactions):
                 or base["execution_evidence"]
             )
 
-            if authorization_sources and execution_sources:
-                base["stage"] = "AUTHORIZED_AND_EXECUTED"
+            base["execution_outcomes"] = unique_outcomes
+
+            if not execution_items:
+                base["execution_outcome"] = "NOT_OBSERVED"
+                base["execution_succeeded"] = None
+            elif len(unique_outcomes) == 1:
+                base["execution_outcome"] = unique_outcomes[0]
+                base["execution_succeeded"] = (
+                    True if unique_outcomes[0] == "SUCCEEDED"
+                    else False if unique_outcomes[0] == "FAILED"
+                    else None
+                )
+            else:
+                base["execution_outcome"] = "MIXED"
+                base["execution_succeeded"] = (
+                    False if "FAILED" in unique_outcomes
+                    else None
+                )
+
+            if authorization_sources and execution_items:
+                if base["execution_succeeded"] is True:
+                    base["stage"] = "AUTHORIZED_AND_EXECUTED"
+                elif base["execution_succeeded"] is False:
+                    base["stage"] = "AUTHORIZED_AND_EXECUTION_FAILED"
+                else:
+                    base["stage"] = "AUTHORIZED_AND_EXECUTION_UNCONFIRMED"
             elif authorization_sources:
                 base["stage"] = "AUTHORIZED_ONLY"
-            else:
-                base["stage"] = "RECEIPT_EXECUTION_ONLY"
+            elif execution_items:
+                if base["execution_succeeded"] is True:
+                    base["stage"] = "RECEIPT_EXECUTION_ONLY"
+                elif base["execution_succeeded"] is False:
+                    base["stage"] = "RECEIPT_EXECUTION_FAILED"
+                else:
+                    base["stage"] = "RECEIPT_EXECUTION_UNCONFIRMED"
 
             base.pop("_delegate_fingerprint", None)
 
             output.append((group["first"], base))
             continue
-
         authorization_items = [
             (position, item)
             for position, item in items
@@ -496,6 +536,14 @@ def _correlate_interactions(interactions):
 
             merged["authorization_observed"] = True
             merged["execution_observed"] = executed is not None
+            merged["execution_outcome"] = (
+                executed.get("execution_outcome")
+                if executed is not None else "NOT_OBSERVED"
+            )
+            merged["execution_succeeded"] = (
+                executed.get("execution_succeeded")
+                if executed is not None else None
+            )
             merged["authorization_evidence_sources"] = [
                 authorized["evidence_source"]
             ]
@@ -510,11 +558,14 @@ def _correlate_interactions(interactions):
                 if executed is not None else None
             )
 
-            merged["stage"] = (
-                "AUTHORIZED_AND_EXECUTED"
-                if executed is not None
-                else "AUTHORIZED_ONLY"
-            )
+            if executed is None:
+                merged["stage"] = "AUTHORIZED_ONLY"
+            elif executed.get("execution_outcome") == "SUCCEEDED":
+                merged["stage"] = "AUTHORIZED_AND_EXECUTED"
+            elif executed.get("execution_outcome") == "FAILED":
+                merged["stage"] = "AUTHORIZED_AND_EXECUTION_FAILED"
+            else:
+                merged["stage"] = "AUTHORIZED_AND_EXECUTION_UNCONFIRMED"
 
             output.append((position, merged))
 
@@ -528,13 +579,24 @@ def _correlate_interactions(interactions):
 
             merged["authorization_observed"] = False
             merged["execution_observed"] = True
+            merged["execution_outcome"] = executed.get(
+                "execution_outcome", "UNKNOWN"
+            )
+            merged["execution_succeeded"] = executed.get(
+                "execution_succeeded"
+            )
             merged["authorization_evidence_sources"] = []
             merged["execution_evidence_sources"] = [
                 executed["evidence_source"]
             ]
             merged["authorization_evidence"] = None
             merged["execution_evidence"] = executed["evidence_source"]
-            merged["stage"] = "RECEIPT_EXECUTION_ONLY"
+            if merged["execution_outcome"] == "SUCCEEDED":
+                merged["stage"] = "RECEIPT_EXECUTION_ONLY"
+            elif merged["execution_outcome"] == "FAILED":
+                merged["stage"] = "RECEIPT_EXECUTION_FAILED"
+            else:
+                merged["stage"] = "RECEIPT_EXECUTION_UNCONFIRMED"
 
             output.append((position, merged))
 
@@ -658,6 +720,8 @@ def analyze_near_transaction(transaction_data):
             raise ValueError("Invalid receipt actions")
 
         if receipt_actions:
+            interaction_start = len(interactions)
+
             _analyze_actions(
                 receipt_actions,
                 receiver,
@@ -668,6 +732,15 @@ def analyze_near_transaction(transaction_data):
                 seen_delegates,
                 "RECEIPT_EXECUTION"
             )
+
+            for interaction in interactions[interaction_start:]:
+                if interaction.get("stage") == "RECEIPT_EXECUTION":
+                    interaction["execution_outcome"] = status
+                    interaction["execution_succeeded"] = (
+                        True if status == "SUCCEEDED"
+                        else False if status == "FAILED"
+                        else None
+                    )
 
         if status == "FAILED":
             findings.append({
@@ -777,3 +850,4 @@ def analyze_near_transaction(transaction_data):
         "delegated_actions": delegations,
         "findings": findings
     }
+

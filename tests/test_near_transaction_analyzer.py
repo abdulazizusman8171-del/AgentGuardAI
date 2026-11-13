@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from app.near_transaction_analyzer import analyze_near_transaction
 
@@ -86,6 +86,41 @@ class TestNearTransactionAnalyzer(unittest.TestCase):
         self.assertTrue(interaction["execution_observed"])
         self.assertEqual(interaction["stage"], "AUTHORIZED_AND_EXECUTED")
 
+    def test_authorized_function_call_with_failed_receipt(self):
+        self.transaction["receipts"] = [{
+            "receipt_id": "failed-authorized-function-call",
+            "predecessor_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [{
+                "FunctionCall": {
+                    "method_name": "buy",
+                    "deposit": "1000000000000000000000000",
+                    "gas": 1000000000000
+                }
+            }],
+            "status": "FAILED",
+            "execution_status": {
+                "Failure": {"ActionError": {}}
+            },
+            "gas_burnt": 500,
+            "logs": ["Execution failed"]
+        }]
+
+        result = analyze_near_transaction(self.transaction)
+
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "FunctionCall"
+        )
+
+        self.assertTrue(interaction["authorization_observed"])
+        self.assertTrue(interaction["execution_observed"])
+        self.assertFalse(interaction["execution_succeeded"])
+        self.assertEqual(interaction["execution_outcome"], "FAILED")
+        self.assertEqual(
+            interaction["stage"],
+            "AUTHORIZED_AND_EXECUTION_FAILED"
+        )
     def test_receipt_only_function_call_evidence_sources(self):
         self.transaction["actions"] = []
         self.transaction["receipts"] = [{
@@ -259,5 +294,92 @@ class TestNearTransactionAnalyzer(unittest.TestCase):
             analyze_near_transaction(self.transaction)
 
 
+
+    def test_failed_receipt_action_is_not_reported_as_successful(self):
+        self.transaction["actions"] = []
+        self.transaction["receipts"] = [{
+            "receipt_id": "failed-function-call",
+            "predecessor_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [{
+                "FunctionCall": {
+                    "method_name": "buy",
+                    "deposit": "1000000000000000000000000",
+                    "gas": 1000000000000
+                }
+            }],
+            "status": "FAILED",
+            "execution_status": {
+                "Failure": {"ActionError": {}}
+            },
+            "gas_burnt": 500,
+            "logs": ["Execution failed"]
+        }]
+
+        result = analyze_near_transaction(self.transaction)
+
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "FunctionCall"
+        )
+
+        self.assertTrue(interaction["execution_observed"])
+        self.assertFalse(interaction["execution_succeeded"])
+        self.assertEqual(interaction["execution_outcome"], "FAILED")
+        self.assertEqual(interaction["stage"], "RECEIPT_EXECUTION_FAILED")
+
+
+    def test_failed_delegate_receipt_is_not_reported_as_successful(self):
+        delegate_action = {
+            "Delegate": {
+                "delegate_action": {
+                    "sender_id": "market.near",
+                    "receiver_id": "market.near",
+                    "public_key": "ed25519:ExamplePublicKey",
+                    "nonce": 1,
+                    "max_block_height": 100,
+                    "actions": [{
+                        "FunctionCall": {
+                            "method_name": "buy",
+                            "deposit": "0",
+                            "gas": 1000000000000
+                        }
+                    }]
+                },
+                "signature": "ed25519:ExampleSignature"
+            }
+        }
+
+        self.transaction["actions"] = [delegate_action]
+        self.transaction["receipts"] = [{
+            "receipt_id": "failed-delegate-receipt",
+            "predecessor_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [delegate_action],
+            "status": "FAILED",
+            "execution_status": {"Failure": {}},
+            "gas_burnt": 500,
+            "logs": []
+        }]
+
+        result = analyze_near_transaction(self.transaction)
+
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "Delegate"
+        )
+
+        self.assertTrue(interaction["authorization_observed"])
+        self.assertTrue(interaction["execution_observed"])
+        self.assertFalse(interaction["execution_succeeded"])
+        self.assertEqual(interaction["execution_outcome"], "FAILED")
+        self.assertEqual(
+            interaction["stage"],
+            "AUTHORIZED_AND_EXECUTION_FAILED"
+        )
+
 if __name__ == "__main__":
     unittest.main()
+
+
+
