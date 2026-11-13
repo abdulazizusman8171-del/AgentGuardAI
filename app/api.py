@@ -13,6 +13,7 @@ from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
 from app.approval import ApprovalManager
 from app.near_client import NearRPCClient, NearRPCError
+from app.near_transaction_analyzer import analyze_near_transaction
 from app.access_key_analyzer import analyze_access_key
 from app.near_market import NearMarketClient, NearMarketError
 
@@ -231,6 +232,42 @@ def get_near_transaction(
             status_code=502,
             detail=str(error)
         )
+
+@app.get("/near/transactions/{tx_hash}/analysis")
+def analyze_near_transaction_route(
+    tx_hash: str,
+    sender_account_id: str,
+    network: str = "mainnet"
+):
+    """Retrieve and analyze finalized NEAR transaction and receipt data."""
+
+    try:
+        client = NearRPCClient(network=network)
+
+        transaction_data = client.get_transaction(
+            tx_hash,
+            sender_account_id
+        )
+
+        analysis = analyze_near_transaction(transaction_data)
+
+        return {
+            "success": True,
+            "data": analysis
+        }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except NearRPCError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error)
+        )
+
 
 @app.post("/evaluate")
 def evaluate(payload: dict[str, Any]):

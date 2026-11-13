@@ -404,6 +404,71 @@ class TestAgentGuardAPI(unittest.TestCase):
         )
 
     @patch("app.api.NearRPCClient")
+    def test_near_transaction_analysis(self, mock_client):
+
+        mock_client.return_value.get_transaction.return_value = {
+            "network": "mainnet",
+            "transaction_hash": "E" * 44,
+            "final_execution_status": "FINAL",
+            "status": {"SuccessValue": ""},
+            "signer_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [
+                {
+                    "DeployContract": {
+                        "code": "example"
+                    }
+                }
+            ],
+            "receipts": [],
+            "data_status": "finalized"
+        }
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}/analysis"
+            "?sender_account_id=alice.near"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()["data"]
+
+        self.assertEqual(
+            data["assessment"],
+            "HIGH_IMPACT_ACTIONS_OBSERVED"
+        )
+
+        self.assertEqual(
+            data["threat_verdict"],
+            "NOT_DETERMINED"
+        )
+
+        self.assertEqual(
+            data["findings"][0]["id"],
+            "contract_deployment"
+        )
+
+        mock_client.return_value.get_transaction.assert_called_once_with(
+            "E" * 44,
+            "alice.near"
+        )
+
+    @patch("app.api.NearRPCClient")
+    def test_near_transaction_analysis_rpc_failure(self, mock_client):
+
+        mock_client.return_value.get_transaction.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.get(
+            f"/near/transactions/{'E' * 44}/analysis"
+            "?sender_account_id=alice.near"
+        )
+
+        self.assertEqual(response.status_code, 502)
+
+
+    @patch("app.api.NearRPCClient")
     def test_near_transaction_testnet_selection(self, mock_client):
 
         self.client.get(

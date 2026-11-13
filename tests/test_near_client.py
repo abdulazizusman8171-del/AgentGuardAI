@@ -164,7 +164,9 @@ class TestNearRPCClient(unittest.TestCase):
                     }
                 },
                 "status": {"SuccessValue": ""},
-                "final_execution_status": "FINAL"
+                "final_execution_status": "FINAL",
+                "receipts": [],
+                "receipts_outcome": []
             }
         })
 

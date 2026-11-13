@@ -423,15 +423,13 @@ class NearRPCClient:
             "data_status": "finalized"
         }
     def get_transaction(self, tx_hash, sender_account_id):
+        """Retrieve a finalized NEAR transaction and its receipt outcomes."""
 
         tx_hash = self.validate_transaction_hash(tx_hash)
-
-        sender_account_id = self.validate_account_id(
-            sender_account_id
-        )
+        sender_account_id = self.validate_account_id(sender_account_id)
 
         result = self._rpc(
-            "tx",
+            "tx_status",
             {
                 "tx_hash": tx_hash,
                 "sender_account_id": sender_account_id,
@@ -442,37 +440,243 @@ class NearRPCClient:
         try:
             transaction = result["transaction"]
             transaction_outcome = result["transaction_outcome"]
-            outcome = transaction_outcome["outcome"]
+            tx_outcome = transaction_outcome["outcome"]
 
             signer_id = transaction["signer_id"]
             receiver_id = transaction["receiver_id"]
             actions = transaction["actions"]
-            status = result["status"]
-            gas_burnt = int(outcome["gas_burnt"])
+
+            final_execution_status = result["final_execution_status"]
+            transaction_status = result["status"]
+
+            if final_execution_status != "FINAL":
+                raise ValueError("Transaction has not reached FINAL status")
+
+            if not isinstance(signer_id, str) or not signer_id:
+                raise ValueError("Invalid transaction signer")
+
+            if not isinstance(receiver_id, str) or not receiver_id:
+                raise ValueError("Invalid transaction receiver")
 
             if not isinstance(actions, list):
                 raise ValueError("Invalid transaction actions")
 
-            if gas_burnt < 0:
-                raise ValueError("Invalid gas usage")
+            gas_burnt = tx_outcome["gas_burnt"]
 
-        except (KeyError, TypeError, ValueError) as error:
+            if (
+                isinstance(gas_burnt, bool)
+                or not isinstance(gas_burnt, int)
+                or gas_burnt < 0
+            ):
+                raise ValueError("Invalid transaction gas usage")
+
+            transaction_logs = tx_outcome.get("logs", [])
+
+            if (
+                not isinstance(transaction_logs, list)
+                or not all(isinstance(log, str) for log in transaction_logs)
+            ):
+                raise ValueError("Invalid transaction logs")
+
+            receipts = result["receipts"]
+            receipt_outcomes = result["receipts_outcome"]
+
+            if not isinstance(receipts, list):
+                raise ValueError("Invalid receipt list")
+
+            if not isinstance(receipt_outcomes, list):
+                raise ValueError("Invalid receipt outcomes")
+
+            receipt_outcomes_by_id = {}
+
+            for item in receipt_outcomes:
+                if not isinstance(item, dict):
+                    raise ValueError("Invalid receipt outcome record")
+
+                receipt_id = item.get("id")
+                outcome = item.get("outcome")
+
+                if not isinstance(receipt_id, str) or not receipt_id:
+                    raise ValueError("Invalid receipt outcome ID")
+
+                if receipt_id in receipt_outcomes_by_id:
+                    raise ValueError("Duplicate receipt outcome ID")
+
+                if not isinstance(outcome, dict):
+                    raise ValueError("Invalid receipt execution outcome")
+
+                receipt_gas = outcome.get("gas_burnt")
+
+                if (
+                    isinstance(receipt_gas, bool)
+                    or not isinstance(receipt_gas, int)
+                    or receipt_gas < 0
+                ):
+                    raise ValueError("Invalid receipt gas usage")
+
+                logs = outcome.get("logs", [])
+
+                if (
+                    not isinstance(logs, list)
+                    or not all(isinstance(log, str) for log in logs)
+                ):
+                    raise ValueError("Invalid receipt logs")
+
+                status = outcome.get("status")
+
+                if not isinstance(status, (dict, str)):
+                    raise ValueError("Invalid receipt execution status")
+
+                receipt_outcomes_by_id[receipt_id] = outcome
+
+            receipt_records = []
+            receipt_ids = set()
+
+            for receipt in receipts:
+
+                if not isinstance(receipt, dict):
+                    raise ValueError("Invalid receipt record")
+
+                receipt_id = receipt.get("receipt_id")
+                predecessor_id = receipt.get("predecessor_id")
+                receipt_receiver = receipt.get("receiver_id")
+                receipt_data = receipt.get("receipt")
+
+                if not isinstance(receipt_id, str) or not receipt_id:
+                    raise ValueError("Invalid receipt ID")
+
+                if receipt_id in receipt_ids:
+                    raise ValueError("Duplicate receipt ID")
+
+                if not isinstance(predecessor_id, str) or not predecessor_id:
+                    raise ValueError("Invalid receipt predecessor")
+
+                if not isinstance(receipt_receiver, str) or not receipt_receiver:
+                    raise ValueError("Invalid receipt receiver")
+
+                if not isinstance(receipt_data, dict) or len(receipt_data) != 1:
+                    raise ValueError("Invalid receipt payload")
+
+                receipt_type, receipt_body = next(iter(receipt_data.items()))
+
+                if receipt_type not in ("Action", "Data"):
+                    raise ValueError("Unsupported receipt type")
+
+                if not isinstance(receipt_body, dict):
+                    raise ValueError("Invalid receipt body")
+
+                if receipt_type == "Action":
+                    receipt_actions = receipt_body.get("actions")
+
+                    if not isinstance(receipt_actions, list):
+                        raise ValueError("Invalid receipt actions")
+                else:
+                    receipt_actions = []
+
+                receipt_ids.add(receipt_id)
+                outcome = receipt_outcomes_by_id.get(receipt_id)
+
+                if outcome is None:
+                    status_label = "UNRESOLVED"
+                    receipt_status = None
+                    executor_id = None
+                    outcome_block_hash = None
+                    receipt_gas = None
+                    receipt_tokens_burnt = None
+                    receipt_logs = []
+
+                else:
+                    receipt_status = outcome["status"]
+
+                    if (
+                        isinstance(receipt_status, dict)
+                        and "Failure" in receipt_status
+                    ):
+                        status_label = "FAILED"
+                    elif (
+                        isinstance(receipt_status, dict)
+                        and any(
+                            key.startswith("Success")
+                            for key in receipt_status
+                        )
+                    ):
+                        status_label = "SUCCEEDED"
+                    else:
+                        status_label = "UNKNOWN"
+
+                    executor_id = outcome.get("executor_id")
+                    outcome_block_hash = next(
+                        (
+                            item.get("block_hash")
+                            for item in receipt_outcomes
+                            if item.get("id") == receipt_id
+                        ),
+                        None
+                    )
+                    receipt_gas = outcome["gas_burnt"]
+                    receipt_tokens_burnt = outcome.get("tokens_burnt")
+                    receipt_logs = outcome.get("logs", [])
+
+                receipt_records.append({
+                    "receipt_id": receipt_id,
+                    "receipt_type": receipt_type,
+                    "predecessor_id": predecessor_id,
+                    "receiver_id": receipt_receiver,
+                    "actions": receipt_actions,
+                    "status": status_label,
+                    "execution_status": receipt_status,
+                    "executor_id": executor_id,
+                    "block_hash": outcome_block_hash,
+                    "gas_burnt": receipt_gas,
+                    "tokens_burnt": receipt_tokens_burnt,
+                    "logs": receipt_logs
+                })
+
+            if not set(receipt_outcomes_by_id).issubset(receipt_ids):
+                raise ValueError("Execution outcome references an unknown receipt")
+
+        except (KeyError, TypeError, ValueError, StopIteration) as error:
             raise NearRPCError(
-                "Invalid transaction data returned by NEAR"
+                "Invalid finalized transaction or receipt data returned by NEAR"
             ) from error
+
+        failed_receipts = sum(
+            receipt["status"] == "FAILED"
+            for receipt in receipt_records
+        )
+
+        successful_receipts = sum(
+            receipt["status"] == "SUCCEEDED"
+            for receipt in receipt_records
+        )
+
+        unknown_receipts = sum(
+            receipt["status"] == "UNKNOWN"
+            for receipt in receipt_records
+        )
+
+        unresolved_receipts = sum(
+            receipt["status"] == "UNRESOLVED"
+            for receipt in receipt_records
+        )
 
         return {
             "network": self.network,
             "transaction_hash": tx_hash,
-            "final_execution_status": result.get(
-                "final_execution_status"
-            ),
-            "status": status,
+            "final_execution_status": final_execution_status,
+            "status": transaction_status,
             "signer_id": signer_id,
             "receiver_id": receiver_id,
             "actions": actions,
             "block_hash": transaction_outcome.get("block_hash"),
             "gas_burnt": gas_burnt,
-            "tokens_burnt": outcome.get("tokens_burnt"),
-            "logs": outcome.get("logs", [])
+            "tokens_burnt": tx_outcome.get("tokens_burnt"),
+            "logs": transaction_logs,
+            "receipt_count": len(receipt_records),
+            "successful_receipt_count": successful_receipts,
+            "failed_receipt_count": failed_receipts,
+            "unresolved_receipt_count": unresolved_receipts,
+            "unknown_receipt_count": unknown_receipts,
+            "receipts": receipt_records,
+            "data_status": "finalized"
         }
