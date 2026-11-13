@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from app.near_transaction_analyzer import analyze_near_transaction
 
@@ -49,6 +49,78 @@ class TestNearTransactionAnalyzer(unittest.TestCase):
                 for finding in result["findings"]
             )
         )
+
+    def test_function_call_authorization_and_execution_sources(self):
+        self.transaction["receipts"] = [{
+            "receipt_id": "receipt-function-call",
+            "predecessor_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [{
+                "FunctionCall": {
+                    "method_name": "buy",
+                    "deposit": "1000000000000000000000000",
+                    "gas": 1000000000000
+                }
+            }],
+            "status": "SUCCEEDED",
+            "execution_status": {"SuccessValue": ""},
+            "gas_burnt": 500,
+            "logs": []
+        }]
+
+        result = analyze_near_transaction(self.transaction)
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "FunctionCall"
+        )
+
+        self.assertEqual(
+            interaction["authorization_evidence_sources"],
+            ["transaction.actions[0]"]
+        )
+        self.assertEqual(
+            interaction["execution_evidence_sources"],
+            ["receipts[0].actions[0]"]
+        )
+        self.assertTrue(interaction["authorization_observed"])
+        self.assertTrue(interaction["execution_observed"])
+        self.assertEqual(interaction["stage"], "AUTHORIZED_AND_EXECUTED")
+
+    def test_receipt_only_function_call_evidence_sources(self):
+        self.transaction["actions"] = []
+        self.transaction["receipts"] = [{
+            "receipt_id": "receipt-only-function-call",
+            "predecessor_id": "alice.near",
+            "receiver_id": "market.near",
+            "actions": [{
+                "FunctionCall": {
+                    "method_name": "buy",
+                    "deposit": "1000000000000000000000000",
+                    "gas": 1000000000000
+                }
+            }],
+            "status": "SUCCEEDED",
+            "execution_status": {"SuccessValue": ""},
+            "gas_burnt": 500,
+            "logs": []
+        }]
+
+        result = analyze_near_transaction(self.transaction)
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "FunctionCall"
+        )
+
+        self.assertEqual(
+            interaction["authorization_evidence_sources"], []
+        )
+        self.assertEqual(
+            interaction["execution_evidence_sources"],
+            ["receipts[0].actions[0]"]
+        )
+        self.assertFalse(interaction["authorization_observed"])
+        self.assertTrue(interaction["execution_observed"])
+        self.assertEqual(interaction["stage"], "RECEIPT_EXECUTION_ONLY")
 
     def test_full_access_key_addition_is_high_impact(self):
 

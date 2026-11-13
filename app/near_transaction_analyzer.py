@@ -388,6 +388,7 @@ def _correlate_interactions(interactions):
         elif (
             interaction.get("_correlation_key")
             and interaction.get("stage") in (
+                "TRANSACTION",
                 "DELEGATED_AUTHORIZATION",
                 "RECEIPT_EXECUTION"
             )
@@ -470,7 +471,7 @@ def _correlate_interactions(interactions):
         authorization_items = [
             (position, item)
             for position, item in items
-            if item.get("stage") == "DELEGATED_AUTHORIZATION"
+            if item.get("stage") in ("TRANSACTION", "DELEGATED_AUTHORIZATION")
         ]
 
         execution_items = [
@@ -495,6 +496,13 @@ def _correlate_interactions(interactions):
 
             merged["authorization_observed"] = True
             merged["execution_observed"] = executed is not None
+            merged["authorization_evidence_sources"] = [
+                authorized["evidence_source"]
+            ]
+            merged["execution_evidence_sources"] = (
+                [executed["evidence_source"]]
+                if executed is not None else []
+            )
 
             merged["authorization_evidence"] = authorized["evidence_source"]
             merged["execution_evidence"] = (
@@ -520,6 +528,10 @@ def _correlate_interactions(interactions):
 
             merged["authorization_observed"] = False
             merged["execution_observed"] = True
+            merged["authorization_evidence_sources"] = []
+            merged["execution_evidence_sources"] = [
+                executed["evidence_source"]
+            ]
             merged["authorization_evidence"] = None
             merged["execution_evidence"] = executed["evidence_source"]
             merged["stage"] = "RECEIPT_EXECUTION_ONLY"
