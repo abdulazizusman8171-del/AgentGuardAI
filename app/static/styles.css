@@ -2555,3 +2555,282 @@ html, body {
         transition: none !important;
     }
 }
+
+/* AGENTGUARD NEAR TRANSACTION INVESTIGATOR */
+
+.near-transaction-investigator {
+    position: relative;
+    overflow: hidden;
+}
+
+.near-investigator-status-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #8795a5;
+}
+
+.near-investigator-status-dot.is-live {
+    background: #45dcaa;
+    box-shadow: 0 0 12px rgba(69, 220, 170, 0.7);
+}
+
+.near-investigator-status-dot.is-loading {
+    background: #f3c96b;
+    animation: investigator-pulse 1s infinite alternate;
+}
+
+.near-investigator-status-dot.is-error {
+    background: #ff817e;
+}
+
+.near-investigator-form {
+    margin: 22px 0 10px;
+}
+
+.near-investigator-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 140px auto;
+    align-items: end;
+    gap: 11px;
+}
+
+.near-investigator-field {
+    min-width: 0;
+}
+
+.near-investigator-field label {
+    display: block;
+    margin-bottom: 9px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.near-investigator-field input,
+.near-investigator-field select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 13px 14px;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+    outline: none;
+}
+
+.near-investigator-field input:focus,
+.near-investigator-field select:focus {
+    border-color: var(--accent);
+}
+
+.near-investigator-controls button {
+    min-height: 44px;
+    padding: 12px 17px;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.near-investigator-controls button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.near-investigator-metrics {
+    margin-top: 17px;
+}
+
+.near-investigator-assessment {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.near-investigator-assessment > div {
+    min-width: 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+}
+
+.near-investigator-assessment span,
+.near-investigator-assessment strong {
+    display: block;
+}
+
+.near-investigator-assessment span {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.near-investigator-assessment strong {
+    color: var(--text);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.near-investigator-result-block {
+    margin-top: 23px;
+}
+
+.near-investigator-result-block h4 {
+    margin: 0 0 12px;
+    color: var(--text);
+    font-size: 15px;
+}
+
+.near-investigator-findings,
+.near-investigator-interactions {
+    display: grid;
+    gap: 11px;
+}
+
+.near-investigator-finding,
+.near-investigator-interaction {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.near-investigator-finding.severity-high,
+.near-investigator-finding.severity-critical {
+    border-left: 3px solid #ff8585;
+}
+
+.near-investigator-finding.severity-warning {
+    border-left: 3px solid #f0bd68;
+}
+
+.near-investigator-finding.severity-info {
+    border-left: 3px solid var(--accent);
+}
+
+.near-investigator-finding-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.near-investigator-finding h5 {
+    margin: 0;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.near-investigator-finding p {
+    margin: 10px 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.near-investigator-finding small,
+.near-investigator-interaction small {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.near-investigator-severity {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.near-investigator-evidence {
+    margin-top: 12px;
+    color: var(--accent);
+    font-size: 11px;
+}
+
+.near-investigator-evidence summary {
+    cursor: pointer;
+}
+
+.near-investigator-evidence pre {
+    max-height: 260px;
+    overflow: auto;
+    margin-top: 10px;
+    padding: 12px;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    font-size: 10px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.near-investigator-interaction {
+    display: grid;
+    gap: 7px;
+}
+
+.near-investigator-interaction strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.near-investigator-interaction span {
+    color: var(--text-muted);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.near-investigator-accounts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.near-investigator-account {
+    padding: 7px 10px;
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.near-investigator-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+@keyframes investigator-pulse {
+    from { opacity: 0.45; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 900px) {
+    .near-investigator-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .near-investigator-controls button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .near-investigator-controls,
+    .near-investigator-assessment {
+        grid-template-columns: 1fr;
+    }
+}

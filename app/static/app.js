@@ -1456,3 +1456,278 @@ setInterval(() => {
         }
     });
 })();
+
+// ==========================================
+// AGENTGUARD NEAR TRANSACTION INVESTIGATOR
+// ==========================================
+
+(function initializeNearTransactionInvestigator() {
+    const form = document.getElementById("near-investigator-form");
+
+    if (!form) return;
+
+    const button = document.getElementById("near-investigator-button");
+    const message = document.getElementById("near-investigator-message");
+    const results = document.getElementById("near-investigator-results");
+    const status = document.getElementById("near-investigator-status");
+    const statusDot = document.getElementById("near-investigator-status-dot");
+
+    function setStatus(label, state) {
+        status.textContent = label;
+        statusDot.className = "near-investigator-status-dot " + state;
+    }
+
+    function makeElement(tag, text, className) {
+        const element = document.createElement(tag);
+
+        if (text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
+
+        if (className) {
+            element.className = className;
+        }
+
+        return element;
+    }
+
+    function makeMetric(label, value, primary = false) {
+        const card = makeElement(
+            "div",
+            null,
+            "near-network-metric" + (primary ? " near-network-primary" : "")
+        );
+
+        card.appendChild(makeElement("span", label));
+        card.appendChild(makeElement("strong", value ?? "--"));
+
+        return card;
+    }
+
+    function renderEvidence(evidence) {
+        const details = makeElement("details", null, "near-investigator-evidence");
+        const summary = makeElement("summary", "View supporting evidence");
+        const content = makeElement("pre", JSON.stringify(evidence ?? {}, null, 2));
+
+        details.append(summary, content);
+
+        return details;
+    }
+
+    function renderFindings(findings) {
+        const container = document.getElementById("near-investigator-findings");
+        container.replaceChildren();
+
+        if (!Array.isArray(findings) || findings.length === 0) {
+            container.appendChild(
+                makeElement(
+                    "p",
+                    "No classified findings were produced from the available transaction evidence.",
+                    "near-investigator-empty"
+                )
+            );
+            return;
+        }
+
+        findings.forEach((finding) => {
+            const severity = String(finding.severity || "INFO").toLowerCase();
+
+            const card = makeElement(
+                "article",
+                null,
+                "near-investigator-finding severity-" + severity
+            );
+
+            const heading = makeElement("div", null, "near-investigator-finding-heading");
+            const title = makeElement("h5", finding.title || finding.id || "Security finding");
+            const badge = makeElement("span", severity.toUpperCase(), "near-investigator-severity");
+
+            heading.append(title, badge);
+
+            card.appendChild(heading);
+            card.appendChild(
+                makeElement("p", finding.description || "No additional description available.")
+            );
+
+            if (finding.category) {
+                card.appendChild(
+                    makeElement("small", String(finding.category).replaceAll("_", " "))
+                );
+            }
+
+            if (finding.evidence) {
+                card.appendChild(renderEvidence(finding.evidence));
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    function renderInteractions(interactions) {
+        const container = document.getElementById("near-investigator-interactions");
+        container.replaceChildren();
+
+        if (!Array.isArray(interactions) || interactions.length === 0) {
+            container.appendChild(
+                makeElement("p", "No additional contract interactions were identified.")
+            );
+            return;
+        }
+
+        interactions.forEach((interaction) => {
+            const card = makeElement("article", null, "near-investigator-interaction");
+
+            card.appendChild(
+                makeElement("strong", interaction.action || "Action")
+            );
+
+            card.appendChild(
+                makeElement("span", "Receiver: " + (interaction.receiver_id || "Unknown"))
+            );
+
+            if (interaction.method_name) {
+                card.appendChild(
+                    makeElement("span", "Method: " + interaction.method_name)
+                );
+            }
+
+            if (interaction.attached_deposit_yocto !== undefined) {
+                card.appendChild(
+                    makeElement(
+                        "span",
+                        "Attached deposit: " + interaction.attached_deposit_yocto + " yoctoNEAR"
+                    )
+                );
+            }
+
+            if (interaction.transfer_yocto !== undefined) {
+                card.appendChild(
+                    makeElement(
+                        "span",
+                        "Transfer: " + interaction.transfer_yocto + " yoctoNEAR"
+                    )
+                );
+            }
+
+            card.appendChild(
+                makeElement("small", "Evidence: " + (interaction.evidence_source || "Transaction data"))
+            );
+
+            container.appendChild(card);
+        });
+    }
+
+    function renderAccounts(accounts) {
+        const container = document.getElementById("near-investigator-accounts");
+        container.replaceChildren();
+
+        if (!Array.isArray(accounts) || accounts.length === 0) {
+            container.appendChild(makeElement("span", "No account information available."));
+            return;
+        }
+
+        accounts.forEach((account) => {
+            container.appendChild(
+                makeElement("span", account, "near-investigator-account")
+            );
+        });
+    }
+
+    function renderReport(data) {
+        document.getElementById("near-investigator-metrics").replaceChildren(
+            makeMetric("Transaction Execution", data.transaction_execution_status),
+            makeMetric("Total Receipts", data.receipt_summary?.total ?? 0),
+            makeMetric("Failed Receipts", data.receipt_summary?.failed ?? 0),
+            makeMetric("Unresolved Receipts", data.receipt_summary?.unresolved ?? 0, true)
+        );
+
+        document.getElementById("near-investigator-assessment").textContent =
+            String(data.assessment || "Not available").replaceAll("_", " ");
+
+        document.getElementById("near-investigator-confidence").textContent =
+            data.investigation_complete ? "Complete" : "Limited";
+
+        document.getElementById("near-investigator-verdict").textContent =
+            data.threat_verdict || "NOT DETERMINED";
+
+        renderFindings(data.findings);
+        renderInteractions(data.contract_interactions);
+        renderAccounts(data.involved_accounts);
+
+        results.hidden = false;
+    }
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const transactionHash =
+            document.getElementById("near-investigator-hash").value.trim();
+
+        const senderAccount =
+            document.getElementById("near-investigator-sender").value.trim();
+
+        const network =
+            document.getElementById("near-investigator-network").value;
+
+        if (!transactionHash || !senderAccount) {
+            message.textContent = "Enter both the transaction hash and sender account.";
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Investigating...";
+        message.textContent = "Retrieving finalized transaction and receipt evidence...";
+        results.hidden = true;
+
+        setStatus("Investigation in progress", "is-loading");
+
+        try {
+            const query = new URLSearchParams({
+                sender_account_id: senderAccount,
+                network: network
+            });
+
+            const endpoint =
+                "/near/transactions/" +
+                encodeURIComponent(transactionHash) +
+                "/analysis?" +
+                query.toString();
+
+            const response = await fetch(endpoint, {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success || !payload.data) {
+                throw new Error(
+                    payload.detail ||
+                    "Transaction investigation failed. Verify the transaction details."
+                );
+            }
+
+            renderReport(payload.data);
+
+            message.textContent =
+                "Investigation completed using finalized NEAR blockchain data.";
+
+            setStatus("Investigation complete", "is-live");
+
+        } catch (error) {
+            console.error("NEAR transaction investigation failed:", error);
+
+            message.textContent =
+                error.message || "Unable to investigate this transaction.";
+
+            setStatus("Investigation failed", "is-error");
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "Investigate Transaction";
+        }
+    });
+})();

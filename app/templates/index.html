@@ -31,6 +31,7 @@
     <div class="nav-group">
         <span class="nav-group-label">NEAR SECURITY</span>
         <a href="#near-network">Network Activity</a>
+        <a href="#near-transaction-investigator">Transaction Investigator</a>
         <a href="#access-keys">Access-Key Scanner</a>
         <a href="#multi-account">Multi-Account Scanner</a>
     </div>
@@ -153,6 +154,119 @@
                             <span>Last Successful Refresh</span>
                             <strong id="near-network-updated">Not updated yet</strong>
                         </div>
+                    </div>
+                </section>
+
+
+                <!-- NEAR TRANSACTION INVESTIGATOR -->
+                <section
+                    class="near-network-panel near-transaction-investigator"
+                    id="near-transaction-investigator"
+                    aria-label="NEAR transaction investigation"
+                >
+                    <div class="near-network-heading">
+                        <div>
+                            <span class="near-network-eyebrow">READ-ONLY BLOCKCHAIN INTELLIGENCE</span>
+                            <h3>NEAR Transaction Investigator</h3>
+                            <p>Investigate finalized transactions, contract interactions and receipt execution evidence.</p>
+                        </div>
+
+                        <div class="near-network-status">
+                            <span id="near-investigator-status-dot" class="near-investigator-status-dot is-idle"></span>
+                            <span id="near-investigator-status">Ready to investigate</span>
+                        </div>
+                    </div>
+
+                    <form id="near-investigator-form" class="near-investigator-form">
+                        <div class="near-investigator-controls">
+                            <div class="near-investigator-field">
+                                <label for="near-investigator-hash">Transaction Hash</label>
+                                <input
+                                    type="text"
+                                    id="near-investigator-hash"
+                                    name="transaction_hash"
+                                    placeholder="Enter NEAR transaction hash"
+                                    minlength="32"
+                                    maxlength="50"
+                                    pattern="[1-9A-HJ-NP-Za-km-z]{32,50}"
+                                    autocomplete="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    required
+                                >
+                            </div>
+
+                            <div class="near-investigator-field">
+                                <label for="near-investigator-sender">Sender Account ID</label>
+                                <input
+                                    type="text"
+                                    id="near-investigator-sender"
+                                    name="sender_account_id"
+                                    placeholder="example.near"
+                                    maxlength="64"
+                                    autocomplete="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    required
+                                >
+                            </div>
+
+                            <div class="near-investigator-field">
+                                <label for="near-investigator-network">Network</label>
+                                <select id="near-investigator-network" name="network">
+                                    <option value="mainnet">Mainnet</option>
+                                    <option value="testnet">Testnet</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" id="near-investigator-button">
+                                Investigate Transaction
+                            </button>
+                        </div>
+                    </form>
+
+                    <p id="near-investigator-message" class="access-key-message" role="status" aria-live="polite">
+                        Enter a finalized NEAR transaction to begin its security investigation.
+                    </p>
+
+                    <div id="near-investigator-results" hidden>
+                        <div class="near-network-grid near-investigator-metrics" id="near-investigator-metrics"></div>
+
+                        <div class="near-investigator-assessment">
+                            <div>
+                                <span>Investigation Assessment</span>
+                                <strong id="near-investigator-assessment">--</strong>
+                            </div>
+                            <div>
+                                <span>Evidence Completeness</span>
+                                <strong id="near-investigator-confidence">--</strong>
+                            </div>
+                            <div>
+                                <span>Threat Verdict</span>
+                                <strong id="near-investigator-verdict">--</strong>
+                            </div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Security Findings</h4>
+                            <div id="near-investigator-findings" class="near-investigator-findings"></div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Contract Interactions</h4>
+                            <div id="near-investigator-interactions" class="near-investigator-interactions"></div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Accounts Involved</h4>
+                            <div id="near-investigator-accounts" class="near-investigator-accounts"></div>
+                        </div>
+
+                        <p class="access-key-disclaimer">
+                            Read-only investigation of public NEAR blockchain data.
+                            Findings describe observable behaviour, not proof of malicious activity.
+                            No wallet connection, private keys, signing or transaction execution is required.
+                        </p>
                     </div>
                 </section>
 
@@ -675,7 +789,7 @@
 
     </div>
 
-    <script src="/static/app.js?v=20261112-images2"></script>
+    <script src="/static/app.js?v=20261113-near-investigator"></script>
 
 </body>
 </html>
