@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from app.near_transaction_analyzer import analyze_near_transaction
 
@@ -133,6 +133,21 @@ class TestNearDelegateActions(unittest.TestCase):
         self.assertEqual(
             len(result["delegated_actions"][0]["source_locations"]),
             2
+        )
+
+        interaction = next(
+            item for item in result["contract_interactions"]
+            if item.get("action") == "Delegate"
+        )
+
+        self.assertEqual(
+            interaction["authorization_evidence_sources"],
+            ["transaction.actions[0]"]
+        )
+
+        self.assertEqual(
+            interaction["execution_evidence_sources"],
+            ["receipts[0].actions[0]"]
         )
 
     def test_delegated_full_access_key_addition_is_detected(self):

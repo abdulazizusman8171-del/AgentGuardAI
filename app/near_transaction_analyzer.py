@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 import json
 from decimal import Decimal, InvalidOperation
 
@@ -437,6 +437,8 @@ def _correlate_interactions(interactions):
 
             base["authorization_observed"] = bool(authorization_sources)
             base["execution_observed"] = bool(execution_sources)
+            base["authorization_evidence_sources"] = authorization_sources
+            base["execution_evidence_sources"] = execution_sources
 
             base["authorization_evidence"] = (
                 authorization_sources[0]
