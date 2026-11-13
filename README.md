@@ -1,282 +1,169 @@
-# AgentGuardAI 🛡️
+# AgentGuard AI 🛡️
 
-### Explainable Blockchain Transaction Security
+### NEAR-First Blockchain Security Intelligence
 
-AgentGuardAI is a blockchain transaction security application designed to help users identify potentially dangerous transactions before execution.
+AgentGuard AI is a blockchain security intelligence platform designed to help users investigate suspicious blockchain activity through evidence-based findings.
 
-It evaluates transaction risk, identifies suspicious activity, provides understandable security findings, and supports human approval workflows.
+The project focuses on NEAR Protocol, providing read-only investigation of accounts, access keys, finalized transactions, receipt execution outcomes, and network activity.
 
-The project combines a Python security engine, a FastAPI backend, a SQLite transaction tracker, and a web-based security dashboard.
+**Project status:** Hackathon prototype.
 
-> **Project status:** Hackathon prototype — under active development.
+## Key Features
 
----
+### NEAR Transaction Investigator
+- Investigates finalized NEAR transactions.
+- Examines receipt execution success, failure, and unresolved outcomes.
+- Reviews authorization and execution evidence.
+- Identifies delegated actions, access-key additions, and account deletion activity.
 
-## 🚀 Key Features
+### Access-Key Security Intelligence
+- Full-access permissions.
+- Function-call restrictions.
+- Receiver-account restrictions.
+- Allowed methods and gas allowances.
+- Public-key information.
 
-### 1. Transaction Risk Assessment
-Evaluates transactions using configurable security rules, including:
+### Gas Key Investigation
+Examines available Gas Key metadata, restrictions, allowance, balance, and nonce evidence.
 
-- Large transaction amounts.
-- Transactions exceeding configured spending limits.
-- Unknown recipients.
-- Interactions with new smart contracts.
-- Unlimited token approvals.
-- Dangerous addresses on a configurable blocklist.
-- Duplicate transaction detection.
+### Explainable Security Findings
+Structured findings include code, title, severity, description, evidence, and recommendation.
 
-### 2. Explainable Security Intelligence
+### Transaction Risk Assessment
+Uses deterministic rules to evaluate supplied transaction information, including spending limits, unknown recipients, new contracts, unlimited approvals, and duplicate transactions.
 
-AgentGuardAI generates understandable security findings containing:
+### Human Approval Workflow
+Supports approval requests and approval tracking.
 
-- Risk severity.
-- Explanation of detected risks.
-- Recommended protective actions.
-- Overall transaction security decisions.
+### NEAR Network Intelligence
+Provides NEAR network activity, market information, and large-buy activity.
 
-The current intelligence engine uses deterministic rules rather than a trained machine-learning model.
+## Technology Stack
 
-### 3. Human Approval Workflow
+- Python 3.12
+- FastAPI
+- JavaScript
+- HTML and CSS
+- SQLite
+- NEAR blockchain RPC
+- Uvicorn
 
-Transactions requiring additional confirmation can enter an approval workflow.
 
-Features include:
-- Approval request creation.
-- Time-limited approvals.
-- Approval verification.
-- Protection against unauthorized confirmation.
-- Approval consumption during processing.
+## Project Structure
 
-The current approval lifetime is five minutes.
+- app/api.py
+- app/main.py
+- app/near_client.py
+- app/access_key_analyzer.py
+- app/security_intelligence.py
+- app/storage.py
+- app/templates/
+- app/static/
+- tests/
+- requirements.txt
+- README.md
 
-### 4. Blockchain Integration
 
-Supported network identifiers include:
+## Installation
 
-| Network | Current capabilities |
-|---|---|
-| Ethereum | Address validation and security evaluation |
-| BNB Chain | Address validation and security evaluation |
-| NEAR Protocol | Address validation, account queries and transaction queries |
-
-**Important:** Ethereum and BNB Chain transaction evaluation currently uses supplied transaction information. NEAR integration supports read-only RPC queries. The application does not broadcast real blockchain transactions.
-
-### 5. Transaction Tracking
-
-SQLite-backed storage supports transaction tracking and duplicate detection.
-
-### 6. Security Dashboard
-
-The web dashboard provides:
-
-- Transaction risk evaluation.
-- Risk scores.
-- Security decisions.
-- Security findings.
-- Recommendations.
-- Network selection.
-- Transaction simulation feedback.
-
----
-
-## 🏗️ Technology Stack
-
-| Component | Technology |
-|---|---|
-| Backend | Python |
-| API | FastAPI |
-| Dashboard | HTML, CSS, JavaScript |
-| Templates | Jinja2 |
-| Database | SQLite |
-| Blockchain integration | NEAR JSON-RPC |
-| Testing | Python unittest |
-| Server | Uvicorn |
-
----
-
-## 📁 Project Structure
-
-```text
-AgentGuardAI/
-│
-├── app/
-│   ├── api.py
-│   ├── main.py
-│   ├── approval.py
-│   ├── executor.py
-│   ├── workflow.py
-│   ├── storage.py
-│   ├── near_client.py
-│   ├── security_intelligence.py
-│   │
-│   ├── templates/
-│   │   └── index.html
-│   │
-│   └── static/
-│       ├── app.js
-│       └── styles.css
-│
-├── data/
-├── storage/
-├── tests/
-├── requirements.txt
-└── README.md
-```
-
----
-
-## ⚙️ Installation
-
-### Requirements
-
-- Python 3.12 or compatible version.
-- Git.
-- Internet connection for NEAR RPC queries.
+Requirements: Python 3.12, Git, and internet connection.
 
 ### 1. Clone the repository
-
 ```bash
 git clone https://github.com/abdulazizusman8171-del/AgentGuardAI.git
 cd AgentGuardAI
 ```
 
-### 2. Create a virtual environment
-
-```bash
+### 2. Create virtual environment
+```powershell
 python -m venv .venv
 ```
 
-Activate it on Windows PowerShell:
-
+### 3. Activate environment
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
-
-```bash
-python -m pip install -r requirements.txt
+### 4. Install dependencies
+```powershell
+pip install -r requirements.txt
 ```
 
-### 4. Start the application
-
-```bash
+### 5. Start application
+```powershell
 python -m uvicorn app.api:app --reload
 ```
 
-### 5. Open the dashboard
+Dashboard: http://127.0.0.1:8000
+API documentation: http://127.0.0.1:8000/docs
 
-Visit:
 
-```text
-http://127.0.0.1:8000/
-```
+## Render Deployment
 
-API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Health check:
-
-```text
-http://127.0.0.1:8000/health
-```
-
----
-
-## 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Security dashboard |
-| GET | `/health` | Application health |
-| POST | `/evaluate` | Evaluate transaction risk |
-| POST | `/intelligence` | Generate explainable security findings |
-| POST | `/approvals` | Create approval request when required |
-| POST | `/approvals/{approval_id}/approve` | Approve a pending request |
-| POST | `/process` | Process a transaction through the security workflow |
-| GET | `/near/accounts/{account_id}` | Retrieve NEAR account information |
-| GET | `/near/transactions/{tx_hash}` | Retrieve NEAR transaction information |
-
----
-
-## 🧪 Running Tests
-
-Run the complete test suite:
+Build command:
 
 ```bash
+pip install -r requirements.txt
+```
+
+Start command:
+
+```bash
+python -m uvicorn app.api:app --host 0.0.0.0 --port $PORT
+```
+
+
+## API Reference
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | /health | Application health |
+| GET | /near/accounts/{account_id} | NEAR account information |
+| GET | /near/accounts/{account_id}/access-keys | Access-key investigation |
+| GET | /near/network-activity | NEAR network activity |
+| GET | /near/market | NEAR market intelligence |
+| GET | /near/transactions/{tx_hash} | Transaction investigation |
+| GET | /near/transactions/{tx_hash}/analysis | Transaction security analysis |
+| GET | /near/large-buys | Large-buy activity |
+| POST | /evaluate | Evaluate supplied transaction data |
+| POST | /intelligence | Generate security intelligence |
+| GET | /transactions/history | Transaction history |
+| GET | /approvals | View approval requests |
+| POST | /approvals | Create approval request |
+| POST | /approvals/{approval_id}/approve | Approve request |
+| POST | /process | Process transaction request |
+
+
+## Testing
+
+Run the automated test suite:
+
+```powershell
 python -m unittest discover -s tests -v
 ```
 
-The tests cover transaction evaluation, security intelligence, approval workflows, transaction execution, storage, API behavior, and NEAR RPC integration.
+The current development build has passed 193 automated tests.
 
----
+## Security and Limitations
 
-## 🔐 Security Design
+- NEAR investigation uses read-only blockchain queries.
+- The application does not request private keys or seed phrases.
+- The application does not sign or broadcast blockchain transactions.
+- Security findings are evidence-based indicators, not proof of compromise.
+- Transaction risk assessment uses deterministic rules, not a trained machine-learning model.
+- Ethereum and BNB Chain evaluation uses supplied transaction information; live investigation is focused on NEAR.
+- This is a hackathon prototype, not a production security audit.
 
-AgentGuardAI follows a security-first transaction workflow:
+## Project Vision
 
-1. Receive transaction information.
-2. Validate transaction data and recipient address.
-3. Check configured security rules.
-4. Calculate a risk score.
-5. Generate a security decision.
-6. Request human confirmation when required.
-7. Block transactions identified as dangerous.
-8. Simulate execution when permitted.
-9. Record successful simulated executions.
+AgentGuard AI aims to make blockchain security intelligence easier to understand through transparent investigation, explainable findings, and practical recommendations.
 
-### Security decisions
+## Contributing
 
-| Decision | Meaning |
-|---|---|
-| ALLOW | No blocking security condition was detected |
-| REQUIRE_CONFIRMATION | Additional human verification is required |
-| BLOCK | The transaction must not proceed |
+Contributions, testing, feedback, and suggestions are welcome.
 
----
+## License
 
-## ⚠️ Current Limitations
+A license has not yet been specified.
 
-AgentGuardAI is an experimental prototype and is not production-ready.
-
-- Transaction risk assessment currently uses deterministic rules.
-- It does not perform a comprehensive smart-contract audit.
-- It does not independently verify all transaction claims against blockchain state.
-- Ethereum and BNB Chain live transaction execution are not implemented.
-- NEAR integration is read-only.
-- Transaction execution is simulated.
-- The system has not undergone an independent security audit.
-
-Never use this prototype as the sole security control for real funds.
-
----
-
-## 🎯 Project Vision
-
-The long-term goal is to develop AgentGuardAI into a multi-chain transaction security platform that helps users understand transaction risks before interacting with blockchain applications.
-
-Future development may include:
-
-- More advanced smart-contract analysis.
-- Additional blockchain integrations.
-- Improved threat intelligence.
-- Wallet integrations with explicit user authorization.
-- More sophisticated risk detection.
-- Enhanced security monitoring.
-
----
-
-## 👨‍💻 Development
-
-AgentGuardAI is an actively developing open-source project.
-
-Contributions, feedback, testing, and collaboration are welcome.
-
-**GitHub:** https://github.com/abdulazizusman8171-del/AgentGuardAI
-
----
-
-**AgentGuardAI — Understand the risk before you transact.**
+GitHub Repository: https://github.com/abdulazizusman8171-del/AgentGuardAI
