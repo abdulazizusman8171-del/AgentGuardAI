@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from app.access_key_analyzer import analyze_access_key
 
@@ -80,6 +80,72 @@ class TestAccessKeyAnalyzer(unittest.TestCase):
                 "permission": "UnknownPermission"
             })
 
+    def test_full_access_has_structured_finding(self):
+        result = analyze_access_key({
+            "public_key": "ed25519:FullAccessEvidence",
+            "permission": "FullAccess"
+        })
+
+        finding = next(
+            item for item in result["findings"]
+            if item["code"] == "FULL_ACCESS_PERMISSION"
+        )
+
+        self.assertEqual(finding["severity"], "HIGH")
+        self.assertEqual(finding["evidence"]["permission"], "FullAccess")
+
+    def test_unrestricted_methods_include_receiver_evidence(self):
+        result = analyze_access_key({
+            "public_key": "ed25519:OpenMethodsEvidence",
+            "permission": "FunctionCall",
+            "receiver_id": "market.near",
+            "method_names": [],
+            "allowance": "100000000000000000000"
+        })
+
+        finding = next(
+            item for item in result["findings"]
+            if item["code"] == "UNRESTRICTED_METHODS"
+        )
+
+        self.assertEqual(finding["severity"], "MEDIUM")
+        self.assertEqual(finding["evidence"]["receiver_id"], "market.near")
+        self.assertEqual(finding["evidence"]["method_names"], [])
+
+    def test_unlimited_allowance_has_structured_finding(self):
+        result = analyze_access_key({
+            "public_key": "ed25519:UnlimitedEvidence",
+            "permission": "FunctionCall",
+            "receiver_id": "market.near",
+            "method_names": ["buy"],
+            "allowance": None
+        })
+
+        finding = next(
+            item for item in result["findings"]
+            if item["code"] == "UNLIMITED_GAS_ALLOWANCE"
+        )
+
+        self.assertEqual(finding["severity"], "MEDIUM")
+        self.assertTrue(finding["evidence"]["allowance_unlimited"])
+
+    def test_method_allowlist_includes_method_evidence(self):
+        result = analyze_access_key({
+            "public_key": "ed25519:MethodEvidence",
+            "permission": "FunctionCall",
+            "receiver_id": "market.near",
+            "method_names": ["buy", "sell"],
+            "allowance": "100000000000000000000"
+        })
+
+        finding = next(
+            item for item in result["findings"]
+            if item["code"] == "METHOD_ALLOWLIST"
+        )
+
+        self.assertEqual(finding["evidence"]["receiver_id"], "market.near")
+        self.assertEqual(finding["evidence"]["method_names"], ["buy", "sell"])
+        self.assertEqual(finding["evidence"]["method_count"], 2)
 
 if __name__ == "__main__":
     unittest.main()

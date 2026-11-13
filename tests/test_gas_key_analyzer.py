@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from app.access_key_analyzer import analyze_access_key
 
@@ -77,6 +77,25 @@ class TestGasKeyAnalyzer(unittest.TestCase):
                 "num_nonces": 2
             })
 
+    def test_gas_key_finding_includes_balance_and_nonce_evidence(self):
+        result = analyze_access_key({
+            "public_key": "ed25519:GasEvidence",
+            "permission": "GasKeyFunctionCall",
+            "receiver_id": "market.near",
+            "method_names": ["buy"],
+            "allowance": None,
+            "balance_yocto": "1000000000000000000000000",
+            "num_nonces": 2
+        })
+
+        finding = next(
+            item for item in result["findings"]
+            if item["code"] == "GAS_KEY_METADATA"
+        )
+
+        self.assertEqual(finding["severity"], "INFO")
+        self.assertEqual(finding["evidence"]["balance_near"], "1")
+        self.assertEqual(finding["evidence"]["num_nonces"], 2)
 
 if __name__ == "__main__":
     unittest.main()
