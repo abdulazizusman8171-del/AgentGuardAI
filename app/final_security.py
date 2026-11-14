@@ -49,3 +49,50 @@ def require_csrf(request: Request) -> None:
         expected = public_url.rstrip("/")
         if origin.rstrip("/") != expected:
             raise HTTPException(status_code=403, detail="Request origin is not allowed.")
+
+
+# AgentGuard developer gateway rate limits.
+_GATEWAY_ATTEMPTS = defaultdict(deque)
+_GATEWAY_WINDOW_SECONDS = 60
+_GATEWAY_IP_MAX_REQUESTS = 120
+_GATEWAY_KEY_MAX_REQUESTS = 60
+
+
+def enforce_gateway_rate_limit(request: Request, key_id: int) -> None:
+    """
+    Apply independent per-IP and per-developer-key sliding-window limits.
+
+    This in-memory limiter is process-local. Production deployments with
+    multiple workers should use a shared rate-limit store.
+    """
+    now = time.time()
+    host = request.client.host if request.client else "unknown"
+
+    keys = [
+        ("gateway_ip", host),
+        ("gateway_api_key", key_id),
+    ]
+
+    limits = [
+        _GATEWAY_IP_MAX_REQUESTS,
+        _GATEWAY_KEY_MAX_REQUESTS,
+    ]
+
+    with _RATE_LOCK:
+        for key, maximum in zip(keys, limits):
+            attempts = _GATEWAY_ATTEMPTS[key]
+
+            while (
+                attempts
+                and now - attempts[0] >= _GATEWAY_WINDOW_SECONDS
+            ):
+                attempts.popleft()
+
+            if len(attempts) >= maximum:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Gateway rate limit exceeded. Try again shortly."
+                )
+
+        for key in keys:
+            _GATEWAY_ATTEMPTS[key].append(now)

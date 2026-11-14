@@ -1,3 +1,4 @@
+﻿import time
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -56,6 +57,17 @@ class TestAgentGuardAPI(unittest.TestCase):
         self.assertEqual(key_response.status_code, 200)
         self.approval_key = key_response.json()["approval_key"]
         self.approval_headers = {**self.csrf_headers, "X-Approval-Key": self.approval_key}
+
+        from app.auth import generate_session_token
+        self.agent_api_key = "ag_live_" + generate_session_token()
+        self.tracker.create_developer_api_key(
+            self.user_id,
+            "API test key",
+            hash_token(self.agent_api_key),
+            self.agent_api_key[:16],
+            int(time.time())
+        )
+        self.agent_headers = {"X-API-Key": self.agent_api_key}
 
         self.safe_transaction = {
             "transaction_id": "api-safe-001",
@@ -1025,7 +1037,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_agent_inspect_permits_safe_transaction(self):
         response = self.client.post(
             "/agent/inspect",
-            json=self.safe_transaction
+            json=self.safe_transaction,
+            headers=self.agent_headers
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1039,7 +1052,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_agent_inspect_requires_human_approval(self):
         response = self.client.post(
             "/agent/inspect",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.agent_headers
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1059,7 +1073,8 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         response = self.client.post(
             "/agent/inspect",
-            json=self.safe_transaction
+            json=self.safe_transaction,
+            headers=self.agent_headers
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1074,10 +1089,170 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         response = self.client.post(
             "/agent/inspect",
-            json=transaction
+            json=transaction,
+            headers=self.agent_headers
         )
 
         self.assertEqual(response.status_code, 400)
 
+
+
+    def test_agent_inspect_rejects_missing_api_key(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_agent_inspect_rejects_invalid_api_key(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction,
+            headers={"X-API-Key": "ag_live_invalid"}
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_agent_inspect_rejects_revoked_api_key(self):
+        from app.auth import hash_token
+
+        record = self.tracker.get_developer_api_key(
+            hash_token(self.agent_api_key)
+        )
+        self.tracker.revoke_developer_api_key(
+            self.user_id, record["id"], int(time.time())
+        )
+
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction,
+            headers=self.agent_headers
+        )
+        self.assertEqual(response.status_code, 401)
+
+
+    def test_agent_inspect_rejects_oversized_request(self):
+        oversized_body = b"x" * (64 * 1024 + 1)
+
+        response = self.client.post(
+            "/agent/inspect",
+            content=oversized_body,
+            headers={
+                "Content-Type": "application/json",
+                **self.agent_headers
+            }
+        )
+
+        self.assertEqual(response.status_code, 413)
+
+    def test_agent_inspect_enforces_api_key_rate_limit(self):
+        from app.auth import hash_token
+        import app.final_security as final_security
+
+        key = ("gateway_api_key", self.tracker.get_developer_api_key(
+            hash_token(self.agent_api_key)
+        )["id"])
+
+        original_limit = final_security._GATEWAY_KEY_MAX_REQUESTS
+
+        try:
+            final_security._GATEWAY_ATTEMPTS[key].clear()
+            final_security._GATEWAY_KEY_MAX_REQUESTS = 1
+
+            first_response = self.client.post(
+                "/agent/inspect",
+                json=self.safe_transaction,
+                headers=self.agent_headers
+            )
+
+            second_response = self.client.post(
+                "/agent/inspect",
+                json=self.safe_transaction,
+                headers=self.agent_headers
+            )
+
+            self.assertEqual(first_response.status_code, 200)
+            self.assertEqual(second_response.status_code, 429)
+
+        finally:
+            final_security._GATEWAY_KEY_MAX_REQUESTS = original_limit
+            final_security._GATEWAY_ATTEMPTS[key].clear()
+
+    # DEVELOPER API KEY TESTS
+
+    def test_developer_api_key_creation(self):
+        response = self.client.post(
+            "/developer/api-keys",
+            json={"name": "My SDK"},
+            headers=self.csrf_headers
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["api_key"].startswith("ag_live_"))
+        self.assertEqual(data["name"], "My SDK")
+        self.assertIsNotNone(
+            self.tracker.get_developer_api_key(
+                __import__("app.auth", fromlist=["hash_token"]).hash_token(data["api_key"])
+            )
+        )
+
+    def test_developer_api_key_creation_requires_login(self):
+        client = TestClient(api.app)
+        try:
+            response = client.post(
+                "/developer/api-keys",
+                json={"name": "Unauthenticated"}
+            )
+            self.assertEqual(response.status_code, 401)
+        finally:
+            client.close()
+
+    def test_developer_api_key_creation_requires_csrf(self):
+        response = self.client.post(
+            "/developer/api-keys",
+            json={"name": "No CSRF"}
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_developer_api_key_listing_hides_hash(self):
+        self.client.post(
+            "/developer/api-keys",
+            json={"name": "List Test"},
+            headers=self.csrf_headers
+        )
+        response = self.client.get("/developer/api-keys")
+        self.assertEqual(response.status_code, 200)
+        record = response.json()["api_keys"][0]
+        self.assertEqual(record["name"], "List Test")
+        self.assertNotIn("key_hash", record)
+
+    def test_developer_api_key_revocation(self):
+        created = self.client.post(
+            "/developer/api-keys",
+            json={"name": "Revoke Test"},
+            headers=self.csrf_headers
+        )
+        key_id = created.json()["id"]
+
+        response = self.client.delete(
+            f"/developer/api-keys/{key_id}",
+            headers=self.csrf_headers
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_developer_api_key_revocation_requires_csrf(self):
+        created = self.client.post(
+            "/developer/api-keys",
+            json={"name": "CSRF Revoke"},
+            headers=self.csrf_headers
+        )
+        key_id = created.json()["id"]
+
+        response = self.client.delete(
+            f"/developer/api-keys/{key_id}"
+        )
+        self.assertEqual(response.status_code, 403)
+
 if __name__ == "__main__":
     unittest.main()
+
+

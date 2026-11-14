@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Query, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
@@ -23,7 +24,13 @@ from app.near_market import NearMarketClient, NearMarketError
 from app.auth import hash_password, verify_password, generate_session_token, hash_token, generate_approval_key, verify_approval_key
 from app.auth_models import RegistrationRequest, EmailVerificationRequest, LoginRequest, ApprovalKeyRecoveryRequest
 from app.email_service import send_verification_email, send_approval_key_recovery_email, send_password_reset_email
-from app.final_security import enforce_login_rate_limit, record_login_failure, new_csrf_token, require_csrf
+from app.final_security import (
+    enforce_login_rate_limit,
+    record_login_failure,
+    new_csrf_token,
+    require_csrf,
+    enforce_gateway_rate_limit,
+)
 
 
 
@@ -48,11 +55,80 @@ _near_large_buys_cache = {
 _near_large_buys_cache_lock = Lock()
 
 
+
+
+class GatewayRequestSizeLimitMiddleware:
+    """Reject oversized request bodies sent to the inspection gateway."""
+
+    MAX_BODY_BYTES = 64 * 1024
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] != "http"
+            or scope.get("path") != "/agent/inspect"
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        content_length = headers.get(b"content-length")
+
+        if content_length:
+            try:
+                if int(content_length) > self.MAX_BODY_BYTES:
+                    response = JSONResponse(
+                        status_code=413,
+                        content={"detail": "Gateway request body is too large."}
+                    )
+                    await response(scope, receive, send)
+                    return
+            except ValueError:
+                response = JSONResponse(
+                    status_code=400,
+                    content={"detail": "Invalid Content-Length header."}
+                )
+                await response(scope, receive, send)
+                return
+
+        received_bytes = 0
+
+        async def limited_receive():
+            nonlocal received_bytes
+
+            message = await receive()
+
+            if message["type"] == "http.request":
+                received_bytes += len(message.get("body", b""))
+
+                if received_bytes > self.MAX_BODY_BYTES:
+                    raise RequestBodyTooLarge()
+
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except RequestBodyTooLarge:
+            response = JSONResponse(
+                status_code=413,
+                content={"detail": "Gateway request body is too large."}
+            )
+            await response(scope, receive, send)
+
+
+class RequestBodyTooLarge(Exception):
+    pass
+
+
 app = FastAPI(
     title="AgentGuard AI",
     description="Blockchain transaction security API",
     version="0.3.0"
 )
+
+app.add_middleware(GatewayRequestSizeLimitMiddleware)
 
 tracker = SQLiteTransactionTracker()
 
@@ -465,10 +541,47 @@ def evaluate(payload: dict[str, Any]):
         )
 
 @app.post("/agent/inspect")
-def inspect_agent_transaction(payload: dict[str, Any]):
+def inspect_agent_transaction(
+    payload: dict[str, Any],
+    request: Request
+):
     """
     Inspect an AI-agent-proposed transaction without executing it.
+    Requires a valid developer API key.
     """
+
+    raw_key = request.headers.get("X-API-Key", "")
+
+    if not isinstance(raw_key, str) or not raw_key.startswith("ag_live_"):
+        raise HTTPException(
+            status_code=401,
+            detail="A valid AgentGuard API key is required."
+        )
+
+    try:
+        supplied_hash = hash_token(raw_key)
+        key_record = tracker.get_developer_api_key(supplied_hash)
+    except (ValueError, TypeError):
+        key_record = None
+
+    if (
+        not key_record
+        or not hmac.compare_digest(key_record["key_hash"], supplied_hash)
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or revoked AgentGuard API key."
+        )
+
+    enforce_gateway_rate_limit(request, key_record["id"])
+
+    if not tracker.update_developer_api_key_usage(
+        key_record["id"], int(time.time())
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or revoked AgentGuard API key."
+        )
 
     try:
         gateway = AgentSecurityGateway(
@@ -973,5 +1086,80 @@ def current_user(request: Request):
         "id": user["id"],
         "email": user["email"],
         "email_verified": bool(user["email_verified"])
+    }
+
+
+# ==========================================
+# DEVELOPER API KEY MANAGEMENT
+# ==========================================
+
+@app.post("/developer/api-keys")
+def create_developer_api_key(payload: dict[str, Any], request: Request):
+    user = get_authenticated_user(request)
+    require_csrf(request)
+
+    name = payload.get("name")
+
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 80:
+        raise HTTPException(
+            status_code=422,
+            detail="API key name must contain 1 to 80 characters."
+        )
+
+    raw_key = "ag_live_" + generate_session_token()
+    key_hash = hash_token(raw_key)
+    key_prefix = raw_key[:16]
+
+    try:
+        key_id = tracker.create_developer_api_key(
+            user["id"],
+            name.strip(),
+            key_hash,
+            key_prefix,
+            int(time.time())
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return {
+        "success": True,
+        "id": key_id,
+        "name": name.strip(),
+        "api_key": raw_key,
+        "key_prefix": key_prefix,
+        "warning": "Copy this API key now. It cannot be displayed again."
+    }
+
+
+@app.get("/developer/api-keys")
+def list_developer_api_keys(request: Request):
+    user = get_authenticated_user(request)
+
+    return {
+        "success": True,
+        "api_keys": tracker.list_developer_api_keys(user["id"])
+    }
+
+
+@app.delete("/developer/api-keys/{key_id}")
+def revoke_developer_api_key(key_id: int, request: Request):
+    user = get_authenticated_user(request)
+    require_csrf(request)
+
+    revoked = tracker.revoke_developer_api_key(
+        user["id"],
+        key_id,
+        int(time.time())
+    )
+
+    if not revoked:
+        raise HTTPException(
+            status_code=404,
+            detail="API key not found or already revoked."
+        )
+
+    return {
+        "success": True,
+        "message": "API key revoked successfully."
     }
 

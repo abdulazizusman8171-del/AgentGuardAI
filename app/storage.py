@@ -72,6 +72,27 @@ class SQLiteTransactionTracker:
                     )
                 """)
 
+                # DEVELOPER API KEYS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS developer_api_keys (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        key_hash TEXT NOT NULL UNIQUE,
+                        key_prefix TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        last_used_at INTEGER,
+                        revoked_at INTEGER,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_developer_api_keys_user
+                    ON developer_api_keys(user_id)
+                """)
+
                 # USER AUTHENTICATION SESSIONS
                 connection.execute("""
                     CREATE TABLE IF NOT EXISTS user_sessions (
@@ -1254,3 +1275,152 @@ class SQLiteTransactionTracker:
                     )
 
                 return True
+
+    # ==========================================
+    # DEVELOPER API KEY MANAGEMENT
+    # ==========================================
+
+    def create_developer_api_key(
+        self, user_id, name, key_hash, key_prefix, created_at
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(name, str) or not name.strip() or len(name.strip()) > 80:
+            raise ValueError("API key name must contain 1 to 80 characters")
+
+        if not isinstance(key_hash, str) or len(key_hash) != 64:
+            raise ValueError("Invalid API key hash")
+
+        if not isinstance(key_prefix, str) or not key_prefix.strip():
+            raise ValueError("API key prefix is required")
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid API key creation timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO developer_api_keys (
+                        user_id, name, key_hash, key_prefix, created_at
+                    )
+                    SELECT id, ?, ?, ?, ?
+                    FROM users
+                    WHERE id = ? AND email_verified = 1
+                    """,
+                    (
+                        name.strip(),
+                        key_hash,
+                        key_prefix.strip(),
+                        created_at,
+                        user_id
+                    )
+                )
+
+        if cursor.rowcount != 1:
+            raise ValueError("Verified user account not found")
+
+        return cursor.lastrowid
+
+    def get_developer_api_key(self, key_hash):
+        if not isinstance(key_hash, str) or len(key_hash) != 64:
+            raise ValueError("Invalid API key hash")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    k.id,
+                    k.user_id,
+                    k.name,
+                    k.key_hash,
+                    k.key_prefix,
+                    k.created_at,
+                    k.last_used_at
+                FROM developer_api_keys AS k
+                JOIN users AS u ON u.id = k.user_id
+                WHERE k.key_hash = ?
+                  AND k.revoked_at IS NULL
+                  AND u.email_verified = 1
+                """,
+                (key_hash,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "id", "user_id", "name", "key_hash",
+            "key_prefix", "created_at", "last_used_at"
+        ]
+        return dict(zip(columns, row))
+
+    def list_developer_api_keys(self, user_id):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    id, name, key_prefix, created_at,
+                    last_used_at, revoked_at
+                FROM developer_api_keys
+                WHERE user_id = ?
+                ORDER BY created_at DESC, id DESC
+                """,
+                (user_id,)
+            ).fetchall()
+
+        columns = [
+            "id", "name", "key_prefix",
+            "created_at", "last_used_at", "revoked_at"
+        ]
+        return [dict(zip(columns, row)) for row in rows]
+
+    def update_developer_api_key_usage(self, key_id, current_time):
+        if type(key_id) is not int or key_id <= 0:
+            raise ValueError("Invalid API key ID")
+
+        if type(current_time) is not int or current_time <= 0:
+            raise ValueError("Invalid usage timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE developer_api_keys
+                    SET last_used_at = ?
+                    WHERE id = ? AND revoked_at IS NULL
+                    """,
+                    (current_time, key_id)
+                )
+
+        return result.rowcount == 1
+
+    def revoke_developer_api_key(self, user_id, key_id, revoked_at):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if type(key_id) is not int or key_id <= 0:
+            raise ValueError("Invalid API key ID")
+
+        if type(revoked_at) is not int or revoked_at <= 0:
+            raise ValueError("Invalid revocation timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE developer_api_keys
+                    SET revoked_at = ?
+                    WHERE id = ?
+                      AND user_id = ?
+                      AND revoked_at IS NULL
+                    """,
+                    (revoked_at, key_id, user_id)
+                )
+
+        return result.rowcount == 1
+

@@ -1,0 +1,138 @@
+﻿import unittest
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+
+from app import api
+from app.storage import SQLiteTransactionTracker
+
+
+class TestAuthenticationAPI(unittest.TestCase):
+
+    def setUp(self):
+        self.tracker = SQLiteTransactionTracker(":memory:")
+        api.tracker = self.tracker
+        self.client = TestClient(api.app)
+
+    def tearDown(self):
+        self.client.close()
+
+    @patch("app.api.send_verification_email")
+    def test_registration_success(self, mock_email):
+        response = self.client.post(
+            "/auth/register",
+            json={
+                "email": "builder@example.com",
+                "password": "SecurePassword123!"
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        mock_email.assert_called_once()
+
+        user = self.tracker.get_user_by_email("builder@example.com")
+        self.assertIsNotNone(user)
+        self.assertEqual(user["email_verified"], 0)
+
+    @patch("app.api.send_verification_email")
+    def test_duplicate_email_rejected(self, mock_email):
+        payload = {
+            "email": "builder@example.com",
+            "password": "SecurePassword123!"
+        }
+
+        first = self.client.post("/auth/register", json=payload)
+        second = self.client.post("/auth/register", json=payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 409)
+        mock_email.assert_called_once()
+
+    def test_invalid_email_rejected(self):
+        response = self.client.post(
+            "/auth/register",
+            json={
+                "email": "not-an-email",
+                "password": "SecurePassword123!"
+            }
+        )
+
+        self.assertEqual(response.status_code, 422)
+
+    @patch(
+        "app.api.send_verification_email",
+        side_effect=RuntimeError("SMTP unavailable")
+    )
+    def test_email_failure_removes_unverified_account(self, mock_email):
+        response = self.client.post(
+            "/auth/register",
+            json={
+                "email": "failure@example.com",
+                "password": "SecurePassword123!"
+            }
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIsNone(
+            self.tracker.get_user_by_email("failure@example.com")
+        )
+
+    @patch("app.api.send_verification_email")
+    def test_email_verification_success(self, mock_email):
+        self.client.post(
+            "/auth/register",
+            json={
+                "email": "verify@example.com",
+                "password": "SecurePassword123!"
+            }
+        )
+
+        token = mock_email.call_args.args[1]
+
+        response = self.client.post(
+            "/auth/verify-email",
+            json={"token": token}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        user = self.tracker.get_user_by_email("verify@example.com")
+        self.assertEqual(user["email_verified"], 1)
+
+    def test_invalid_verification_token_rejected(self):
+        response = self.client.post(
+            "/auth/verify-email",
+            json={"token": "invalid-token-value-123456"}
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.send_verification_email")
+    def test_verification_token_cannot_be_reused(self, mock_email):
+        self.client.post(
+            "/auth/register",
+            json={
+                "email": "reuse@example.com",
+                "password": "SecurePassword123!"
+            }
+        )
+
+        token = mock_email.call_args.args[1]
+
+        first = self.client.post(
+            "/auth/verify-email",
+            json={"token": token}
+        )
+
+        second = self.client.post(
+            "/auth/verify-email",
+            json={"token": token}
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 400)
+
+
+if __name__ == "__main__":
+    unittest.main()
