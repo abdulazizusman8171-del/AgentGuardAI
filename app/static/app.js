@@ -640,11 +640,54 @@ setInterval(() => {
 
 
 // AGENTGUARD NEAR LARGE BUY MONITOR
+function formatNearTransactionAge(timestamp) {
+    if (!timestamp) return "Transaction time unavailable";
+
+    let transactionDate;
+
+    if (typeof timestamp === "number") {
+        transactionDate = new Date(
+            timestamp < 100000000000 ? timestamp * 1000 : timestamp
+        );
+    } else {
+        transactionDate = new Date(timestamp);
+    }
+
+    if (Number.isNaN(transactionDate.getTime())) {
+        return "Transaction time unavailable";
+    }
+
+    const ageSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - transactionDate.getTime()) / 1000)
+    );
+
+    if (ageSeconds < 60) return ageSeconds + " seconds ago";
+
+    const minutes = Math.floor(ageSeconds / 60);
+    if (minutes < 60) return minutes + " minutes ago";
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + " hours ago";
+
+    const days = Math.floor(hours / 24);
+    return days + " days ago";
+}
+
 async function loadNearLargeBuys() {
     const countElement = document.getElementById("near-large-buy-count");
     const listElement = document.getElementById("near-large-buy-list");
 
     if (!countElement || !listElement) return;
+
+    let statusElement = document.getElementById("near-large-buy-status");
+
+    if (!statusElement) {
+        statusElement = document.createElement("small");
+        statusElement.id = "near-large-buy-status";
+        statusElement.className = "near-large-buy-status";
+        listElement.parentElement.insertBefore(statusElement, listElement);
+    }
 
     try {
         const response = await fetch("/near/large-buys");
@@ -659,14 +702,31 @@ async function loadNearLargeBuys() {
             throw new Error("Invalid large-buy response");
         }
 
-        // Update the card only after a successful API response.
+        const updatedDate = result.last_updated
+            ? new Date(result.last_updated)
+            : null;
+
+        const updatedText =
+            updatedDate && !Number.isNaN(updatedDate.getTime())
+                ? updatedDate.toLocaleString()
+                : "Unavailable";
+
+        statusElement.textContent =
+            (result.is_stale ? "STALE DATA" : "FRESH DATA") +
+            " | Last updated: " + updatedText;
+
+        statusElement.dataset.status =
+            result.is_stale ? "stale" : "fresh";
+
         listElement.replaceChildren();
 
         if (result.data.length === 0) {
             countElement.textContent = "No buy detected";
 
             const message = document.createElement("p");
-            message.textContent = "No verified NEAR purchases found in the latest feed.";
+            message.textContent =
+                "No verified NEAR purchases found in the latest feed.";
+
             listElement.appendChild(message);
             return;
         }
@@ -690,6 +750,12 @@ async function loadNearLargeBuys() {
         const wallet = document.createElement("small");
         wallet.textContent = "Wallet: " + (buy.wallet || "Unknown");
 
+        const age = document.createElement("small");
+        age.className = "near-transaction-age";
+        age.textContent =
+            "Transaction age: " +
+            formatNearTransactionAge(buy.timestamp);
+
         const link = document.createElement("a");
         link.textContent = "View transaction";
         link.href = buy.transaction_url ||
@@ -698,15 +764,17 @@ async function loadNearLargeBuys() {
         link.target = "_blank";
         link.rel = "noopener noreferrer";
 
-        item.append(value, wallet, link);
+        item.append(value, wallet, age, link);
         listElement.appendChild(item);
 
     } catch (error) {
-        // Keep the last successful result visible if a refresh fails.
         console.error("NEAR large-buy error:", error);
+
+        if (statusElement.textContent) {
+            statusElement.textContent += " | Refresh failed";
+        }
     }
 }
-
 loadNearLargeBuys();
 
 // Refresh large-buy data every 60 seconds.

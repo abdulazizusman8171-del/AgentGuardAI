@@ -1,6 +1,7 @@
 import os
 import hmac
 import time
+from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
 
@@ -247,35 +248,46 @@ def get_cached_near_large_buys():
         now = time.monotonic()
         cached_data = _near_large_buys_cache["data"]
         fetched_at = _near_large_buys_cache["fetched_at"]
+        last_updated = _near_large_buys_cache.get("last_updated")
 
-        # Return fresh data without contacting GeckoTerminal.
-        # An empty list is a valid cached result.
         if (
             cached_data is not None
             and fetched_at is not None
             and now - fetched_at < NEAR_LARGE_BUYS_CACHE_TTL
         ):
-            return cached_data
+            return {
+                "data": cached_data,
+                "last_updated": last_updated,
+                "is_stale": False
+            }
 
         try:
             buys = NearMarketClient().get_large_buys()
+            updated_at = datetime.now(timezone.utc).isoformat()
 
             _near_large_buys_cache["data"] = buys
             _near_large_buys_cache["fetched_at"] = time.monotonic()
+            _near_large_buys_cache["last_updated"] = updated_at
 
-            return buys
+            return {
+                "data": buys,
+                "last_updated": updated_at,
+                "is_stale": False
+            }
 
         except NearMarketError:
-            # Serve the last successful result during temporary failures.
             if (
                 cached_data is not None
                 and fetched_at is not None
                 and time.monotonic() - fetched_at < NEAR_LARGE_BUYS_STALE_TTL
             ):
-                return cached_data
+                return {
+                    "data": cached_data,
+                    "last_updated": last_updated,
+                    "is_stale": True
+                }
 
             raise
-
 
 @app.get("/near/market")
 def get_near_market():
@@ -578,11 +590,13 @@ def process_transaction(payload: dict[str, Any]):
 @app.get("/near/large-buys")
 def get_near_large_buys():
     try:
-        buys = get_cached_near_large_buys()
+        result = get_cached_near_large_buys()
 
         return {
             "success": True,
-            "data": buys,
+            "data": result["data"],
+            "last_updated": result["last_updated"],
+            "is_stale": result["is_stale"],
             "source": "GeckoTerminal",
             "scope": "Ref Finance USDC/wNEAR pool"
         }
