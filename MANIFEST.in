@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+recursive-include agentguard *.py
+prune tests
+global-exclude *.py[cod]
+global-exclude __pycache__

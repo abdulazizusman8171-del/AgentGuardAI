@@ -6,3 +6,15 @@ data/
 *.db
 
 *.backup
+
+# AgentGuard AI local backups
+*.bak
+*.backup
+*.backup_*
+*.before-*.html
+*.before-*
+backup_*/
+
+# Local build artifacts and test logs
+dist/
+auth_api_test_errors.txt

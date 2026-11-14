@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentguard-ai"
+version = "0.1.0"
+description = "Python SDK for the AgentGuard AI transaction security gateway"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "AgentGuard AI"}
+]
+keywords = [
+    "agentguard",
+    "blockchain",
+    "security",
+    "ai-agents",
+    "transaction-security",
+    "near"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: OS Independent"
+]
+
+[tool.setuptools.packages.find]
+include = ["agentguard*"]
+
+[tool.setuptools]
+include-package-data = false
