@@ -14,6 +14,7 @@ from app.main import evaluate_transaction
 from app.security_intelligence import generate_security_insights
 from app.storage import SQLiteTransactionTracker
 from app.workflow import TransactionWorkflow
+from app.agent_gateway import AgentSecurityGateway
 from app.approval import ApprovalManager
 from app.near_client import NearRPCClient, NearRPCError
 from app.near_transaction_analyzer import analyze_near_transaction
@@ -456,6 +457,26 @@ def evaluate(payload: dict[str, Any]):
             transaction_tracker=tracker,
             blocked_recipients=BLOCKED_RECIPIENTS
         )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+@app.post("/agent/inspect")
+def inspect_agent_transaction(payload: dict[str, Any]):
+    """
+    Inspect an AI-agent-proposed transaction without executing it.
+    """
+
+    try:
+        gateway = AgentSecurityGateway(
+            transaction_tracker=tracker,
+            blocked_recipients=BLOCKED_RECIPIENTS
+        )
+
+        return gateway.inspect_transaction(payload)
 
     except ValueError as error:
         raise HTTPException(

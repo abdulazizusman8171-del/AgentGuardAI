@@ -1022,5 +1022,62 @@ class TestAgentGuardAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 502)
 
 
+    def test_agent_inspect_permits_safe_transaction(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(data["gateway_status"], "PERMITTED")
+        self.assertFalse(data["execution_performed"])
+        self.assertFalse(data["transaction_signed"])
+        self.assertFalse(data["transaction_broadcast"])
+
+    def test_agent_inspect_requires_human_approval(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.unknown_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(
+            data["gateway_status"],
+            "APPROVAL_REQUIRED"
+        )
+        self.assertTrue(data["human_approval_required"])
+        self.assertFalse(data["execution_performed"])
+
+    def test_agent_inspect_rejects_blocklisted_recipient(self):
+        api.BLOCKED_RECIPIENTS = [
+            self.safe_transaction["recipient_address"]
+        ]
+
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(data["gateway_status"], "REJECTED")
+        self.assertFalse(data["execution_performed"])
+
+    def test_agent_inspect_rejects_invalid_transaction(self):
+        transaction = self.safe_transaction.copy()
+        transaction["amount"] = "invalid"
+
+        response = self.client.post(
+            "/agent/inspect",
+            json=transaction
+        )
+
+        self.assertEqual(response.status_code, 400)
+
 if __name__ == "__main__":
     unittest.main()
