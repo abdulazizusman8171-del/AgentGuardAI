@@ -1,4 +1,4 @@
-const form = document.getElementById("transaction-form");
+﻿const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -247,7 +247,7 @@ function authHeaders(extra = {}) {
 async function authPost(path, body = {}) {
     const response = await fetch(path, { method: "POST", credentials: "same-origin", headers: authHeaders(), body: JSON.stringify(body) });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || "Request failed.");
+    if (!response.ok) { const detail = data.detail; const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map(item => item.msg || JSON.stringify(item)).join("; ") : detail && typeof detail === "object" ? JSON.stringify(detail) : "Request failed."; throw new Error(message); }
     return data;
 }
 function showOneTimeKey(data) {
@@ -2197,6 +2197,7 @@ setInterval(() => {
     const password = document.getElementById("newAccountPassword");
     const confirmation = document.getElementById("confirmAccountPassword");
     const status = document.getElementById("passwordResetStatus");
+    const recoveryPanel = document.getElementById("passwordRecoveryPanel");
 
     function setupVisibility(input, button) {
         if (!input || !button) return;
@@ -2221,6 +2222,7 @@ setInterval(() => {
 
     if (requestButton) {
         requestButton.addEventListener("click", async function () {
+            if (recoveryPanel) recoveryPanel.classList.remove("hidden");
             try {
                 const data = await authPost(
                     "/auth/password-reset/request",
@@ -2265,3 +2267,69 @@ setInterval(() => {
         });
     }
 })();
+
+
+// NEAR MARKET INTELLIGENCE — SAME ENGINE AS SECURITY INTELLIGENCE
+(() => {
+    const track = document.getElementById("nearMarketTrack");
+    const prev = document.getElementById("nearMarketPrev");
+    const next = document.getElementById("nearMarketNext");
+    const viewport = track?.parentElement;
+
+    if (!track || !viewport) return;
+
+    const originalCards = Array.from(track.children);
+    const originalCardCount = originalCards.length;
+    const duration = 18000;
+
+    if (originalCardCount < 2) return;
+
+    originalCards.forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.removeAttribute("id");
+        clone.setAttribute("aria-hidden", "true");
+        clone.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+        track.appendChild(clone);
+    });
+
+    track.style.animation =
+        `agentGuardContinuousSlide ${duration}ms linear infinite`;
+
+    function moveNearCarousel(direction) {
+        const animation = track.getAnimations()[0];
+
+        if (animation) {
+            const stepDuration = duration / originalCardCount;
+            animation.currentTime =
+                (Number(animation.currentTime) || 0) +
+                direction * stepDuration;
+        }
+    }
+
+    if (prev) {
+        prev.addEventListener("click", () => moveNearCarousel(-1));
+    }
+
+    if (next) {
+        next.addEventListener("click", () => moveNearCarousel(1));
+    }
+
+    viewport.addEventListener("mouseenter", () => {
+        track.style.animationPlayState = "paused";
+    });
+
+    viewport.addEventListener("mouseleave", () => {
+        track.style.animationPlayState = "running";
+    });
+
+    viewport.addEventListener("focusin", () => {
+        track.style.animationPlayState = "paused";
+    });
+
+    viewport.addEventListener("focusout", () => {
+        track.style.animationPlayState = "running";
+    });
+})();
+
+
+

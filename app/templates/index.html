@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -555,7 +555,8 @@
             <p>Live price, trading volume and large-purchase activity.</p>
         </div>
     </div>
-    <div class="near-market-grid">
+    <div class="near-market-viewport">
+        <div class="near-market-grid" id="nearMarketTrack">
         <article class="activity-card near-market-card" id="near-market">
                             <div class="activity-visual">
                                 <div class="visual-icon blockchain-icon"><span>◈</span><i></i></div>
@@ -587,6 +588,13 @@
                             </div>
                             <small>Ref Finance USDC/wNEAR · GeckoTerminal</small>
                         </article>
+        </div>
+    </div>
+
+    <div class="near-market-controls">
+        <button type="button" id="nearMarketPrev" aria-label="Previous market card">&#8592;</button>
+        <div id="nearMarketDots" class="near-market-dots" aria-label="Market slides"></div>
+        <button type="button" id="nearMarketNext" aria-label="Next market card">&#8594;</button>
     </div>
 </section>
 
@@ -788,14 +796,7 @@
         <p id="accountStatus" class="auth-status" role="status">
             Register and verify your email before logging in.
         </p>
-    </div>
-
-    <!-- PASSWORD RECOVERY -->
-    <div class="auth-card">
-        <div class="auth-card-heading">
-            <h3>Password Recovery</h3>
-            <p>Recover access to your account using your verified email.</p>
-        </div>
+        <div id="passwordRecoveryPanel" class="password-recovery-panel hidden">
 
         <label for="passwordResetToken">Password reset token</label>
         <input id="passwordResetToken" type="password" autocomplete="off"
@@ -823,6 +824,7 @@
                 type="button">Reset password</button>
 
         <p id="passwordResetStatus" class="auth-status" role="status"></p>
+        </div>
     </div>
 
     <!-- EMAIL VERIFICATION -->
@@ -908,3 +910,5 @@
 
 </body>
 </html>
+
+

@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -3369,3 +3369,141 @@ html, body {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* NEAR MARKET INTELLIGENCE CAROUSEL */
+.near-market-viewport {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.near-market-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: max-content;
+    gap: 18px;
+    padding: 5px 3px;
+    will-change: transform;
+}
+
+.near-market-grid .activity-card {
+    flex: 0 0 320px;
+    min-width: 0;
+}
+
+.near-market-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.near-market-controls button {
+    width: 40px;
+    height: 38px;
+    cursor: pointer;
+}
+
+.near-market-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.near-market-dot {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text-muted);
+    cursor: pointer;
+}
+
+.near-market-dot.active {
+    background: var(--accent);
+    transform: scale(1.3);
+}
+
+@media (max-width: 650px) {
+    .near-market-grid .activity-card {
+        flex-basis: min(280px, 82vw);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .near-market-grid {
+        will-change: auto;
+    }
+}
+
+
+/* NEAR MARKET CONTINUOUS SLIDING ANIMATION */
+@keyframes nearMarketContinuousSlide {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translate3d(calc(-1 * var(--near-market-loop-distance)), 0, 0);
+    }
+}
+
+.near-market-grid {
+    animation-timing-function: linear;
+}
+
+.near-market-viewport {
+    touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .near-market-grid {
+        animation: none !important;
+    }
+}
+
+
+
+
+
+/* NEAR MARKET — MATCH SECURITY INTELLIGENCE CAROUSEL */
+.near-market-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch;
+    width: max-content !important;
+    max-width: none !important;
+    gap: 18px;
+    animation-timing-function: linear !important;
+    animation-iteration-count: infinite !important;
+    will-change: transform;
+}
+
+.near-market-grid .activity-card {
+    flex-shrink: 0 !important;
+}
+
+/* FINAL NEAR CAROUSEL ANIMATION OVERRIDE */
+.near-market-grid {
+    animation-name: agentGuardContinuousSlide !important;
+    animation-duration: 18000ms !important;
+    animation-timing-function: linear !important;
+    animation-iteration-count: infinite !important;
+    animation-fill-mode: none !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: max-content !important;
+    max-width: none !important;
+}
+
+.near-market-grid > .activity-card {
+    flex: 0 0 320px !important;
+}
+
+@media (max-width: 650px) {
+    .near-market-grid > .activity-card {
+        flex-basis: min(280px, 82vw) !important;
+    }
+}
+
