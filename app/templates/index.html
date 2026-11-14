@@ -754,17 +754,31 @@
     </div>
 
     <div class="approval-auth">
-        <label for="approvalApiKey">Approval authorization key:</label>
-        <input
-            id="approvalApiKey"
-            type="password"
-            autocomplete="off"
-            placeholder="Enter your approval key"
-        >
-        <button id="unlockApprovals">Unlock</button>
-        <p id="approvalAuthStatus" role="status">
-            Enter your key to view protected approvals.
-        </p>
+        <h3>Account access</h3>
+        <label for="accountEmail">Email</label>
+        <input id="accountEmail" type="email" autocomplete="email" placeholder="you@example.com">
+        <label for="accountPassword">Password</label>
+        <input id="accountPassword" type="password" autocomplete="current-password" placeholder="At least 12 characters">
+        <div class="button-row">
+            <button id="registerAccount" type="button">Create account</button>
+            <button id="loginAccount" type="button">Log in</button>
+            <button id="logoutAccount" type="button">Log out</button>
+        </div>
+        <p id="accountStatus" role="status">Register and verify your email before logging in.</p>
+        <label for="emailVerificationToken">Email verification token</label>
+        <input id="emailVerificationToken" type="password" autocomplete="off" placeholder="Paste verification token from email">
+        <button id="verifyEmailAccount" type="button">Verify email</button>
+        <div class="button-row">
+            <button id="createApprovalKey" type="button">Generate personal Approval Key</button>
+            <button id="requestKeyRecovery" type="button">Email recovery token</button>
+        </div>
+        <label for="recoveryToken">Recovery token from email</label>
+        <input id="recoveryToken" type="password" autocomplete="off" placeholder="Paste recovery token">
+        <button id="completeKeyRecovery" type="button">Replace Approval Key</button>
+        <label for="approvalApiKey">Personal Approval Key</label>
+        <input id="approvalApiKey" type="password" autocomplete="off" placeholder="Enter your personal Approval Key">
+        <button id="unlockApprovals" type="button">Unlock Approval Center</button>
+        <p id="approvalAuthStatus" role="status">Log in and enter your personal key to view approvals.</p>
     </div>
 
     <div class="approval-filter">

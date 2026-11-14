@@ -41,7 +41,7 @@ class ApprovalManager:
 
         return transaction_json, fingerprint
 
-    def create_approval(self, transaction):
+    def create_approval(self, transaction, owner_user_id=None):
 
         if not isinstance(transaction, dict):
             raise ValueError("Transaction must be a dictionary")
@@ -68,7 +68,8 @@ class ApprovalManager:
             transaction_json=transaction_json,
             fingerprint=fingerprint,
             created_at=current_time,
-            expires_at=expires_at
+            expires_at=expires_at,
+            owner_user_id=owner_user_id
         )
         return {
             "approval_id": approval_id,
@@ -78,7 +79,9 @@ class ApprovalManager:
             "message": "Approval request created successfully."
         }
 
-    def approve_transaction(self, approval_id, transaction):
+    def approve_transaction(
+        self, approval_id, transaction, owner_user_id=None
+    ):
 
         if not isinstance(approval_id, str) or not approval_id.strip():
             raise ValueError("Valid approval ID is required")
@@ -86,7 +89,9 @@ class ApprovalManager:
         if not isinstance(transaction, dict):
             raise ValueError("Transaction must be a dictionary")
 
-        approval = self.storage.get_approval(approval_id)
+        approval = self.storage.get_approval(
+            approval_id, owner_user_id=owner_user_id
+        )
 
         if approval is None:
             return {
@@ -117,7 +122,8 @@ class ApprovalManager:
 
         approved = self.storage.approve_pending_approval(
             approval_id,
-            current_time
+            current_time,
+            owner_user_id=owner_user_id
         )
 
         if not approved:
@@ -131,7 +137,9 @@ class ApprovalManager:
             "message": "Transaction approved successfully."
         }
 
-    def consume_approval(self, approval_id, transaction):
+    def consume_approval(
+        self, approval_id, transaction, owner_user_id=None
+    ):
 
         if not isinstance(approval_id, str) or not approval_id.strip():
             raise ValueError("Valid approval ID is required")
@@ -139,7 +147,9 @@ class ApprovalManager:
         if not isinstance(transaction, dict):
             raise ValueError("Transaction must be a dictionary")
 
-        approval = self.storage.get_approval(approval_id)
+        approval = self.storage.get_approval(
+            approval_id, owner_user_id=owner_user_id
+        )
 
         if approval is None:
             return {
@@ -170,7 +180,8 @@ class ApprovalManager:
 
         consumed = self.storage.consume_approved_approval(
             approval_id,
-            current_time
+            current_time,
+            owner_user_id=owner_user_id
         )
 
         if not consumed:

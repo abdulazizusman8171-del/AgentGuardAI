@@ -58,10 +58,100 @@ class SQLiteTransactionTracker:
                     )
                 """)
 
+                # PERSONAL USER ACCOUNTS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                        password_hash TEXT NOT NULL,
+                        password_salt TEXT NOT NULL,
+                        approval_key_hash TEXT,
+                        email_verified INTEGER NOT NULL DEFAULT 0,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )
+                """)
+
+                # USER AUTHENTICATION SESSIONS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        token_hash TEXT NOT NULL UNIQUE,
+                        created_at INTEGER NOT NULL,
+                        expires_at INTEGER NOT NULL,
+                        revoked_at INTEGER,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_user_sessions_user
+                    ON user_sessions(user_id)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_user_sessions_expiry
+                    ON user_sessions(expires_at)
+                """)
+
+                # EMAIL VERIFICATION AND APPROVAL KEY RECOVERY TOKENS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS account_tokens (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        token_hash TEXT NOT NULL UNIQUE,
+                        purpose TEXT NOT NULL CHECK (
+                            purpose IN (
+                                'EMAIL_VERIFICATION',
+                                'APPROVAL_KEY_RECOVERY'
+                            )
+                        ),
+                        created_at INTEGER NOT NULL,
+                        expires_at INTEGER NOT NULL,
+                        used_at INTEGER,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_account_tokens_user_purpose
+                    ON account_tokens(user_id, purpose)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_account_tokens_expiry
+                    ON account_tokens(expires_at)
+                """)
+
+                # Add ownership to existing approvals without deleting records.
+                approval_columns = {
+                    row[1] for row in connection.execute(
+                        "PRAGMA table_info(pending_approvals)"
+                    ).fetchall()
+                }
+
+                if "owner_user_id" not in approval_columns:
+                    connection.execute("""
+                        ALTER TABLE pending_approvals
+                        ADD COLUMN owner_user_id INTEGER
+                        REFERENCES users(id)
+                    """)
+
                 connection.execute("""
                     CREATE INDEX IF NOT EXISTS
                     idx_pending_approvals_transaction
                     ON pending_approvals(transaction_id)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_pending_approvals_owner
+                    ON pending_approvals(owner_user_id)
                 """)
 
     def _validate_transaction_id(self, transaction_id):
@@ -109,7 +199,8 @@ class SQLiteTransactionTracker:
         transaction_json,
         fingerprint,
         created_at,
-        expires_at
+        expires_at,
+        owner_user_id=None
     ):
 
         with closing(self._connect()) as connection:
@@ -122,9 +213,10 @@ class SQLiteTransactionTracker:
                         transaction_json,
                         fingerprint,
                         created_at,
-                        expires_at
+                        expires_at,
+                        owner_user_id
                     )
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         approval_id,
@@ -132,7 +224,8 @@ class SQLiteTransactionTracker:
                         transaction_json,
                         fingerprint,
                         created_at,
-                        expires_at
+                        expires_at,
+                        owner_user_id
                     )
                 )
     def get_transaction_history(self, limit=50):
@@ -159,7 +252,7 @@ class SQLiteTransactionTracker:
             }
             for row in rows
         ]
-    def get_approval(self, approval_id):
+    def get_approval(self, approval_id, owner_user_id=None):
 
         with closing(self._connect()) as connection:
             row = connection.execute(
@@ -167,8 +260,9 @@ class SQLiteTransactionTracker:
                 SELECT *
                 FROM pending_approvals
                 WHERE approval_id = ?
+                  AND (? IS NULL OR owner_user_id = ?)
                 """,
-                (approval_id,)
+                (approval_id, owner_user_id, owner_user_id)
             ).fetchone()
 
         if row is None:
@@ -183,12 +277,15 @@ class SQLiteTransactionTracker:
             "created_at",
             "expires_at",
             "approved_at",
-            "consumed_at"
+            "consumed_at",
+            "owner_user_id"
         ]
 
         return dict(zip(columns, row))
 
-    def approve_pending_approval(self, approval_id, current_time):
+    def approve_pending_approval(
+        self, approval_id, current_time, owner_user_id=None
+    ):
 
         with closing(self._connect()) as connection:
             with connection:
@@ -201,8 +298,15 @@ class SQLiteTransactionTracker:
                     WHERE approval_id = ?
                       AND status = 'PENDING'
                       AND expires_at > ?
+                      AND (? IS NULL OR owner_user_id = ?)
                     """,
-                    (current_time, approval_id, current_time)
+                    (
+                        current_time,
+                        approval_id,
+                        current_time,
+                        owner_user_id,
+                        owner_user_id
+                    )
                 )
 
                 if result.rowcount == 1:
@@ -215,13 +319,21 @@ class SQLiteTransactionTracker:
                     WHERE approval_id = ?
                       AND status = 'PENDING'
                       AND expires_at <= ?
+                      AND (? IS NULL OR owner_user_id = ?)
                     """,
-                    (approval_id, current_time)
+                    (
+                        approval_id,
+                        current_time,
+                        owner_user_id,
+                        owner_user_id
+                    )
                 )
 
                 return False
 
-    def consume_approved_approval(self, approval_id, current_time):
+    def consume_approved_approval(
+        self, approval_id, current_time, owner_user_id=None
+    ):
 
         with closing(self._connect()) as connection:
             with connection:
@@ -234,8 +346,15 @@ class SQLiteTransactionTracker:
                     WHERE approval_id = ?
                       AND status = 'APPROVED'
                       AND expires_at > ?
+                      AND (? IS NULL OR owner_user_id = ?)
                     """,
-                    (current_time, approval_id, current_time)
+                    (
+                        current_time,
+                        approval_id,
+                        current_time,
+                        owner_user_id,
+                        owner_user_id
+                    )
                 )
 
                 if result.rowcount == 1:
@@ -248,12 +367,20 @@ class SQLiteTransactionTracker:
                     WHERE approval_id = ?
                       AND status = 'APPROVED'
                       AND expires_at <= ?
+                      AND (? IS NULL OR owner_user_id = ?)
                     """,
-                    (approval_id, current_time)
+                    (
+                        approval_id,
+                        current_time,
+                        owner_user_id,
+                        owner_user_id
+                    )
                 )
 
                 return False
-    def get_approvals(self, status=None, limit=50):
+    def get_approvals(
+        self, status=None, limit=50, owner_user_id=None
+    ):
 
         if type(limit) is not int or not 1 <= limit <= 200:
             raise ValueError("Limit must be an integer between 1 and 200")
@@ -287,10 +414,20 @@ class SQLiteTransactionTracker:
         """
 
         parameters = []
+        conditions = []
 
         if status is not None:
-            query += " WHERE status = ?"
+            conditions.append("status = ?")
             parameters.append(status)
+
+        if owner_user_id is not None:
+            if type(owner_user_id) is not int or owner_user_id <= 0:
+                raise ValueError("Invalid owner user ID")
+            conditions.append("owner_user_id = ?")
+            parameters.append(owner_user_id)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
         query += " ORDER BY created_at DESC LIMIT ?"
         parameters.append(limit)
@@ -391,6 +528,7 @@ class SQLiteTransactionTracker:
         if execution_status not in (
             "NOT_EXECUTED",
             "AWAITING_CONFIRMATION",
+            "APPROVAL_REQUIRED",
             "EXECUTED",
             "BLOCKED",
             "FAILED"
@@ -481,3 +619,594 @@ class SQLiteTransactionTracker:
             history.append(record)
 
         return history
+
+
+    # ==========================================
+    # PERSONAL USER ACCOUNT STORAGE
+    # ==========================================
+
+    def create_user(
+        self,
+        email,
+        password_hash,
+        password_salt,
+        created_at
+    ):
+        import re
+
+        if not isinstance(email, str):
+            raise ValueError("Valid email address is required")
+
+        email = email.strip().lower()
+
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+            raise ValueError("Invalid email address")
+
+        if not isinstance(password_hash, str) or not password_hash:
+            raise ValueError("Password hash is required")
+
+        if not isinstance(password_salt, str) or not password_salt:
+            raise ValueError("Password salt is required")
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid account creation time")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                try:
+                    cursor = connection.execute(
+                        """
+                        INSERT INTO users (
+                            email,
+                            password_hash,
+                            password_salt,
+                            created_at,
+                            updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (
+                            email,
+                            password_hash,
+                            password_salt,
+                            created_at,
+                            created_at
+                        )
+                    )
+                except sqlite3.IntegrityError:
+                    raise ValueError("An account with this email already exists")
+
+                return cursor.lastrowid
+
+    def get_user_by_email(self, email):
+
+        if not isinstance(email, str) or not email.strip():
+            raise ValueError("Valid email address is required")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    email,
+                    password_hash,
+                    password_salt,
+                    approval_key_hash,
+                    email_verified,
+                    created_at,
+                    updated_at
+                FROM users
+                WHERE email = ?
+                """,
+                (email.strip().lower(),)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "id",
+            "email",
+            "password_hash",
+            "password_salt",
+            "approval_key_hash",
+            "email_verified",
+            "created_at",
+            "updated_at"
+        ]
+
+        return dict(zip(columns, row))
+
+    def get_user_by_id(self, user_id):
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    email,
+                    approval_key_hash,
+                    email_verified,
+                    created_at,
+                    updated_at
+                FROM users
+                WHERE id = ?
+                """,
+                (user_id,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "id",
+            "email",
+            "approval_key_hash",
+            "email_verified",
+            "created_at",
+            "updated_at"
+        ]
+
+        return dict(zip(columns, row))
+
+    def update_user_password(
+        self,
+        user_id,
+        password_hash,
+        password_salt,
+        updated_at
+    ):
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(password_hash, str) or not password_hash:
+            raise ValueError("Password hash is required")
+
+        if not isinstance(password_salt, str) or not password_salt:
+            raise ValueError("Password salt is required")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE users
+                    SET password_hash = ?,
+                        password_salt = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        password_hash,
+                        password_salt,
+                        updated_at,
+                        user_id
+                    )
+                )
+
+        return result.rowcount == 1
+
+    def set_user_approval_key(
+        self,
+        user_id,
+        approval_key_hash,
+        updated_at
+    ):
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if (
+            not isinstance(approval_key_hash, str)
+            or not approval_key_hash
+        ):
+            raise ValueError("Approval Key hash is required")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE users
+                    SET approval_key_hash = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                      AND email_verified = 1
+                    """,
+                    (
+                        approval_key_hash,
+                        updated_at,
+                        user_id
+                    )
+                )
+
+        return result.rowcount == 1
+
+    def verify_user_email(self, user_id, updated_at):
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE users
+                    SET email_verified = 1,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (updated_at, user_id)
+                )
+
+        return result.rowcount == 1
+
+
+    # ==========================================
+    # USER SESSION MANAGEMENT
+    # ==========================================
+
+    def create_user_session(
+        self, user_id, token_hash, created_at, expires_at
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Session token hash is required")
+
+        if type(created_at) is not int or type(expires_at) is not int:
+            raise ValueError("Invalid session timestamps")
+
+        if expires_at <= created_at:
+            raise ValueError("Session expiry must be in the future")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO user_sessions (
+                        user_id, token_hash, created_at, expires_at
+                    )
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (user_id, token_hash, created_at, expires_at)
+                )
+
+        return cursor.lastrowid
+
+    def get_valid_user_session(self, token_hash, current_time):
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Session token hash is required")
+
+        if type(current_time) is not int:
+            raise ValueError("Invalid current timestamp")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id, user_id, token_hash, created_at, expires_at
+                FROM user_sessions
+                WHERE token_hash = ?
+                  AND revoked_at IS NULL
+                  AND expires_at > ?
+                """,
+                (token_hash, current_time)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "id", "user_id", "token_hash", "created_at", "expires_at"
+        ]
+        return dict(zip(columns, row))
+
+    def revoke_user_session(self, token_hash, revoked_at):
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Session token hash is required")
+
+        if type(revoked_at) is not int:
+            raise ValueError("Invalid revocation timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE user_sessions
+                    SET revoked_at = ?
+                    WHERE token_hash = ?
+                      AND revoked_at IS NULL
+                    """,
+                    (revoked_at, token_hash)
+                )
+
+        return result.rowcount == 1
+
+    def revoke_all_user_sessions(self, user_id, revoked_at):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if type(revoked_at) is not int:
+            raise ValueError("Invalid revocation timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE user_sessions
+                    SET revoked_at = ?
+                    WHERE user_id = ?
+                      AND revoked_at IS NULL
+                    """,
+                    (revoked_at, user_id)
+                )
+
+        return result.rowcount
+
+
+    # ==========================================
+    # EMAIL VERIFICATION AND RECOVERY TOKENS
+    # ==========================================
+
+    def create_account_token(
+        self, user_id, token_hash, purpose, created_at, expires_at
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Token hash is required")
+
+        allowed_purposes = {
+            "EMAIL_VERIFICATION",
+            "APPROVAL_KEY_RECOVERY"
+        }
+
+        if purpose not in allowed_purposes:
+            raise ValueError("Invalid account token purpose")
+
+        if type(created_at) is not int or type(expires_at) is not int:
+            raise ValueError("Invalid token timestamps")
+
+        if expires_at <= created_at:
+            raise ValueError("Token expiry must be in the future")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                user = connection.execute(
+                    "SELECT id FROM users WHERE id = ?",
+                    (user_id,)
+                ).fetchone()
+
+                if user is None:
+                    raise ValueError("User account not found")
+
+                connection.execute(
+                    """
+                    UPDATE account_tokens
+                    SET used_at = ?
+                    WHERE user_id = ?
+                      AND purpose = ?
+                      AND used_at IS NULL
+                    """,
+                    (created_at, user_id, purpose)
+                )
+
+                cursor = connection.execute(
+                    """
+                    INSERT INTO account_tokens (
+                        user_id,
+                        token_hash,
+                        purpose,
+                        created_at,
+                        expires_at
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_id,
+                        token_hash,
+                        purpose,
+                        created_at,
+                        expires_at
+                    )
+                )
+
+        return cursor.lastrowid
+
+    def get_valid_account_token(
+        self, token_hash, purpose, current_time
+    ):
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Token hash is required")
+
+        if purpose not in {
+            "EMAIL_VERIFICATION",
+            "APPROVAL_KEY_RECOVERY"
+        }:
+            raise ValueError("Invalid account token purpose")
+
+        if type(current_time) is not int:
+            raise ValueError("Invalid current timestamp")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    user_id,
+                    token_hash,
+                    purpose,
+                    created_at,
+                    expires_at
+                FROM account_tokens
+                WHERE token_hash = ?
+                  AND purpose = ?
+                  AND used_at IS NULL
+                  AND expires_at > ?
+                """,
+                (token_hash, purpose, current_time)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = [
+            "id",
+            "user_id",
+            "token_hash",
+            "purpose",
+            "created_at",
+            "expires_at"
+        ]
+
+        return dict(zip(columns, row))
+
+    def consume_account_token(
+        self, token_hash, purpose, current_time
+    ):
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Token hash is required")
+
+        if purpose not in {
+            "EMAIL_VERIFICATION",
+            "APPROVAL_KEY_RECOVERY"
+        }:
+            raise ValueError("Invalid account token purpose")
+
+        if type(current_time) is not int:
+            raise ValueError("Invalid current timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE account_tokens
+                    SET used_at = ?
+                    WHERE token_hash = ?
+                      AND purpose = ?
+                      AND used_at IS NULL
+                      AND expires_at > ?
+                    """,
+                    (
+                        current_time,
+                        token_hash,
+                        purpose,
+                        current_time
+                    )
+                )
+
+        return result.rowcount == 1
+
+
+    def delete_unverified_user(self, user_id):
+        """Delete an unverified account and its associated records."""
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                user = connection.execute(
+                    """
+                    SELECT email_verified
+                    FROM users
+                    WHERE id = ?
+                    """,
+                    (user_id,)
+                ).fetchone()
+
+                if user is None or user[0] != 0:
+                    return False
+
+                connection.execute(
+                    "DELETE FROM account_tokens WHERE user_id = ?",
+                    (user_id,)
+                )
+
+                connection.execute(
+                    "DELETE FROM user_sessions WHERE user_id = ?",
+                    (user_id,)
+                )
+
+                connection.execute(
+                    "DELETE FROM pending_approvals WHERE owner_user_id = ?",
+                    (user_id,)
+                )
+
+                result = connection.execute(
+                    """
+                    DELETE FROM users
+                    WHERE id = ? AND email_verified = 0
+                    """,
+                    (user_id,)
+                )
+
+        return result.rowcount == 1
+
+    # ==========================================
+    # ATOMIC EMAIL VERIFICATION
+    # ==========================================
+
+    def verify_email_with_token(self, token_hash, current_time):
+        if not isinstance(token_hash, str) or not token_hash:
+            raise ValueError("Verification token hash is required")
+
+        if type(current_time) is not int or current_time <= 0:
+            raise ValueError("Invalid verification timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                token = connection.execute(
+                    """
+                    SELECT id, user_id
+                    FROM account_tokens
+                    WHERE token_hash = ?
+                      AND purpose = 'EMAIL_VERIFICATION'
+                      AND used_at IS NULL
+                      AND expires_at > ?
+                    """,
+                    (token_hash, current_time)
+                ).fetchone()
+
+                if token is None:
+                    return False
+
+                token_id, user_id = token
+
+                updated = connection.execute(
+                    """
+                    UPDATE users
+                    SET email_verified = 1,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (current_time, user_id)
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError(
+                        "Verification failed: user account not found"
+                    )
+
+                consumed = connection.execute(
+                    """
+                    UPDATE account_tokens
+                    SET used_at = ?
+                    WHERE id = ?
+                      AND used_at IS NULL
+                      AND expires_at > ?
+                    """,
+                    (current_time, token_id, current_time)
+                )
+
+                if consumed.rowcount != 1:
+                    raise ValueError(
+                        "Verification failed: token could not be consumed"
+                    )
+
+                return True

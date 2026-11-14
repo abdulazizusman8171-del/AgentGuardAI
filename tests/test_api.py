@@ -26,10 +26,6 @@ class TestAgentGuardAPI(unittest.TestCase):
             "fetched_at": None
         })
 
-        api.APPROVAL_API_KEY = "test-approval-secret"
-        self.approval_headers = {
-            "X-Approval-Key": "test-approval-secret"
-        }
         self.temp_dir = tempfile.TemporaryDirectory()
         database = Path(self.temp_dir.name) / "api_test.db"
 
@@ -46,7 +42,20 @@ class TestAgentGuardAPI(unittest.TestCase):
             blocked_recipients=[]
         )
 
+        import os, time
+        from app.auth import hash_password, hash_token
+        os.environ["AGENTGUARD_COOKIE_SECURE"] = "false"
         self.client = TestClient(api.app)
+        password_hash, password_salt = hash_password("TestPassword123!")
+        self.user_id = self.tracker.create_user("api-tests@example.com", password_hash, password_salt, int(time.time()))
+        self.tracker.verify_user_email(self.user_id, int(time.time()))
+        login = self.client.post("/auth/login", json={"email": "api-tests@example.com", "password": "TestPassword123!"})
+        self.assertEqual(login.status_code, 200)
+        self.csrf_headers = {"X-CSRF-Token": self.client.cookies.get("agentguard_csrf")}
+        key_response = self.client.post("/auth/approval-key", headers=self.csrf_headers)
+        self.assertEqual(key_response.status_code, 200)
+        self.approval_key = key_response.json()["approval_key"]
+        self.approval_headers = {**self.csrf_headers, "X-Approval-Key": self.approval_key}
 
         self.safe_transaction = {
             "transaction_id": "api-safe-001",
@@ -125,7 +134,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_unknown_recipient_creates_approval(self):
         response = self.client.post(
             "/approvals",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
 
         self.assertEqual(response.status_code, 200)
@@ -138,7 +148,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_approval_and_transaction_execution(self):
         create_response = self.client.post(
             "/approvals",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
 
         approval_id = (
@@ -158,7 +169,8 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         process_response = self.client.post(
             "/process",
-            json=process_payload
+            json=process_payload,
+            headers=self.approval_headers
         )
 
         self.assertEqual(process_response.status_code, 200)
@@ -170,7 +182,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_modified_transaction_cannot_be_approved(self):
         create_response = self.client.post(
             "/approvals",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
 
         approval_id = (
@@ -203,14 +216,11 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_unknown_recipient_waits_for_confirmation(self):
         response = self.client.post(
             "/process",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.approval_headers
         )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json()["execution_result"]["status"],
-            "AWAITING_CONFIRMATION"
-        )
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("approval ID is required", response.json()["detail"])
 
     def test_safe_transaction_executes(self):
         response = self.client.post(
@@ -663,26 +673,15 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_pending_confirmation_assessment_is_saved(self):
         response = self.client.post(
             "/process",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.approval_headers
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json()["execution_result"]["status"],
-            "AWAITING_CONFIRMATION"
-        )
-
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("approval ID is required", response.json()["detail"])
         history = self.client.get("/transactions/history").json()["transactions"]
+        self.assertEqual(history[0]["execution_status"], "APPROVAL_REQUIRED")
 
-        self.assertEqual(len(history), 1)
-        self.assertEqual(
-            history[0]["decision"],
-            "REQUIRE_CONFIRMATION"
-        )
-        self.assertEqual(
-            history[0]["execution_status"],
-            "AWAITING_CONFIRMATION"
-        )
 
     def test_failed_execution_assessment_is_saved(self):
         transaction = self.safe_transaction.copy()
@@ -710,7 +709,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_list_pending_approvals(self):
         self.client.post(
             "/approvals",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
 
         response = self.client.get("/approvals?status=PENDING", headers=self.approval_headers)
@@ -725,7 +725,8 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_filter_approved_approvals(self):
         create_response = self.client.post(
             "/approvals",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
 
         approval_id = (
@@ -760,27 +761,46 @@ class TestAgentGuardAPI(unittest.TestCase):
     def test_approval_action_rejects_missing_and_wrong_keys(self):
         missing = self.client.post(
             "/approvals/test-id/approve",
-            json=self.unknown_transaction
+            json=self.unknown_transaction,
+            headers=self.csrf_headers
         )
         wrong = self.client.post(
             "/approvals/test-id/approve",
             json=self.unknown_transaction,
-            headers={"X-Approval-Key": "incorrect-key"}
+            headers={**self.csrf_headers, "X-Approval-Key": "incorrect-key"}
         )
 
         self.assertEqual(missing.status_code, 401)
         self.assertEqual(wrong.status_code, 401)
 
-    def test_approval_routes_fail_when_key_is_not_configured(self):
-        with patch.object(api, "APPROVAL_API_KEY", None):
-            list_response = self.client.get("/approvals")
-            action_response = self.client.post(
-                "/approvals/test-id/approve",
-                json=self.unknown_transaction
-            )
+    def test_approval_routes_require_authenticated_personal_key(self):
+        unauthenticated = TestClient(api.app)
+        try:
+            response = unauthenticated.get("/approvals")
+            self.assertEqual(response.status_code, 401)
+        finally:
+            unauthenticated.close()
 
-        self.assertEqual(list_response.status_code, 503)
-        self.assertEqual(action_response.status_code, 503)
+    def test_approval_list_isolated_between_users(self):
+        created = self.client.post("/approvals", json=self.unknown_transaction, headers=self.csrf_headers)
+        self.assertEqual(created.status_code, 200)
+        import time
+        from app.auth import hash_password
+        password_hash, password_salt = hash_password("OtherUserPassword123!")
+        other_id = self.tracker.create_user("other-user@example.com", password_hash, password_salt, int(time.time()))
+        self.tracker.verify_user_email(other_id, int(time.time()))
+        other_client = TestClient(api.app)
+        try:
+            login = other_client.post("/auth/login", json={"email": "other-user@example.com", "password": "OtherUserPassword123!"})
+            self.assertEqual(login.status_code, 200)
+            other_key_response = other_client.post("/auth/approval-key", headers={"X-CSRF-Token": other_client.cookies.get("agentguard_csrf")})
+            other_key = other_key_response.json()["approval_key"]
+            response = other_client.get("/approvals", headers={"X-Approval-Key": other_key})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["approvals"], [])
+        finally:
+            other_client.close()
+
     def test_invalid_approval_status_filter(self):
         response = self.client.get("/approvals?status=INVALID", headers=self.approval_headers)
 

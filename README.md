@@ -169,3 +169,29 @@ Contributions, testing, feedback, and suggestions are welcome.
 A license has not yet been specified.
 
 GitHub Repository: https://github.com/abdulazizusman8171-del/AgentGuardAI
+
+## Personal Approval Center Accounts
+
+The Approval Center now uses verified email accounts and individual Approval Keys:
+
+- Register with an email address and a password of at least 12 characters.
+- Verify the email using the one-time token delivered by SMTP.
+- Log in to receive a secure, HttpOnly session cookie.
+- Generate a personal Approval Key. The raw key is shown only once; only its SHA-256 hash is stored.
+- Recover a forgotten key through a time-limited email token. Recovery replaces the old key and revokes active sessions.
+- Approval records are scoped to the authenticated account. Existing records without an owner remain unassigned.
+- Confirmation-required processing requires an authenticated account, the account's Approval Key, CSRF validation, and an approval ID belonging to that account.
+
+### Account-related environment variables
+
+Configure these in the deployment environment (never commit credentials):
+
+- `AGENTGUARD_SMTP_HOST`
+- `AGENTGUARD_SMTP_PORT` (587 for STARTTLS or 465 for implicit TLS)
+- `AGENTGUARD_SMTP_USERNAME`
+- `AGENTGUARD_SMTP_PASSWORD`
+- `AGENTGUARD_SMTP_FROM`
+- `AGENTGUARD_PUBLIC_URL` (for example, the HTTPS Render URL)
+- `AGENTGUARD_COOKIE_SECURE=true` in production HTTPS; use `false` only for local HTTP development.
+
+The login throttler is in-process. For multi-worker production deployments, also enforce rate limits at the hosting proxy or use a shared rate-limit store. Configure a persistent Render disk for the SQLite database if account/session data must survive service restarts.

@@ -234,137 +234,88 @@ const refreshApprovalsButton = document.getElementById("refreshApprovals");
 const approvalApiKeyInput = document.getElementById("approvalApiKey");
 const unlockApprovalsButton = document.getElementById("unlockApprovals");
 const approvalAuthStatus = document.getElementById("approvalAuthStatus");
-
-// Keep the authorization key in memory only.
+const accountStatus = document.getElementById("accountStatus");
 let approvalApiKey = "";
 
+function csrfToken() {
+    const item = document.cookie.split(";").map(v => v.trim()).find(v => v.startsWith("agentguard_csrf="));
+    return item ? decodeURIComponent(item.split("=").slice(1).join("=")) : "";
+}
+function authHeaders(extra = {}) {
+    return { "Content-Type": "application/json", "X-CSRF-Token": csrfToken(), ...extra };
+}
+async function authPost(path, body = {}) {
+    const response = await fetch(path, { method: "POST", credentials: "same-origin", headers: authHeaders(), body: JSON.stringify(body) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Request failed.");
+    return data;
+}
+function showOneTimeKey(data) {
+    approvalApiKey = data.approval_key;
+    approvalApiKeyInput.value = data.approval_key;
+    approvalAuthStatus.textContent = data.warning + " Store it safely; it will not be shown again.";
+}
+document.getElementById("registerAccount").addEventListener("click", async () => {
+    try { const data = await authPost("/auth/register", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = data.message; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
+document.getElementById("verifyEmailAccount").addEventListener("click", async () => {
+    try { const data = await authPost("/auth/verify-email", { token: document.getElementById("emailVerificationToken").value }); accountStatus.textContent = data.message; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
+document.getElementById("loginAccount").addEventListener("click", async () => {
+    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
+document.getElementById("logoutAccount").addEventListener("click", async () => {
+    try { const data = await authPost("/auth/logout"); approvalApiKey = ""; approvalApiKeyInput.value = ""; approvalList.textContent = "Log in to view approvals."; accountStatus.textContent = data.message; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
+document.getElementById("createApprovalKey").addEventListener("click", async () => {
+    try { showOneTimeKey(await authPost("/auth/approval-key")); }
+    catch (e) { approvalAuthStatus.textContent = e.message; }
+});
+document.getElementById("requestKeyRecovery").addEventListener("click", async () => {
+    try { const data = await authPost("/auth/approval-key/recovery", { email: document.getElementById("accountEmail").value }); accountStatus.textContent = data.message; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
+document.getElementById("completeKeyRecovery").addEventListener("click", async () => {
+    try { showOneTimeKey(await authPost("/auth/approval-key/recover", { token: document.getElementById("recoveryToken").value })); accountStatus.textContent = "Approval Key replaced. Please log in again."; }
+    catch (e) { accountStatus.textContent = e.message; }
+});
 function formatTimestamp(value) {
     if (!value) return "Date unavailable";
-
     const numeric = Number(value);
-
-    const date = Number.isFinite(numeric)
-        ? new Date(numeric < 1000000000000 ? numeric * 1000 : numeric)
-        : new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return String(value);
-    }
-
-    return date.toLocaleString();
+    const date = Number.isFinite(numeric) ? new Date(numeric < 1000000000000 ? numeric * 1000 : numeric) : new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
 }
-
 async function loadApprovals() {
-    if (!approvalApiKey) {
-        approvalList.textContent = "Unlock the Approval Center to view approvals.";
-        return;
-    }
-
+    if (!approvalApiKey) { approvalList.textContent = "Log in and unlock the Approval Center with your personal key."; return; }
     approvalList.textContent = "Loading approvals...";
-
     try {
         const query = new URLSearchParams({ limit: "50" });
-
-        if (approvalStatus.value) {
-            query.set("status", approvalStatus.value);
-        }
-
-        const response = await fetch("/approvals?" + query.toString(), {
-            headers: {
-                "X-Approval-Key": approvalApiKey
-            }
-        });
-
+        if (approvalStatus.value) query.set("status", approvalStatus.value);
+        const response = await fetch("/approvals?" + query.toString(), { credentials: "same-origin", headers: { "X-Approval-Key": approvalApiKey } });
         const data = await response.json();
-
-        if (response.status === 401) {
-            approvalApiKey = "";
-            approvalList.textContent = "Authorization failed. Unlock again.";
-            approvalAuthStatus.textContent = "Your authorization key is invalid.";
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error(data.detail || "Could not load approvals.");
-        }
-
+        if (!response.ok) throw new Error(data.detail || "Could not load approvals.");
         approvalList.replaceChildren();
-
-        if (!data.approvals || data.approvals.length === 0) {
-            approvalList.textContent = "No approvals found.";
-            return;
-        }
-
-        data.approvals.forEach(function (approval) {
-            const item = document.createElement("div");
-            item.className = "record-item";
-
-            const details = document.createElement("div");
-            details.className = "record-details";
-
-            const title = document.createElement("h3");
-            title.textContent = "Transaction: " + approval.transaction_id;
-
-            const id = document.createElement("p");
-            id.textContent = "Approval ID: " + approval.approval_id;
-
-            const created = document.createElement("p");
-            created.textContent = "Created: " + formatTimestamp(approval.created_at);
-
-            const badge = document.createElement("span");
-            const normalizedStatus = String(approval.status || "UNKNOWN").toLowerCase();
-
-            badge.className = "status-badge " + normalizedStatus;
-            badge.textContent = normalizedStatus.toUpperCase();
-
-            details.append(title, id, created);
-            item.append(details, badge);
-            approvalList.appendChild(item);
+        if (!data.approvals?.length) { approvalList.textContent = "No approvals found."; return; }
+        data.approvals.forEach(approval => {
+            const item = document.createElement("div"); item.className = "record-item";
+            const details = document.createElement("div"); details.className = "record-details";
+            const title = document.createElement("h3"); title.textContent = "Transaction: " + approval.transaction_id;
+            const id = document.createElement("p"); id.textContent = "Approval ID: " + approval.approval_id;
+            const created = document.createElement("p"); created.textContent = "Created: " + formatTimestamp(approval.created_at);
+            const badge = document.createElement("span"); const status = String(approval.status || "UNKNOWN").toLowerCase(); badge.className = "status-badge " + status; badge.textContent = status.toUpperCase();
+            details.append(title, id, created); item.append(details, badge); approvalList.appendChild(item);
         });
-
-    } catch (error) {
-        approvalList.textContent = error.message;
-    }
+    } catch (error) { approvalList.textContent = error.message; }
 }
-
 async function unlockApprovalCenter() {
-    const candidateKey = approvalApiKeyInput.value.trim();
-
-    if (!candidateKey) {
-        approvalAuthStatus.textContent = "Please enter your authorization key.";
-        return;
-    }
-
-    unlockApprovalsButton.disabled = true;
-    approvalAuthStatus.textContent = "Checking authorization...";
-
-    try {
-        const response = await fetch("/approvals?limit=1", {
-            headers: {
-                "X-Approval-Key": candidateKey
-            }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.detail || "Authorization failed.");
-        }
-
-        approvalApiKey = candidateKey;
-        approvalAuthStatus.textContent = "Authorization successful. Approval Center unlocked.";
-
-        await loadApprovals();
-
-    } catch (error) {
-        approvalApiKey = "";
-        approvalAuthStatus.textContent = error.message;
-        approvalList.textContent = "Approval Center is locked.";
-
-    } finally {
-        approvalApiKeyInput.value = "";
-        unlockApprovalsButton.disabled = false;
-    }
+    approvalApiKey = approvalApiKeyInput.value.trim();
+    if (!approvalApiKey) { approvalAuthStatus.textContent = "Enter your personal Approval Key."; return; }
+    try { const response = await fetch("/approvals?limit=1", { credentials: "same-origin", headers: { "X-Approval-Key": approvalApiKey } }); const data = await response.json(); if (!response.ok) throw new Error(data.detail || "Authorization failed."); approvalAuthStatus.textContent = "Approval Center unlocked for your account."; await loadApprovals(); }
+    catch (error) { approvalApiKey = ""; approvalAuthStatus.textContent = error.message; }
 }
 // DASHBOARD EVENT LISTENERS
 // ==========================================
