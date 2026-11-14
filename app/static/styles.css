@@ -3107,3 +3107,196 @@ html, body {
     background: rgba(249, 115, 22, 0.15);
     color: #fdba74;
 }
+
+/* =====================================================
+   AGENTGUARD AI - RESPONSIVE ACCOUNT & APPROVAL CENTER
+   ===================================================== */
+
+.auth-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin-top: 24px;
+}
+
+.auth-card {
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-light);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-card-heading {
+    margin-bottom: 10px;
+}
+
+.auth-card-heading h3 {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 19px;
+}
+
+.auth-card-heading p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.auth-card label {
+    display: block;
+    margin-top: 5px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-card input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.auth-card button {
+    min-height: 46px;
+    max-width: 100%;
+    padding: 11px 15px;
+    border-radius: 10px;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+.auth-button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.auth-button-grid button {
+    width: 100%;
+}
+
+.auth-secondary {
+    background: transparent !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+}
+
+.auth-secondary:hover {
+    background: var(--accent-soft) !important;
+}
+
+.auth-visibility-toggle {
+    align-self: flex-start;
+    min-height: 34px !important;
+    padding: 7px 12px !important;
+    font-size: 13px !important;
+    background: transparent !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.auth-visibility-toggle:hover {
+    background: var(--accent-soft) !important;
+}
+
+.auth-primary-action {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.auth-action-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.auth-status {
+    min-height: 20px;
+    margin: 8px 0 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* TABLETS */
+@media (max-width: 850px) {
+    .auth-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* MOBILE PHONES */
+@media (max-width: 600px) {
+    .auth-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    .auth-card {
+        padding: 17px;
+        border-radius: 13px;
+        gap: 9px;
+    }
+
+    .auth-card-heading h3 {
+        font-size: 18px;
+    }
+
+    .auth-card-heading p {
+        font-size: 13px;
+    }
+
+    .auth-card label {
+        font-size: 14px;
+    }
+
+    .auth-card input {
+        min-height: 50px;
+        font-size: 15px;
+    }
+
+    .auth-card button {
+        min-height: 46px;
+        font-size: 14px;
+    }
+
+    .auth-button-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .auth-button-grid button {
+        width: 100%;
+        padding: 10px 7px;
+    }
+
+    .auth-visibility-toggle {
+        min-height: 34px !important;
+        font-size: 12px !important;
+    }
+
+    .auth-status {
+        font-size: 12px;
+    }
+}
+
+/* VERY NARROW PHONES */
+@media (max-width: 360px) {
+    .auth-button-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-card {
+        padding: 14px;
+    }
+}

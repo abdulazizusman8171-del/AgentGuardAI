@@ -753,51 +753,131 @@
         <button id="refreshApprovals">Refresh</button>
     </div>
 
-    <div class="approval-auth">
-        <h3>Account access</h3>
-        <label for="accountEmail">Email</label>
-        <input id="accountEmail" type="email" autocomplete="email" placeholder="you@example.com">
+    <div class="approval-auth auth-layout">
+
+    <!-- ACCOUNT ACCESS -->
+    <div class="auth-card">
+        <div class="auth-card-heading">
+            <h3>Account Access</h3>
+            <p>Register or sign in to manage your personal approvals.</p>
+        </div>
+
+        <label for="accountEmail">Email address</label>
+        <input id="accountEmail" type="email" autocomplete="email"
+               placeholder="you@example.com">
+
         <label for="accountPassword">Password</label>
-        <input id="accountPassword" type="password" autocomplete="current-password" placeholder="At least 12 characters">
-<button id="toggleAccountPassword" type="button" aria-pressed="false" style="margin-top:8px;">Show password</button>
-        <div class="button-row">
+        <input id="accountPassword" type="password"
+               autocomplete="current-password"
+               placeholder="At least 12 characters">
+
+        <button id="toggleAccountPassword" class="auth-visibility-toggle"
+                type="button" aria-pressed="false">Show password</button>
+
+        <div class="auth-button-grid">
             <button id="registerAccount" type="button">Create account</button>
             <button id="loginAccount" type="button">Log in</button>
-            <button id="logoutAccount" type="button">Log out</button>
-            <button id="requestPasswordReset" type="button">Forgot Password?</button>
+            <button id="logoutAccount" type="button" class="auth-secondary">
+                Log out
+            </button>
+            <button id="requestPasswordReset" type="button" class="auth-secondary">
+                Forgot Password?
+            </button>
         </div>
-        <p id="accountStatus" role="status">Register and verify your email before logging in.</p>
 
-        <h4>Password recovery</h4>
-        <p>Request a password reset token by email.</p>
+        <p id="accountStatus" class="auth-status" role="status">
+            Register and verify your email before logging in.
+        </p>
+    </div>
+
+    <!-- PASSWORD RECOVERY -->
+    <div class="auth-card">
+        <div class="auth-card-heading">
+            <h3>Password Recovery</h3>
+            <p>Recover access to your account using your verified email.</p>
+        </div>
+
         <label for="passwordResetToken">Password reset token</label>
-        <input id="passwordResetToken" type="password" autocomplete="off" placeholder="Paste token from email">
+        <input id="passwordResetToken" type="password" autocomplete="off"
+               placeholder="Paste token from email">
 
         <label for="newAccountPassword">New password</label>
-        <input id="newAccountPassword" type="password" autocomplete="new-password" placeholder="At least 12 characters">
-        <button id="toggleNewAccountPassword" type="button" aria-pressed="false">Show password</button>
+        <input id="newAccountPassword" type="password"
+               autocomplete="new-password"
+               placeholder="At least 12 characters">
+
+        <button id="toggleNewAccountPassword"
+                class="auth-visibility-toggle"
+                type="button" aria-pressed="false">Show password</button>
 
         <label for="confirmAccountPassword">Confirm new password</label>
-        <input id="confirmAccountPassword" type="password" autocomplete="new-password" placeholder="Enter new password again">
-        <button id="toggleConfirmAccountPassword" type="button" aria-pressed="false">Show password</button>
+        <input id="confirmAccountPassword" type="password"
+               autocomplete="new-password"
+               placeholder="Enter new password again">
 
-        <button id="completePasswordReset" type="button">Reset password</button>
-        <p id="passwordResetStatus" role="status"></p>
-        <label for="emailVerificationToken">Email verification token</label>
-        <input id="emailVerificationToken" type="password" autocomplete="off" placeholder="Paste verification token from email">
-        <button id="verifyEmailAccount" type="button">Verify email</button>
-        <div class="button-row">
-            <button id="createApprovalKey" type="button">Generate personal Approval Key</button>
-            <button id="requestKeyRecovery" type="button">Email recovery token</button>
-        </div>
-        <label for="recoveryToken">Recovery token from email</label>
-        <input id="recoveryToken" type="password" autocomplete="off" placeholder="Paste recovery token">
-        <button id="completeKeyRecovery" type="button">Replace Approval Key</button>
-        <label for="approvalApiKey">Personal Approval Key</label>
-        <input id="approvalApiKey" type="password" autocomplete="off" placeholder="Enter your personal Approval Key">
-        <button id="unlockApprovals" type="button">Unlock Approval Center</button>
-        <p id="approvalAuthStatus" role="status">Log in and enter your personal key to view approvals.</p>
+        <button id="toggleConfirmAccountPassword"
+                class="auth-visibility-toggle"
+                type="button" aria-pressed="false">Show password</button>
+
+        <button id="completePasswordReset" class="auth-primary-action"
+                type="button">Reset password</button>
+
+        <p id="passwordResetStatus" class="auth-status" role="status"></p>
     </div>
+
+    <!-- EMAIL VERIFICATION -->
+    <div class="auth-card">
+        <div class="auth-card-heading">
+            <h3>Email Verification</h3>
+            <p>Verify your email address to activate account access.</p>
+        </div>
+
+        <label for="emailVerificationToken">Email verification token</label>
+        <input id="emailVerificationToken" type="password"
+               autocomplete="off"
+               placeholder="Paste verification token from email">
+
+        <button id="verifyEmailAccount" class="auth-primary-action"
+                type="button">Verify email</button>
+    </div>
+
+    <!-- APPROVAL KEY MANAGEMENT -->
+    <div class="auth-card">
+        <div class="auth-card-heading">
+            <h3>Personal Approval Key</h3>
+            <p>Generate, recover and manage your private Approval Key.</p>
+        </div>
+
+        <div class="auth-action-stack">
+            <button id="createApprovalKey" type="button">
+                Generate Personal Approval Key
+            </button>
+
+            <button id="requestKeyRecovery" type="button" class="auth-secondary">
+                Email Recovery Token
+            </button>
+        </div>
+
+        <label for="recoveryToken">Recovery token from email</label>
+        <input id="recoveryToken" type="password" autocomplete="off"
+               placeholder="Paste recovery token">
+
+        <button id="completeKeyRecovery" class="auth-primary-action"
+                type="button">Replace Approval Key</button>
+
+        <label for="approvalApiKey">Personal Approval Key</label>
+        <input id="approvalApiKey" type="password" autocomplete="off"
+               placeholder="Enter your personal Approval Key">
+
+        <button id="unlockApprovals" class="auth-primary-action"
+                type="button">Unlock Approval Center</button>
+
+        <p id="approvalAuthStatus" class="auth-status" role="status">
+            Log in and enter your personal key to view approvals.
+        </p>
+    </div>
+
+</div>
 
     <div class="approval-filter">
         <label for="approvalStatus">Filter by status:</label>
