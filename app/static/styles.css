@@ -3300,3 +3300,72 @@ html, body {
         padding: 14px;
     }
 }
+/* FINAL MOBILE APPROVAL CENTER BUTTON FIX */
+.auth-card .auth-visibility-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    padding: 7px 13px !important;
+    margin: 0 0 8px 0 !important;
+    background: transparent !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--border) !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+}
+
+.auth-card .auth-button-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100%;
+}
+
+.auth-card .auth-button-grid > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 10px 8px !important;
+    box-sizing: border-box;
+}
+
+.auth-card .auth-button-grid > .auth-secondary {
+    background: transparent !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+}
+
+.auth-card .auth-primary-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    min-height: 46px;
+    margin: 5px 0 !important;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .auth-card .auth-visibility-toggle {
+        font-size: 12px !important;
+    }
+
+    .auth-card label {
+        width: 100%;
+        margin-top: 7px;
+    }
+}
+
+@media (max-width: 360px) {
+    .auth-card .auth-button-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
