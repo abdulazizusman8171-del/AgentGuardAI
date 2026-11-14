@@ -30,6 +30,16 @@ _near_market_cache = {
 }
 _near_market_cache_lock = Lock()
 
+# Shared NEAR large-buy cache to reduce GeckoTerminal requests.
+NEAR_LARGE_BUYS_CACHE_TTL = 60
+NEAR_LARGE_BUYS_STALE_TTL = 900
+
+_near_large_buys_cache = {
+    "data": None,
+    "fetched_at": None
+}
+_near_large_buys_cache_lock = Lock()
+
 
 app = FastAPI(
     title="AgentGuard AI",
@@ -226,6 +236,41 @@ def get_cached_near_market_data():
                 cached_data is not None
                 and fetched_at is not None
                 and time.monotonic() - fetched_at < NEAR_MARKET_STALE_TTL
+            ):
+                return cached_data
+
+            raise
+
+
+def get_cached_near_large_buys():
+    with _near_large_buys_cache_lock:
+        now = time.monotonic()
+        cached_data = _near_large_buys_cache["data"]
+        fetched_at = _near_large_buys_cache["fetched_at"]
+
+        # Return fresh data without contacting GeckoTerminal.
+        # An empty list is a valid cached result.
+        if (
+            cached_data is not None
+            and fetched_at is not None
+            and now - fetched_at < NEAR_LARGE_BUYS_CACHE_TTL
+        ):
+            return cached_data
+
+        try:
+            buys = NearMarketClient().get_large_buys()
+
+            _near_large_buys_cache["data"] = buys
+            _near_large_buys_cache["fetched_at"] = time.monotonic()
+
+            return buys
+
+        except NearMarketError:
+            # Serve the last successful result during temporary failures.
+            if (
+                cached_data is not None
+                and fetched_at is not None
+                and time.monotonic() - fetched_at < NEAR_LARGE_BUYS_STALE_TTL
             ):
                 return cached_data
 
@@ -533,8 +578,7 @@ def process_transaction(payload: dict[str, Any]):
 @app.get("/near/large-buys")
 def get_near_large_buys():
     try:
-        client = NearMarketClient()
-        buys = client.get_large_buys()
+        buys = get_cached_near_large_buys()
 
         return {
             "success": True,

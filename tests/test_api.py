@@ -21,6 +21,11 @@ class TestAgentGuardAPI(unittest.TestCase):
             "fetched_at": None
         })
 
+        api._near_large_buys_cache.update({
+            "data": None,
+            "fetched_at": None
+        })
+
         api.APPROVAL_API_KEY = "test-approval-secret"
         self.approval_headers = {
             "X-Approval-Key": "test-approval-secret"
@@ -793,6 +798,66 @@ class TestAgentGuardAPI(unittest.TestCase):
 
         self.assertEqual(response.status_code, 502)
 
+
+    @patch("app.api.NearMarketClient")
+    def test_near_large_buys_uses_fresh_cache(self, mock_client):
+        cached_data = [{
+            "asset": "NEAR",
+            "direction": "BUY",
+            "near_amount": 100,
+            "usd_value": 300,
+            "wallet": "cached.near",
+            "transaction_hash": "cached_hash"
+        }]
+
+        api._near_large_buys_cache.update({
+            "data": cached_data,
+            "fetched_at": api.time.monotonic()
+        })
+
+        response = self.client.get("/near/large-buys")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"], cached_data)
+        mock_client.assert_not_called()
+
+    @patch("app.api.NearMarketClient")
+    def test_near_large_buys_uses_stale_cache_on_provider_failure(self, mock_client):
+        cached_data = [{
+            "asset": "NEAR",
+            "direction": "BUY",
+            "near_amount": 100,
+            "usd_value": 300,
+            "wallet": "cached.near",
+            "transaction_hash": "cached_hash"
+        }]
+
+        api._near_large_buys_cache.update({
+            "data": cached_data,
+            "fetched_at": api.time.monotonic() - 120
+        })
+
+        mock_client.return_value.get_large_buys.side_effect = (
+            NearMarketError("Trade data unavailable")
+        )
+
+        response = self.client.get("/near/large-buys")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"], cached_data)
+
+    @patch("app.api.NearMarketClient")
+    def test_near_large_buys_caches_empty_results(self, mock_client):
+        api._near_large_buys_cache.update({
+            "data": [],
+            "fetched_at": api.time.monotonic()
+        })
+
+        response = self.client.get("/near/large-buys")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"], [])
+        mock_client.assert_not_called()
 
     @patch("app.api.NearRPCClient")
     def test_near_network_activity_success(self, mock_client):
