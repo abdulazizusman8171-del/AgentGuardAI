@@ -101,7 +101,7 @@ The AgentGuard Python SDK allows developers to submit proposed transactions to t
 Install from the locally built wheel:
 
 ```powershell
-python -m pip install agentguard_ai-0.1.0-py3-none-any.whl
+python -m pip install dist\agentguard_ai-0.1.0-py3-none-any.whl
 ```
 
 The package distribution name is `agentguard-ai`, and its Python import name is `agentguard`.
