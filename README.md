@@ -8,6 +8,8 @@ The project focuses on NEAR Protocol, providing read-only investigation of accou
 
 **Project status:** Hackathon prototype.
 
+**Live Demo:** https://agentguardai.onrender.com/
+
 ## Key Features
 
 ### NEAR Transaction Investigator
@@ -142,7 +144,7 @@ Run the automated test suite:
 python -m unittest discover -s tests -v
 ```
 
-The current development build has passed 193 automated tests.
+The current development build has passed 198 automated tests.
 
 ## Security and Limitations
 
