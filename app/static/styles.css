@@ -3060,3 +3060,50 @@ html, body {
     display: inline-block;
     margin-top: 5px;
 }
+
+/* TRANSACTION ASSESSMENT HISTORY */
+
+.assessment-record {
+    align-items: flex-start;
+}
+
+.assessment-record .record-details {
+    flex: 1;
+    min-width: 220px;
+}
+
+.assessment-record .record-details p {
+    overflow-wrap: anywhere;
+    margin-top: 5px;
+}
+
+.assessment-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-badge.decision-allow,
+.status-badge.execution-executed {
+    background: rgba(0, 236, 151, 0.12);
+    color: #00ec97;
+}
+
+.status-badge.decision-block,
+.status-badge.execution-blocked,
+.status-badge.execution-approval_rejected {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.status-badge.decision-require_confirmation,
+.status-badge.execution-awaiting_confirmation {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+.status-badge.execution-failed {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fdba74;
+}

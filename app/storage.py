@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from pathlib import Path
 from contextlib import closing
 
@@ -314,3 +315,169 @@ class SQLiteTransactionTracker:
             dict(zip(columns, row))
             for row in rows
         ]
+    # ==========================================
+    # TRANSACTION ASSESSMENT HISTORY
+    # ==========================================
+
+    def _ensure_assessments_table(self, connection):
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS transaction_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transaction_id TEXT NOT NULL,
+                network TEXT NOT NULL,
+                amount REAL NOT NULL,
+                recipient_address TEXT NOT NULL,
+                risk_score INTEGER NOT NULL,
+                decision TEXT NOT NULL,
+                reasons_json TEXT NOT NULL,
+                execution_status TEXT NOT NULL DEFAULT 'NOT_EXECUTED',
+                assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS
+            idx_assessment_transaction
+            ON transaction_assessments(transaction_id)
+        """)
+
+    def record_transaction_assessment(
+        self,
+        transaction,
+        security_report,
+        execution_status="NOT_EXECUTED"
+    ):
+
+        import json
+
+        if not isinstance(transaction, dict):
+            raise ValueError("Transaction must be a dictionary")
+
+        if not isinstance(security_report, dict):
+            raise ValueError("Security report must be a dictionary")
+
+        transaction_id = self._validate_transaction_id(
+            transaction.get("transaction_id")
+        )
+
+        network = transaction.get("network", "")
+
+        if not isinstance(network, str) or not network.strip():
+            raise ValueError("Valid network is required")
+
+        amount = transaction.get("amount")
+
+        if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+            raise ValueError("Valid transaction amount is required")
+
+        risk_score = security_report.get("risk_score")
+        decision = security_report.get("decision")
+        reasons = security_report.get("reasons", [])
+
+        if type(risk_score) is not int or not 0 <= risk_score <= 100:
+            raise ValueError("Invalid risk score")
+
+        if decision not in (
+            "ALLOW",
+            "BLOCK",
+            "REQUIRE_CONFIRMATION"
+        ):
+            raise ValueError("Invalid security decision")
+
+        if not isinstance(reasons, list):
+            raise ValueError("Invalid security reasons")
+
+        if execution_status not in (
+            "NOT_EXECUTED",
+            "AWAITING_CONFIRMATION",
+            "EXECUTED",
+            "BLOCKED",
+            "FAILED"
+        ):
+            raise ValueError("Invalid execution status")
+
+        recipient = transaction.get("recipient_address", "")
+
+        if not isinstance(recipient, str):
+            raise ValueError("Invalid recipient address")
+
+        with closing(self._connect()) as connection:
+            with connection:
+
+                self._ensure_assessments_table(connection)
+
+                connection.execute("""
+                    INSERT INTO transaction_assessments (
+                        transaction_id,
+                        network,
+                        amount,
+                        recipient_address,
+                        risk_score,
+                        decision,
+                        reasons_json,
+                        execution_status
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    transaction_id,
+                    network.strip().lower(),
+                    amount,
+                    recipient,
+                    risk_score,
+                    decision,
+                    json.dumps(reasons),
+                    execution_status
+                ))
+
+    def get_assessment_history(self, limit=50):
+
+        import json
+
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("Limit must be between 1 and 200")
+
+        with closing(self._connect()) as connection:
+
+            self._ensure_assessments_table(connection)
+
+            rows = connection.execute("""
+                SELECT
+                    id,
+                    transaction_id,
+                    network,
+                    amount,
+                    recipient_address,
+                    risk_score,
+                    decision,
+                    reasons_json,
+                    execution_status,
+                    assessed_at
+                FROM transaction_assessments
+                ORDER BY id DESC
+                LIMIT ?
+            """, (limit,)).fetchall()
+
+        columns = [
+            "id",
+            "transaction_id",
+            "network",
+            "amount",
+            "recipient_address",
+            "risk_score",
+            "decision",
+            "reasons_json",
+            "execution_status",
+            "assessed_at"
+        ]
+
+        history = []
+
+        for row in rows:
+            record = dict(zip(columns, row))
+            record["reasons"] = json.loads(
+                record.pop("reasons_json")
+            )
+            history.append(record)
+
+        return history

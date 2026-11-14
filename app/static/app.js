@@ -160,13 +160,13 @@ async function loadTransactionHistory() {
         historyList.replaceChildren();
 
         if (!data.transactions || data.transactions.length === 0) {
-            historyList.textContent = "No executed transactions found yet.";
+            historyList.textContent = "No transaction assessments found yet.";
             return;
         }
 
         data.transactions.forEach(function (transaction) {
             const item = document.createElement("div");
-            item.className = "record-item";
+            item.className = "record-item assessment-record";
 
             const details = document.createElement("div");
             details.className = "record-details";
@@ -174,16 +174,47 @@ async function loadTransactionHistory() {
             const title = document.createElement("h3");
             title.textContent = transaction.transaction_id;
 
+            const summary = document.createElement("p");
+            summary.textContent =
+                "Network: " + transaction.network.toUpperCase() +
+                " | Amount: " + transaction.amount;
+
+            const risk = document.createElement("p");
+            risk.textContent = "Risk score: " + transaction.risk_score + "/100";
+
+            const recipient = document.createElement("p");
+            recipient.textContent =
+                "Recipient: " + (transaction.recipient_address || "Not provided");
+
             const date = document.createElement("p");
-            date.textContent = "Processed: " +
-                (transaction.processed_at || "Date unavailable");
+            date.textContent =
+                "Assessed: " + (transaction.assessed_at || "Date unavailable");
 
-            const badge = document.createElement("span");
-            badge.className = "status-badge consumed";
-            badge.textContent = "EXECUTED";
+            const reasons = document.createElement("p");
+            reasons.textContent =
+                "Reasons: " +
+                (Array.isArray(transaction.reasons) && transaction.reasons.length
+                    ? transaction.reasons.join("; ")
+                    : "No security concerns detected.");
 
-            details.append(title, date);
-            item.append(details, badge);
+            const badges = document.createElement("div");
+            badges.className = "assessment-badges";
+
+            const decision = document.createElement("span");
+            decision.className =
+                "status-badge decision-" +
+                String(transaction.decision).toLowerCase();
+            decision.textContent = transaction.decision;
+
+            const execution = document.createElement("span");
+            execution.className =
+                "status-badge execution-" +
+                String(transaction.execution_status).toLowerCase();
+            execution.textContent = transaction.execution_status.replaceAll("_", " ");
+
+            badges.append(decision, execution);
+            details.append(title, summary, risk, recipient, date, reasons);
+            item.append(details, badges);
             historyList.appendChild(item);
         });
 

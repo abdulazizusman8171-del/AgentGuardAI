@@ -398,6 +398,12 @@ def security_intelligence(payload: dict[str, Any]):
             blocked_recipients=BLOCKED_RECIPIENTS
         )
 
+        tracker.record_transaction_assessment(
+            payload,
+            security_report,
+            execution_status="NOT_EXECUTED"
+        )
+
         intelligence = generate_security_insights(
             security_report
         )
@@ -414,12 +420,15 @@ def security_intelligence(payload: dict[str, Any]):
             detail=str(error)
         )
 
+
 @app.get("/transactions/history")
 def transaction_history(
     limit: int = Query(default=50, ge=1, le=200)
 ):
     try:
-        transactions = tracker.get_transaction_history(limit=limit)
+        transactions = tracker.get_assessment_history(
+            limit=limit
+        )
 
         return {
             "success": True,
@@ -468,6 +477,13 @@ def create_approval(payload: dict[str, Any]):
         )
 
         if security_report["decision"] != "REQUIRE_CONFIRMATION":
+
+            tracker.record_transaction_assessment(
+                payload,
+                security_report,
+                execution_status="NOT_EXECUTED"
+            )
+
             return {
                 "approval_required": False,
                 "security_report": security_report,
@@ -475,6 +491,12 @@ def create_approval(payload: dict[str, Any]):
             }
 
         approval = approval_manager.create_approval(payload)
+
+        tracker.record_transaction_assessment(
+            payload,
+            security_report,
+            execution_status="AWAITING_CONFIRMATION"
+        )
 
         return {
             "approval_required": True,
@@ -544,47 +566,76 @@ def process_transaction(payload: dict[str, Any]):
         if security_report["decision"] == "REQUIRE_CONFIRMATION":
 
             if not approval_id:
-                return workflow.process(
+                execution_result = workflow.executor.execute(
                     transaction=transaction,
+                    security_report=security_report,
                     confirmed=False,
                     simulated_success=simulated_success
                 )
 
-            approval_result = approval_manager.consume_approval(
-                approval_id,
-                transaction
-            )
+            else:
+                approval_result = approval_manager.consume_approval(
+                    approval_id,
+                    transaction
+                )
 
-            if not approval_result["consumed"]:
-                return {
-                    "security_report": security_report,
-                    "execution_result": {
+                if not approval_result["consumed"]:
+                    execution_result = {
                         "status": "APPROVAL_REJECTED",
                         "message": approval_result["message"]
                     }
-                }
 
-            confirmed = True
+                    tracker.record_transaction_assessment(
+                        transaction,
+                        security_report,
+                        execution_status="APPROVAL_REJECTED"
+                    )
 
-        elif approval_id is not None:
-            raise ValueError(
-                "An approval ID was supplied for a transaction "
-                "that does not require confirmation."
+                    return {
+                        "security_report": security_report,
+                        "execution_result": execution_result
+                    }
+
+                confirmed = True
+
+                execution_result = workflow.executor.execute(
+                    transaction=transaction,
+                    security_report=security_report,
+                    confirmed=confirmed,
+                    simulated_success=simulated_success
+                )
+
+        else:
+
+            if approval_id is not None:
+                raise ValueError(
+                    "An approval ID was supplied for a transaction "
+                    "that does not require confirmation."
+                )
+
+            execution_result = workflow.executor.execute(
+                transaction=transaction,
+                security_report=security_report,
+                confirmed=False,
+                simulated_success=simulated_success
             )
 
-        return workflow.process(
-            transaction=transaction,
-            confirmed=confirmed,
-            simulated_success=simulated_success
+        tracker.record_transaction_assessment(
+            transaction,
+            security_report,
+            execution_status=execution_result["status"]
         )
+
+        return {
+            "security_report": security_report,
+            "execution_result": execution_result
+        }
 
     except ValueError as error:
         raise HTTPException(
             status_code=400,
             detail=str(error)
         )
-
-
 
 
 @app.get("/near/large-buys")

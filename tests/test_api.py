@@ -614,6 +614,98 @@ class TestAgentGuardAPI(unittest.TestCase):
             transactions[0]["transaction_id"],
             self.safe_transaction["transaction_id"]
         )
+        self.assertEqual(
+            transactions[0]["execution_status"],
+            "EXECUTED"
+        )
+        self.assertEqual(
+            transactions[0]["decision"],
+            "ALLOW"
+        )
+        self.assertEqual(len(transactions), 1)
+
+    def test_intelligence_assessment_is_saved(self):
+        response = self.client.post(
+            "/intelligence",
+            json=self.safe_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        history = self.client.get("/transactions/history").json()["transactions"]
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["decision"], "ALLOW")
+        self.assertEqual(history[0]["execution_status"], "NOT_EXECUTED")
+        self.assertEqual(history[0]["risk_score"], 0)
+
+    def test_blocked_transaction_assessment_is_saved(self):
+        blocked_transaction = self.safe_transaction.copy()
+        blocked_transaction["amount"] = 3
+
+        response = self.client.post(
+            "/process",
+            json=blocked_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["execution_result"]["status"],
+            "BLOCKED"
+        )
+
+        history = self.client.get("/transactions/history").json()["transactions"]
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["decision"], "BLOCK")
+        self.assertEqual(history[0]["execution_status"], "BLOCKED")
+
+    def test_pending_confirmation_assessment_is_saved(self):
+        response = self.client.post(
+            "/process",
+            json=self.unknown_transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["execution_result"]["status"],
+            "AWAITING_CONFIRMATION"
+        )
+
+        history = self.client.get("/transactions/history").json()["transactions"]
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(
+            history[0]["decision"],
+            "REQUIRE_CONFIRMATION"
+        )
+        self.assertEqual(
+            history[0]["execution_status"],
+            "AWAITING_CONFIRMATION"
+        )
+
+    def test_failed_execution_assessment_is_saved(self):
+        transaction = self.safe_transaction.copy()
+        transaction["simulated_success"] = False
+
+        response = self.client.post(
+            "/process",
+            json=transaction
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["execution_result"]["status"],
+            "FAILED"
+        )
+
+        history = self.client.get(
+            "/transactions/history"
+        ).json()["transactions"]
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["decision"], "ALLOW")
+        self.assertEqual(history[0]["execution_status"], "FAILED")
 
     def test_list_pending_approvals(self):
         self.client.post(
