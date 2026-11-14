@@ -2171,3 +2171,97 @@ setInterval(() => {
         }
     });
 })();
+
+// ACCOUNT PASSWORD VISIBILITY
+(function () {
+    const password = document.getElementById("accountPassword");
+    const toggle = document.getElementById("toggleAccountPassword");
+
+    if (!password || !toggle) return;
+
+    toggle.addEventListener("click", function () {
+        const showing = password.type === "text";
+
+        password.type = showing ? "password" : "text";
+        toggle.textContent = showing ? "Show password" : "Hide password";
+        toggle.setAttribute("aria-pressed", String(!showing));
+    });
+})();
+
+// PASSWORD RESET FORM HANDLERS
+(function () {
+    const requestButton = document.getElementById("requestPasswordReset");
+    const completeButton = document.getElementById("completePasswordReset");
+    const email = document.getElementById("accountEmail");
+    const token = document.getElementById("passwordResetToken");
+    const password = document.getElementById("newAccountPassword");
+    const confirmation = document.getElementById("confirmAccountPassword");
+    const status = document.getElementById("passwordResetStatus");
+
+    function setupVisibility(input, button) {
+        if (!input || !button) return;
+
+        button.addEventListener("click", function () {
+            const showing = input.type === "text";
+            input.type = showing ? "password" : "text";
+            button.textContent = showing ? "Show password" : "Hide password";
+            button.setAttribute("aria-pressed", String(!showing));
+        });
+    }
+
+    setupVisibility(
+        password,
+        document.getElementById("toggleNewAccountPassword")
+    );
+
+    setupVisibility(
+        confirmation,
+        document.getElementById("toggleConfirmAccountPassword")
+    );
+
+    if (requestButton) {
+        requestButton.addEventListener("click", async function () {
+            try {
+                const data = await authPost(
+                    "/auth/password-reset/request",
+                    { email: email.value }
+                );
+                status.textContent = data.message;
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+    }
+
+    if (completeButton) {
+        completeButton.addEventListener("click", async function () {
+            if (password.value !== confirmation.value) {
+                status.textContent = "The passwords do not match.";
+                return;
+            }
+
+            if (password.value.length < 12 || password.value.length > 128) {
+                status.textContent =
+                    "Password must contain between 12 and 128 characters.";
+                return;
+            }
+
+            try {
+                const data = await authPost(
+                    "/auth/password-reset/complete",
+                    {
+                        token: token.value,
+                        password: password.value
+                    }
+                );
+
+                status.textContent = data.message;
+                token.value = "";
+                password.value = "";
+                confirmation.value = "";
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+    }
+})();

@@ -21,7 +21,7 @@ from app.access_key_analyzer import analyze_access_key
 from app.near_market import NearMarketClient, NearMarketError
 from app.auth import hash_password, verify_password, generate_session_token, hash_token, generate_approval_key, verify_approval_key
 from app.auth_models import RegistrationRequest, EmailVerificationRequest, LoginRequest, ApprovalKeyRecoveryRequest
-from app.email_service import send_verification_email, send_approval_key_recovery_email
+from app.email_service import send_verification_email, send_approval_key_recovery_email, send_password_reset_email
 from app.final_security import enforce_login_rate_limit, record_login_failure, new_csrf_token, require_csrf
 
 
@@ -846,6 +846,103 @@ def recover_approval_key(payload: EmailVerificationRequest):
     tracker.revoke_all_user_sessions(token_record["user_id"], now)
     return {"success": True, "approval_key": raw_key, "warning": "Your previous key is invalid. Copy this replacement now and log in again."}
 
+
+@app.post("/auth/password-reset/request")
+def request_password_reset(payload: dict):
+    email = payload.get("email", "")
+    if not isinstance(email, str):
+        email = ""
+    email = email.strip().lower()
+
+    user = tracker.get_user_by_email(email) if email else None
+
+    # Same response for existing and unknown accounts.
+    if user and user.get("email_verified"):
+        now = int(time.time())
+        token = generate_session_token()
+
+        tracker.create_account_token(
+            user["id"],
+            hash_token(token),
+            "PASSWORD_RESET",
+            now,
+            now + 1800
+        )
+
+        try:
+            send_password_reset_email(email, token)
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "message": "If a verified account exists, password reset instructions have been sent."
+    }
+
+
+@app.post("/auth/password-reset/complete")
+def complete_password_reset(payload: dict):
+    token = payload.get("token")
+    password = payload.get("password")
+
+    if not isinstance(token, str) or not 20 <= len(token) <= 200:
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token is invalid or expired."
+        )
+
+    if not isinstance(password, str) or not 12 <= len(password) <= 128:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain between 12 and 128 characters."
+        )
+
+    token_hash = hash_token(token)
+    now = int(time.time())
+
+    token_record = tracker.get_valid_account_token(
+        token_hash,
+        "PASSWORD_RESET",
+        now
+    )
+
+    if not token_record:
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token is invalid, expired, or already used."
+        )
+
+    password_hash, password_salt = hash_password(password)
+
+    if not tracker.consume_account_token(
+        token_hash,
+        "PASSWORD_RESET",
+        now
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token is invalid, expired, or already used."
+        )
+
+    updated = tracker.update_user_password(
+        token_record["user_id"],
+        password_hash,
+        password_salt,
+        now
+    )
+
+    if not updated:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not update password. Request a new reset link."
+        )
+
+    tracker.revoke_all_user_sessions(token_record["user_id"], now)
+
+    return {
+        "success": True,
+        "message": "Password updated successfully. Please log in again."
+    }
 
 @app.get("/auth/me")
 def current_user(request: Request):

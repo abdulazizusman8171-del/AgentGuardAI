@@ -74,3 +74,44 @@ def send_approval_key_recovery_email(recipient, token):
             server.login(username, password)
             server.send_message(message)
     return True
+
+
+def send_password_reset_email(recipient, token):
+    host = os.getenv("AGENTGUARD_SMTP_HOST")
+    port = int(os.getenv("AGENTGUARD_SMTP_PORT", "587"))
+    username = os.getenv("AGENTGUARD_SMTP_USERNAME")
+    password = os.getenv("AGENTGUARD_SMTP_PASSWORD")
+    sender = os.getenv("AGENTGUARD_SMTP_FROM")
+    public_url = os.getenv(
+        "AGENTGUARD_PUBLIC_URL",
+        "http://127.0.0.1:8000"
+    )
+
+    if not all([host, username, password, sender]):
+        raise RuntimeError("Email delivery is not configured.")
+
+    message = EmailMessage()
+    message["Subject"] = "Reset your AgentGuard AI password"
+    message["From"] = sender
+    message["To"] = recipient
+
+    message.set_content(
+        "A request was made to reset your AgentGuard AI password.\n\n"
+        "Use this one-time password reset token:\n\n"
+        f"{token}\n\n"
+        "This token expires after 30 minutes and can only be used once.\n"
+        "If you did not request this reset, ignore this email.\n\n"
+        f"AgentGuard AI: {public_url}"
+    )
+
+    if port == 465:
+        with smtplib.SMTP_SSL(host, port, timeout=15) as server:
+            server.login(username, password)
+            server.send_message(message)
+    else:
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            server.starttls()
+            server.login(username, password)
+            server.send_message(message)
+
+    return True

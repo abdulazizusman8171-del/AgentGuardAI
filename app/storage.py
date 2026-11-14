@@ -106,7 +106,8 @@ class SQLiteTransactionTracker:
                         purpose TEXT NOT NULL CHECK (
                             purpose IN (
                                 'EMAIL_VERIFICATION',
-                                'APPROVAL_KEY_RECOVERY'
+                                'APPROVAL_KEY_RECOVERY',
+                                'PASSWORD_RESET'
                             )
                         ),
                         created_at INTEGER NOT NULL,
@@ -116,6 +117,46 @@ class SQLiteTransactionTracker:
                     )
                 """)
 
+                # Migrate existing databases to support password reset tokens.
+                token_schema = connection.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='account_tokens'"
+                ).fetchone()
+
+                if token_schema and 'PASSWORD_RESET' not in token_schema[0]:
+                    connection.execute("""
+                        CREATE TABLE account_tokens_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL,
+                            token_hash TEXT NOT NULL UNIQUE,
+                            purpose TEXT NOT NULL CHECK (
+                                purpose IN (
+                                    'EMAIL_VERIFICATION',
+                                    'APPROVAL_KEY_RECOVERY',
+                                    'PASSWORD_RESET'
+                                )
+                            ),
+                            created_at INTEGER NOT NULL,
+                            expires_at INTEGER NOT NULL,
+                            used_at INTEGER,
+                            FOREIGN KEY (user_id) REFERENCES users(id)
+                        )
+                    """)
+
+                    connection.execute("""
+                        INSERT INTO account_tokens_new (
+                            id, user_id, token_hash, purpose,
+                            created_at, expires_at, used_at
+                        )
+                        SELECT
+                            id, user_id, token_hash, purpose,
+                            created_at, expires_at, used_at
+                        FROM account_tokens
+                    """)
+
+                    connection.execute("DROP TABLE account_tokens")
+                    connection.execute(
+                        "ALTER TABLE account_tokens_new RENAME TO account_tokens"
+                    )
                 connection.execute("""
                     CREATE INDEX IF NOT EXISTS
                     idx_account_tokens_user_purpose
@@ -963,7 +1004,8 @@ class SQLiteTransactionTracker:
 
         allowed_purposes = {
             "EMAIL_VERIFICATION",
-            "APPROVAL_KEY_RECOVERY"
+            "APPROVAL_KEY_RECOVERY",
+            "PASSWORD_RESET"
         }
 
         if purpose not in allowed_purposes:
@@ -1026,7 +1068,8 @@ class SQLiteTransactionTracker:
 
         if purpose not in {
             "EMAIL_VERIFICATION",
-            "APPROVAL_KEY_RECOVERY"
+            "APPROVAL_KEY_RECOVERY",
+            "PASSWORD_RESET"
         }:
             raise ValueError("Invalid account token purpose")
 
@@ -1074,7 +1117,8 @@ class SQLiteTransactionTracker:
 
         if purpose not in {
             "EMAIL_VERIFICATION",
-            "APPROVAL_KEY_RECOVERY"
+            "APPROVAL_KEY_RECOVERY",
+            "PASSWORD_RESET"
         }:
             raise ValueError("Invalid account token purpose")
 

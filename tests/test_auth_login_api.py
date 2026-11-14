@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 import tempfile
 import time
 from pathlib import Path
@@ -187,5 +187,126 @@ class TestLoginAPI(unittest.TestCase):
         self.assertEqual(blocked.status_code, 429)
 
 
+    def test_password_reset_request_sends_email(self):
+        self.verify_user()
+
+        from unittest.mock import patch
+
+        with patch("app.api.send_password_reset_email") as send_email:
+            response = self.client.post(
+                "/auth/password-reset/request",
+                json={"email": "login@example.com"}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        send_email.assert_called_once()
+
+        token = send_email.call_args[0][1]
+        record = self.tracker.get_valid_account_token(
+            hash_token(token),
+            "PASSWORD_RESET",
+            int(time.time())
+        )
+        self.assertIsNotNone(record)
+
+    def test_password_reset_success(self):
+        self.verify_user()
+
+        now = int(time.time())
+        token = "test-password-reset-token-123456789"
+
+        self.tracker.create_account_token(
+            self.user_id,
+            hash_token(token),
+            "PASSWORD_RESET",
+            now,
+            now + 1800
+        )
+
+        session_token = "existing-session-token-for-reset"
+        self.tracker.create_user_session(
+            self.user_id,
+            hash_token(session_token),
+            now,
+            now + 3600
+        )
+
+        response = self.client.post(
+            "/auth/password-reset/complete",
+            json={
+                "token": token,
+                "password": "NewSecurePassword456!"
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        session = self.tracker.get_valid_user_session(
+            hash_token(session_token),
+            int(time.time())
+        )
+        self.assertIsNone(session)
+
+        login = self.client.post(
+            "/auth/login",
+            json={
+                "email": "login@example.com",
+                "password": "NewSecurePassword456!"
+            }
+        )
+        self.assertEqual(login.status_code, 200)
+
+    def test_password_reset_token_cannot_be_reused(self):
+        self.verify_user()
+
+        now = int(time.time())
+        token = "single-use-password-reset-token-123"
+
+        self.tracker.create_account_token(
+            self.user_id,
+            hash_token(token),
+            "PASSWORD_RESET",
+            now,
+            now + 1800
+        )
+
+        payload = {
+            "token": token,
+            "password": "NewSecurePassword456!"
+        }
+
+        first = self.client.post(
+            "/auth/password-reset/complete",
+            json=payload
+        )
+        second = self.client.post(
+            "/auth/password-reset/complete",
+            json=payload
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 400)
+
+    def test_expired_password_reset_token_rejected(self):
+        now = int(time.time())
+        token = "expired-password-reset-token-123"
+
+        self.tracker.create_account_token(
+            self.user_id,
+            hash_token(token),
+            "PASSWORD_RESET",
+            now - 3600,
+            now - 1800
+        )
+
+        response = self.client.post(
+            "/auth/password-reset/complete",
+            json={
+                "token": token,
+                "password": "NewSecurePassword456!"
+            }
+        )
+
+        self.assertEqual(response.status_code, 400)
 if __name__ == "__main__":
     unittest.main()

@@ -759,12 +759,30 @@
         <input id="accountEmail" type="email" autocomplete="email" placeholder="you@example.com">
         <label for="accountPassword">Password</label>
         <input id="accountPassword" type="password" autocomplete="current-password" placeholder="At least 12 characters">
+<button id="toggleAccountPassword" type="button" aria-pressed="false" style="margin-top:8px;">Show password</button>
         <div class="button-row">
             <button id="registerAccount" type="button">Create account</button>
             <button id="loginAccount" type="button">Log in</button>
             <button id="logoutAccount" type="button">Log out</button>
+            <button id="requestPasswordReset" type="button">Forgot Password?</button>
         </div>
         <p id="accountStatus" role="status">Register and verify your email before logging in.</p>
+
+        <h4>Password recovery</h4>
+        <p>Request a password reset token by email.</p>
+        <label for="passwordResetToken">Password reset token</label>
+        <input id="passwordResetToken" type="password" autocomplete="off" placeholder="Paste token from email">
+
+        <label for="newAccountPassword">New password</label>
+        <input id="newAccountPassword" type="password" autocomplete="new-password" placeholder="At least 12 characters">
+        <button id="toggleNewAccountPassword" type="button" aria-pressed="false">Show password</button>
+
+        <label for="confirmAccountPassword">Confirm new password</label>
+        <input id="confirmAccountPassword" type="password" autocomplete="new-password" placeholder="Enter new password again">
+        <button id="toggleConfirmAccountPassword" type="button" aria-pressed="false">Show password</button>
+
+        <button id="completePasswordReset" type="button">Reset password</button>
+        <p id="passwordResetStatus" role="status"></p>
         <label for="emailVerificationToken">Email verification token</label>
         <input id="emailVerificationToken" type="password" autocomplete="off" placeholder="Paste verification token from email">
         <button id="verifyEmailAccount" type="button">Verify email</button>
