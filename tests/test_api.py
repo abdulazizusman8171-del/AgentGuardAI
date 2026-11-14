@@ -16,6 +16,11 @@ from app.near_market import NearMarketError
 class TestAgentGuardAPI(unittest.TestCase):
 
     def setUp(self):
+        api._near_market_cache.update({
+            "data": None,
+            "fetched_at": None
+        })
+
         api.APPROVAL_API_KEY = "test-approval-secret"
         self.approval_headers = {
             "X-Approval-Key": "test-approval-secret"
@@ -705,6 +710,49 @@ class TestAgentGuardAPI(unittest.TestCase):
             response.json()["data"]["price"],
             2.50
         )
+
+    @patch("app.api.NearMarketClient")
+    def test_near_market_uses_fresh_cache(self, mock_client):
+        cached_data = {
+            "asset": "NEAR",
+            "currency": "USD",
+            "price": 2.50,
+            "source": "CoinGecko"
+        }
+
+        api._near_market_cache.update({
+            "data": cached_data,
+            "fetched_at": api.time.monotonic()
+        })
+
+        response = self.client.get("/near/market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"]["price"], 2.50)
+        mock_client.assert_not_called()
+
+    @patch("app.api.NearMarketClient")
+    def test_near_market_uses_stale_cache_on_provider_failure(self, mock_client):
+        cached_data = {
+            "asset": "NEAR",
+            "currency": "USD",
+            "price": 2.50,
+            "source": "CoinGecko"
+        }
+
+        api._near_market_cache.update({
+            "data": cached_data,
+            "fetched_at": api.time.monotonic() - 120
+        })
+
+        mock_client.return_value.get_market_data.side_effect = (
+            NearMarketError("Market API HTTP error: 429")
+        )
+
+        response = self.client.get("/near/market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"]["price"], 2.50)
 
     @patch("app.api.NearMarketClient")
     def test_near_market_provider_failure(self, mock_client):

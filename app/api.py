@@ -1,5 +1,7 @@
 import os
 import hmac
+import time
+from threading import Lock
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Query
@@ -16,6 +18,17 @@ from app.near_client import NearRPCClient, NearRPCError
 from app.near_transaction_analyzer import analyze_near_transaction
 from app.access_key_analyzer import analyze_access_key
 from app.near_market import NearMarketClient, NearMarketError
+
+
+# Shared NEAR market-data cache to reduce CoinGecko requests.
+NEAR_MARKET_CACHE_TTL = 60
+NEAR_MARKET_STALE_TTL = 900
+
+_near_market_cache = {
+    "data": None,
+    "fetched_at": None
+}
+_near_market_cache_lock = Lock()
 
 
 app = FastAPI(
@@ -185,11 +198,44 @@ def get_near_network_activity(network: str = "mainnet"):
             detail=str(error)
         )
 
+def get_cached_near_market_data():
+    with _near_market_cache_lock:
+        now = time.monotonic()
+        cached_data = _near_market_cache["data"]
+        fetched_at = _near_market_cache["fetched_at"]
+
+        # Return fresh data without contacting CoinGecko.
+        if (
+            cached_data is not None
+            and fetched_at is not None
+            and now - fetched_at < NEAR_MARKET_CACHE_TTL
+        ):
+            return cached_data
+
+        try:
+            market_data = NearMarketClient().get_market_data()
+
+            _near_market_cache["data"] = market_data
+            _near_market_cache["fetched_at"] = time.monotonic()
+
+            return market_data
+
+        except NearMarketError:
+            # Use the last successful result during temporary provider failures.
+            if (
+                cached_data is not None
+                and fetched_at is not None
+                and time.monotonic() - fetched_at < NEAR_MARKET_STALE_TTL
+            ):
+                return cached_data
+
+            raise
+
+
 @app.get("/near/market")
 def get_near_market():
     try:
-        client = NearMarketClient()
-        market_data = client.get_market_data()
+        market_data = get_cached_near_market_data()
 
         return {
             "success": True,
