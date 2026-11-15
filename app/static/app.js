@@ -2942,9 +2942,11 @@ loadDeveloperAnalytics();
         senderInput.placeholder = "example.near";
         senderInput.value = accountInput.value.trim();
         senderInput.dataset.autoPopulated = "true";
+        senderInput.dataset.sourceAccountId = accountInput.value.trim();
 
         senderInput.addEventListener("input", function () {
             senderInput.dataset.autoPopulated = "false";
+            delete senderInput.dataset.sourceAccountId;
         });
         senderInput.maxLength = 64;
         senderInput.autocomplete = "off";
@@ -3120,11 +3122,11 @@ loadDeveloperAnalytics();
 
         rows.querySelectorAll('[data-field="sender"]').forEach((sender) => {
             if (
-                sender.dataset.autoPopulated === "true" ||
-                !sender.value.trim()
+                sender.dataset.autoPopulated === "true" &&
+                sender.dataset.sourceAccountId !== undefined
             ) {
                 sender.value = currentAccountId;
-                sender.dataset.autoPopulated = "true";
+                sender.dataset.sourceAccountId = currentAccountId;
             }
         });
 
