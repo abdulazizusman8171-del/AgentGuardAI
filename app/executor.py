@@ -1,7 +1,13 @@
+from app.main import evaluate_transaction
+
+
 class SimulatedExecutor:
 
-    def __init__(self, transaction_tracker):
+    def __init__(self, transaction_tracker, blocked_recipients=None):
         self.transaction_tracker = transaction_tracker
+        self.blocked_recipients = (
+            blocked_recipients if blocked_recipients is not None else []
+        )
 
     def execute(
         self,
@@ -28,9 +34,26 @@ class SimulatedExecutor:
         if not isinstance(transaction_id, str) or not transaction_id.strip():
             raise ValueError("Valid transaction ID is required")
 
-        decision = security_report.get("decision")
+        # Independently regenerate the trusted security decision.
+        trusted_report = evaluate_transaction(
+            transaction,
+            transaction_tracker=self.transaction_tracker,
+            blocked_recipients=self.blocked_recipients
+        )
 
-        # Security rule 1: Never execute blocked transactions.
+        # A concurrent request may have processed this transaction
+        # after the original report was generated. Always block it.
+        if trusted_report.get("duplicate_transaction") is True:
+            return {
+                "status": "BLOCKED",
+                "message": "Duplicate transaction detected."
+            }
+
+        # Reject forged, modified, or stale security reports.
+        if security_report != trusted_report:
+            raise ValueError("Security report verification failed")
+
+        decision = trusted_report["decision"]
 
         if decision == "BLOCK":
             return {
@@ -38,38 +61,39 @@ class SimulatedExecutor:
                 "message": "Security engine blocked this transaction."
             }
 
-        # Security rule 2: Wait for confirmation.
-
         if decision == "REQUIRE_CONFIRMATION" and not confirmed:
             return {
                 "status": "AWAITING_CONFIRMATION",
                 "message": "User confirmation is required."
             }
 
-        # Reject unknown security decisions.
-
         if decision not in ["ALLOW", "REQUIRE_CONFIRMATION"]:
             raise ValueError("Invalid security decision")
 
-        # Check for previously processed transactions.
-
-        if self.transaction_tracker.is_duplicate(transaction_id):
-            return {
-                "status": "BLOCKED",
-                "message": "Duplicate transaction detected."
-            }
-
-        # Simulate blockchain execution.
-
+        # Failed simulations must not claim the transaction.
         if not simulated_success:
             return {
                 "status": "FAILED",
                 "message": "Simulated execution failed."
             }
 
-        # Record only successful simulated executions.
+        # Atomically claim the transaction.
+        claim_processed = getattr(
+            self.transaction_tracker,
+            "claim_processed",
+            None
+        )
 
-        self.transaction_tracker.mark_processed(transaction_id)
+        if not callable(claim_processed):
+            raise ValueError(
+                "Atomic transaction protection is unavailable"
+            )
+
+        if not claim_processed(transaction_id):
+            return {
+                "status": "BLOCKED",
+                "message": "Duplicate transaction detected."
+            }
 
         return {
             "status": "EXECUTED",

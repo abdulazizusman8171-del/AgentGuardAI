@@ -312,6 +312,24 @@ class SQLiteTransactionTracker:
                     (transaction_id,)
                 )
 
+    def claim_processed(self, transaction_id):
+        """Atomically claim a transaction ID for simulated processing."""
+
+        transaction_id = self._validate_transaction_id(transaction_id)
+
+        with closing(self._connect()) as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    INSERT OR IGNORE INTO processed_transactions
+                    (transaction_id)
+                    VALUES (?)
+                    """,
+                    (transaction_id,)
+                )
+
+        return cursor.rowcount == 1
+
     def register_inspection(self, transaction_id):
 
         transaction_id = self._validate_transaction_id(transaction_id)
@@ -1697,4 +1715,3 @@ class SQLiteTransactionTracker:
                 )
 
         return result.rowcount == 1
-

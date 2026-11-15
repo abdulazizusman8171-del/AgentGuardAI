@@ -1,5 +1,6 @@
 import math
 import re
+from threading import Lock
 
 
 # ==========================================
@@ -10,6 +11,7 @@ class TransactionTracker:
 
     def __init__(self):
         self.processed_ids = set()
+        self._processed_lock = Lock()
         self.inspected_ids = set()
 
     def register_inspection(self, transaction_id):
@@ -28,14 +30,30 @@ class TransactionTracker:
         if not isinstance(transaction_id, str) or not transaction_id.strip():
             raise ValueError("Transaction ID must be non-empty text")
 
-        return transaction_id.strip() in self.processed_ids
+        with self._processed_lock:
+            return transaction_id.strip() in self.processed_ids
+
+    def claim_processed(self, transaction_id):
+        """Atomically claim a transaction ID in this in-memory tracker."""
+
+        if not isinstance(transaction_id, str) or not transaction_id.strip():
+            raise ValueError("Transaction ID must be non-empty text")
+
+        transaction_id = transaction_id.strip()
+
+        with self._processed_lock:
+            if transaction_id in self.processed_ids:
+                return False
+
+            self.processed_ids.add(transaction_id)
+            return True
 
     def mark_processed(self, transaction_id):
         if not isinstance(transaction_id, str) or not transaction_id.strip():
             raise ValueError("Transaction ID must be non-empty text")
 
-        self.processed_ids.add(transaction_id.strip())
-
+        with self._processed_lock:
+            self.processed_ids.add(transaction_id.strip())
 
 # ==========================================
 # BLOCKCHAIN ADDRESS VALIDATION

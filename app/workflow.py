@@ -1,4 +1,4 @@
-from app.main import evaluate_transaction
+﻿from app.main import evaluate_transaction
 from app.executor import SimulatedExecutor
 
 
@@ -12,7 +12,7 @@ class TransactionWorkflow:
             blocked_recipients if blocked_recipients is not None else []
         )
 
-        self.executor = SimulatedExecutor(transaction_tracker)
+        self.executor = SimulatedExecutor(transaction_tracker, self.blocked_recipients)
 
     def process(
         self,
