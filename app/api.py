@@ -1,4 +1,4 @@
-﻿import os
+import os
 from app.wallet_behavior_analyzer import analyze_wallet_behavior
 import logging
 import hmac
@@ -1443,6 +1443,7 @@ def compare_wallet_behavior_reports(
             "created_at": first["created_at"],
             "risk_score": first["risk_score"],
             "risk_level": first["risk_level"],
+            "threat_verdict": first["report"].get("threat_verdict", "NOT_DETERMINED"),
             "transaction_count": first["transaction_count"]
         },
         "newer": {
@@ -1450,6 +1451,7 @@ def compare_wallet_behavior_reports(
             "created_at": second["created_at"],
             "risk_score": second["risk_score"],
             "risk_level": second["risk_level"],
+            "threat_verdict": second["report"].get("threat_verdict", "NOT_DETERMINED"),
             "transaction_count": second["transaction_count"]
         },
         "changes": {
@@ -1459,6 +1461,10 @@ def compare_wallet_behavior_reports(
             ),
             "risk_level_changed": (
                 first["risk_level"] != second["risk_level"]
+            ),
+            "threat_verdict_changed": (
+                first["report"].get("threat_verdict", "NOT_DETERMINED") !=
+                second["report"].get("threat_verdict", "NOT_DETERMINED")
             )
         },
         "notice": (

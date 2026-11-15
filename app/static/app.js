@@ -3380,6 +3380,18 @@ loadDeveloperAnalytics();
                     `Second selected report: #${newer.id} | ${newer.risk_level} | ${newer.risk_score}/100`
                 ),
                 historyNode(
+                    "p",
+                    `First report threat verdict: ${older.threat_verdict || "NOT_DETERMINED"}`
+                ),
+                historyNode(
+                    "p",
+                    `Second report threat verdict: ${newer.threat_verdict || "NOT_DETERMINED"}`
+                ),
+                historyNode(
+                    "p",
+                    `Threat verdict changed: ${changes.threat_verdict_changed ? "Yes" : "No"}`
+                ),
+                historyNode(
                     "strong",
                     `Risk score change: ${changes.risk_score > 0 ? "+" : ""}${changes.risk_score}`
                 ),
