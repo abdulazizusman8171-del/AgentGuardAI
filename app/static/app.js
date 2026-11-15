@@ -3370,14 +3370,14 @@ loadDeveloperAnalytics();
 
             historyComparison.append(
                 historyNode("h4", "Investigation Comparison"),
-                historyNode("p", `${payload.account_id} ? ${payload.network}`),
+                historyNode("p", `${payload.account_id} | ${payload.network}`),
                 historyNode(
                     "p",
-                    `First selected report: #${older.id} ? ${older.risk_level} ? ${older.risk_score}/100`
+                    `First selected report: #${older.id} | ${older.risk_level} | ${older.risk_score}/100`
                 ),
                 historyNode(
                     "p",
-                    `Second selected report: #${newer.id} ? ${newer.risk_level} ? ${newer.risk_score}/100`
+                    `Second selected report: #${newer.id} | ${newer.risk_level} | ${newer.risk_score}/100`
                 ),
                 historyNode(
                     "strong",
