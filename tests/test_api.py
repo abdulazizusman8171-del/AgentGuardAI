@@ -1354,6 +1354,237 @@ class TestAgentGuardAPI(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+
+    # NEAR WALLET BEHAVIOUR API TESTS
+
+    def make_wallet_behavior_analysis(self, network="mainnet", account="alice.near"):
+        return {
+            "analysis_type": "deterministic_near_transaction_analysis",
+            "network": network,
+            "transaction_hash": "E" * 44,
+            "finality": "FINAL",
+            "investigation_complete": True,
+            "involved_accounts": [account, "market.near"],
+            "findings": [],
+            "receipt_summary": {
+                "total": 0,
+                "successful": 0,
+                "failed": 0,
+                "unknown": 0,
+                "unresolved": 0
+            },
+            "contract_interactions": []
+        }
+
+    @patch("app.api.analyze_near_transaction")
+    @patch("app.api.NearRPCClient")
+    def test_wallet_behavior_success(self, mock_client, mock_analyzer):
+        mock_client.return_value.validate_account_id.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.validate_transaction_hash.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.get_transaction.return_value = {
+            "network": "mainnet",
+            "transaction_hash": "E" * 44
+        }
+        mock_analyzer.return_value = self.make_wallet_behavior_analysis()
+
+        response = self.client.post(
+            "/near/accounts/alice.near/behavior",
+            json={
+                "transactions": [{
+                    "transaction_hash": "E" * 44,
+                    "sender_account_id": "alice.near"
+                }]
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["account_id"], "alice.near")
+        self.assertEqual(data["transaction_count"], 1)
+        self.assertEqual(data["network"], "mainnet")
+        self.assertTrue(data["inspection_only"])
+        self.assertFalse(data["execution_performed"])
+        self.assertFalse(data["transaction_signed"])
+        self.assertFalse(data["transaction_broadcast"])
+
+        mock_client.assert_called_once_with(network="mainnet")
+        mock_client.return_value.get_transaction.assert_called_once_with(
+            "E" * 44,
+            "alice.near"
+        )
+
+    @patch("app.api.analyze_near_transaction")
+    @patch("app.api.NearRPCClient")
+    def test_wallet_behavior_testnet_selection(self, mock_client, mock_analyzer):
+        mock_client.return_value.validate_account_id.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.validate_transaction_hash.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.get_transaction.return_value = {
+            "network": "testnet",
+            "transaction_hash": "E" * 44
+        }
+        mock_analyzer.return_value = self.make_wallet_behavior_analysis(
+            network="testnet"
+        )
+
+        response = self.client.post(
+            "/near/accounts/alice.near/behavior?network=testnet",
+            json={
+                "transactions": [{
+                    "transaction_hash": "E" * 44,
+                    "sender_account_id": "alice.near"
+                }]
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["network"], "testnet")
+        mock_client.assert_called_once_with(network="testnet")
+
+    @patch("app.api.NearRPCClient")
+    def test_wallet_behavior_rejects_invalid_sample_count(self, mock_client):
+        response = self.client.post(
+            "/near/accounts/alice.near/behavior",
+            json={"transactions": []}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        mock_client.assert_not_called()
+
+    @patch("app.api.analyze_near_transaction")
+    @patch("app.api.NearRPCClient")
+    def test_wallet_behavior_rejects_unrelated_wallet(
+        self, mock_client, mock_analyzer
+    ):
+        mock_client.return_value.validate_account_id.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.validate_transaction_hash.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.get_transaction.return_value = {
+            "network": "mainnet",
+            "transaction_hash": "E" * 44
+        }
+        mock_analyzer.return_value = self.make_wallet_behavior_analysis(
+            account="bob.near"
+        )
+
+        response = self.client.post(
+            "/near/accounts/alice.near/behavior",
+            json={
+                "transactions": [{
+                    "transaction_hash": "E" * 44,
+                    "sender_account_id": "bob.near"
+                }]
+            }
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    @patch("app.api.NearRPCClient")
+    def test_wallet_behavior_rpc_failure(self, mock_client):
+        mock_client.return_value.validate_account_id.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.validate_transaction_hash.side_effect = (
+            lambda value: value
+        )
+        mock_client.return_value.get_transaction.side_effect = (
+            NearRPCError("Unable to connect to NEAR RPC")
+        )
+
+        response = self.client.post(
+            "/near/accounts/alice.near/behavior",
+            json={
+                "transactions": [{
+                    "transaction_hash": "E" * 44,
+                    "sender_account_id": "alice.near"
+                }]
+            }
+        )
+
+        self.assertEqual(response.status_code, 502)
+
+
+    # ADDITIONAL WALLET BEHAVIOUR INPUT VALIDATION TESTS
+
+    def test_wallet_behavior_rejects_invalid_wallet_id(self):
+        with patch("app.api.NearRPCClient") as mock_client:
+            mock_client.return_value.validate_account_id.side_effect = (
+                ValueError("Invalid NEAR account ID")
+            )
+
+            response = self.client.post(
+                "/near/accounts/invalid/behavior",
+                json={
+                    "transactions": [{
+                        "transaction_hash": "E" * 44,
+                        "sender_account_id": "alice.near"
+                    }]
+                }
+            )
+
+            self.assertEqual(response.status_code, 400)
+            mock_client.return_value.get_transaction.assert_not_called()
+
+    def test_wallet_behavior_rejects_invalid_transaction_hash(self):
+        with patch("app.api.NearRPCClient") as mock_client:
+            mock_client.return_value.validate_account_id.side_effect = (
+                lambda value: value
+            )
+            mock_client.return_value.validate_transaction_hash.side_effect = (
+                ValueError("Invalid NEAR transaction hash")
+            )
+
+            response = self.client.post(
+                "/near/accounts/alice.near/behavior",
+                json={
+                    "transactions": [{
+                        "transaction_hash": "invalid",
+                        "sender_account_id": "alice.near"
+                    }]
+                }
+            )
+
+            self.assertEqual(response.status_code, 400)
+            mock_client.return_value.get_transaction.assert_not_called()
+
+    def test_wallet_behavior_rejects_duplicate_hashes_before_rpc(self):
+        with patch("app.api.NearRPCClient") as mock_client:
+            mock_client.return_value.validate_account_id.side_effect = (
+                lambda value: value
+            )
+            mock_client.return_value.validate_transaction_hash.side_effect = (
+                lambda value: value
+            )
+
+            response = self.client.post(
+                "/near/accounts/alice.near/behavior",
+                json={
+                    "transactions": [
+                        {
+                            "transaction_hash": "E" * 44,
+                            "sender_account_id": "alice.near"
+                        },
+                        {
+                            "transaction_hash": "E" * 44,
+                            "sender_account_id": "alice.near"
+                        }
+                    ]
+                }
+            )
+
+            self.assertEqual(response.status_code, 400)
+            mock_client.return_value.get_transaction.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main()
 

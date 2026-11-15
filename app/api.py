@@ -1,4 +1,5 @@
-import os
+﻿import os
+from app.wallet_behavior_analyzer import analyze_wallet_behavior
 import logging
 import hmac
 import time
@@ -1244,4 +1245,108 @@ def revoke_developer_api_key(key_id: int, request: Request):
         "success": True,
         "message": "API key revoked successfully."
     }
+
+
+
+
+# NEAR WALLET BEHAVIOUR INTELLIGENCE
+@app.post("/near/accounts/{account_id}/behavior")
+def inspect_wallet_behavior(
+    account_id: str,
+    payload: dict[str, Any],
+    network: str = "mainnet"
+):
+    """Analyse supplied finalized NEAR transactions without executing them."""
+
+    if not isinstance(network, str) or network not in ("mainnet", "testnet"):
+        raise HTTPException(
+            status_code=400,
+            detail="Network must be mainnet or testnet"
+        )
+
+    transactions = payload.get("transactions")
+
+    if not isinstance(transactions, list):
+        raise HTTPException(
+            status_code=400,
+            detail="transactions must be a list"
+        )
+
+    if not 1 <= len(transactions) <= 20:
+        raise HTTPException(
+            status_code=400,
+            detail="Supply between 1 and 20 transactions"
+        )
+
+    try:
+        client = NearRPCClient(network=network)
+
+        # Validate the wallet being investigated.
+        normalized_account_id = client.validate_account_id(account_id)
+
+        analyses = []
+        seen_hashes = set()
+
+        for item in transactions:
+            if not isinstance(item, dict):
+                raise ValueError("Each transaction must be an object")
+
+            tx_hash = item.get("transaction_hash")
+            sender_account_id = item.get("sender_account_id")
+
+            if not isinstance(tx_hash, str) or not tx_hash.strip():
+                raise ValueError(
+                    "Every transaction needs a transaction_hash"
+                )
+
+            if not isinstance(sender_account_id, str) or not sender_account_id.strip():
+                raise ValueError(
+                    "Every transaction needs a sender_account_id"
+                )
+
+            # Validate both fields before making the RPC request.
+            tx_hash = client.validate_transaction_hash(tx_hash.strip())
+            sender_account_id = client.validate_account_id(
+                sender_account_id.strip()
+            )
+
+            if tx_hash in seen_hashes:
+                raise ValueError(
+                    "Duplicate transaction hashes are not allowed"
+                )
+
+            seen_hashes.add(tx_hash)
+
+            transaction_data = client.get_transaction(
+                tx_hash,
+                sender_account_id
+            )
+
+            analysis = analyze_near_transaction(transaction_data)
+
+            if analysis.get("network") != network:
+                raise ValueError(
+                    "Transaction network does not match request"
+                )
+
+            analyses.append(analysis)
+
+        result = analyze_wallet_behavior(
+            normalized_account_id,
+            analyses
+        )
+
+        result["network"] = network
+        result["inspection_only"] = True
+        result["execution_performed"] = False
+        result["transaction_signed"] = False
+        result["transaction_broadcast"] = False
+
+        return result
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    except NearRPCError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
 
