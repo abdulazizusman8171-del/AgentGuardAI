@@ -10,6 +10,19 @@ class TransactionTracker:
 
     def __init__(self):
         self.processed_ids = set()
+        self.inspected_ids = set()
+
+    def register_inspection(self, transaction_id):
+        if not isinstance(transaction_id, str) or not transaction_id.strip():
+            raise ValueError("Transaction ID must be non-empty text")
+
+        transaction_id = transaction_id.strip()
+
+        if transaction_id in self.inspected_ids:
+            return False
+
+        self.inspected_ids.add(transaction_id)
+        return True
 
     def is_duplicate(self, transaction_id):
         if not isinstance(transaction_id, str) or not transaction_id.strip():

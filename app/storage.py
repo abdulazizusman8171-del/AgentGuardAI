@@ -37,6 +37,13 @@ class SQLiteTransactionTracker:
                 """)
 
                 connection.execute("""
+                    CREATE TABLE IF NOT EXISTS inspected_transactions (
+                        transaction_id TEXT PRIMARY KEY,
+                        inspected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                connection.execute("""
                     CREATE TABLE IF NOT EXISTS pending_approvals (
                         approval_id TEXT PRIMARY KEY,
                         transaction_id TEXT NOT NULL,
@@ -253,6 +260,39 @@ class SQLiteTransactionTracker:
                     """,
                     (transaction_id,)
                 )
+
+    def register_inspection(self, transaction_id):
+
+        transaction_id = self._validate_transaction_id(transaction_id)
+
+        with closing(self._connect()) as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    INSERT OR IGNORE INTO inspected_transactions
+                    (transaction_id)
+                    VALUES (?)
+                    """,
+                    (transaction_id,)
+                )
+
+        return cursor.rowcount == 1
+
+    def is_inspected(self, transaction_id):
+
+        transaction_id = self._validate_transaction_id(transaction_id)
+
+        with closing(self._connect()) as connection:
+            result = connection.execute(
+                """
+                SELECT 1
+                FROM inspected_transactions
+                WHERE transaction_id = ?
+                """,
+                (transaction_id,)
+            ).fetchone()
+
+        return result is not None
 
     def create_pending_approval(
         self,

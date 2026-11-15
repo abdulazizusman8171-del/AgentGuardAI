@@ -27,6 +27,27 @@ class AgentSecurityGateway:
             blocked_recipients=self.blocked_recipients
         )
 
+        register_inspection = getattr(
+            self.transaction_tracker,
+            "register_inspection",
+            None
+        )
+
+        if not callable(register_inspection):
+            raise ValueError("Inspection tracking is unavailable")
+
+        transaction_id = transaction.get("transaction_id")
+
+        security_report.setdefault("duplicate_inspection", False)
+
+        if not register_inspection(transaction_id):
+            security_report["risk_score"] = 100
+            security_report["decision"] = "BLOCK"
+            security_report["duplicate_inspection"] = True
+            security_report["reasons"].append(
+                "Duplicate inspection detected"
+            )
+
         decision = security_report["decision"]
 
         if decision == "ALLOW":

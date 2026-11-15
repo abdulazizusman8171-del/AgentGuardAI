@@ -68,6 +68,32 @@ class TestAgentSecurityGateway(unittest.TestCase):
             result["security_report"]["duplicate_transaction"]
         )
 
+    def test_first_inspection_is_not_marked_as_processed(self):
+        result = self.gateway.inspect_transaction(self.transaction)
+
+        self.assertEqual(result["gateway_status"], "PERMITTED")
+        self.assertTrue(
+            self.tracker.is_duplicate("agent-test-001") is False
+        )
+        self.assertIn("agent-test-001", self.tracker.inspected_ids)
+
+    def test_repeated_inspection_is_rejected(self):
+        first = self.gateway.inspect_transaction(self.transaction)
+        second = self.gateway.inspect_transaction(self.transaction)
+
+        self.assertEqual(first["gateway_status"], "PERMITTED")
+        self.assertEqual(second["gateway_status"], "REJECTED")
+        self.assertEqual(
+            second["security_report"]["risk_score"],
+            100
+        )
+        self.assertTrue(
+            second["security_report"]["duplicate_inspection"]
+        )
+        self.assertFalse(
+            second["security_report"]["duplicate_transaction"]
+        )
+
     def test_gateway_never_executes_or_broadcasts(self):
         result = self.gateway.inspect_transaction(self.transaction)
 
