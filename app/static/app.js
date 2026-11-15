@@ -1,4 +1,4 @@
-﻿const form = document.getElementById("transaction-form");
+const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -264,11 +264,11 @@ document.getElementById("verifyEmailAccount").addEventListener("click", async ()
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("loginAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; }
+    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; await loadDeveloperApiKeys(); }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("logoutAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/logout"); approvalApiKey = ""; approvalApiKeyInput.value = ""; approvalList.textContent = "Log in to view approvals."; accountStatus.textContent = data.message; }
+    try { const data = await authPost("/auth/logout"); approvalApiKey = ""; approvalApiKeyInput.value = ""; approvalList.textContent = "Log in to view approvals."; clearDeveloperApiKeys(); accountStatus.textContent = data.message; }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("createApprovalKey").addEventListener("click", async () => {
@@ -444,9 +444,30 @@ if (sidebarBackdrop) {
     sidebarBackdrop.addEventListener("click", closeMobileMenu);
 }
 
+function updateActiveSidebarLink() {
+    const currentHash = window.location.hash || "#dashboard";
+
+    sidebarLinks.forEach(link => {
+        link.classList.toggle("active", link.getAttribute("href") === currentHash);
+    });
+
+    const activeLink = document.querySelector("#mainSidebar nav a.active");
+    const activeGroup = activeLink?.closest("details.nav-group");
+
+    if (activeGroup) {
+        activeGroup.open = true;
+    }
+}
+
 sidebarLinks.forEach(link => {
-    link.addEventListener("click", closeMobileMenu);
+    link.addEventListener("click", () => {
+        closeMobileMenu();
+        updateActiveSidebarLink();
+    });
 });
+
+window.addEventListener("hashchange", updateActiveSidebarLink);
+updateActiveSidebarLink();
 
 document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
@@ -475,6 +496,32 @@ if (networkSelector) {
     networkSelector.addEventListener("change", updateNetworkTheme);
 }
 
+// Keep duplicated NEAR market carousel cards synchronised with live data.
+function syncNearMarketCarouselClones() {
+    const track = document.getElementById("nearMarketTrack");
+    if (!track) return;
+
+    const cards = Array.from(track.children);
+    const originals = cards.filter(
+        card => card.getAttribute("aria-hidden") !== "true"
+    );
+    const clones = cards.filter(
+        card => card.getAttribute("aria-hidden") === "true"
+    );
+
+    originals.forEach((original, index) => {
+        const clone = clones[index];
+        if (!clone) return;
+
+        clone.innerHTML = original.innerHTML;
+        clone.removeAttribute("id");
+        clone.setAttribute("aria-hidden", "true");
+
+        clone.querySelectorAll("[id]").forEach(element => {
+            element.removeAttribute("id");
+        });
+    });
+}
 // AGENTGUARD NEAR MARKET AND VOLUME MONITOR
 async function loadNearMarket() {
     const priceElement = document.getElementById("near-price");
@@ -594,6 +641,8 @@ async function loadNearMarket() {
             }
         }
 
+        syncNearMarketCarouselClones();
+
     } catch (error) {
         priceElement.textContent = "Unavailable";
         changeElement.textContent = "Market data unavailable";
@@ -607,6 +656,7 @@ async function loadNearMarket() {
             volumeUpdatedElement.textContent = "Please try again later";
         }
 
+        syncNearMarketCarouselClones();
         console.error("NEAR market error:", error);
     }
 }
@@ -710,6 +760,7 @@ async function loadNearLargeBuys() {
                 "No verified NEAR purchases found in the latest feed.";
 
             listElement.appendChild(message);
+            syncNearMarketCarouselClones();
             return;
         }
 
@@ -748,6 +799,7 @@ async function loadNearLargeBuys() {
 
         item.append(value, wallet, age, link);
         listElement.appendChild(item);
+        syncNearMarketCarouselClones();
 
     } catch (error) {
         console.error("NEAR large-buy error:", error);
@@ -755,6 +807,8 @@ async function loadNearLargeBuys() {
         if (statusElement.textContent) {
             statusElement.textContent += " | Refresh failed";
         }
+
+        syncNearMarketCarouselClones();
     }
 }
 loadNearLargeBuys();
@@ -2269,11 +2323,12 @@ setInterval(() => {
 })();
 
 
-// NEAR MARKET INTELLIGENCE — SAME ENGINE AS SECURITY INTELLIGENCE
+// NEAR MARKET INTELLIGENCE — INTERACTIVE INFINITE CAROUSEL
 (() => {
     const track = document.getElementById("nearMarketTrack");
     const prev = document.getElementById("nearMarketPrev");
     const next = document.getElementById("nearMarketNext");
+    const dotsContainer = document.getElementById("nearMarketDots");
     const viewport = track?.parentElement;
 
     if (!track || !viewport) return;
@@ -2284,6 +2339,8 @@ setInterval(() => {
 
     if (originalCardCount < 2) return;
 
+    const stepDuration = duration / originalCardCount;
+
     originalCards.forEach(card => {
         const clone = card.cloneNode(true);
         clone.removeAttribute("id");
@@ -2292,27 +2349,72 @@ setInterval(() => {
         track.appendChild(clone);
     });
 
+    syncNearMarketCarouselClones();
+
     track.style.animation =
         `agentGuardContinuousSlide ${duration}ms linear infinite`;
+
+    const dots = [];
+
+    if (dotsContainer) {
+        dotsContainer.replaceChildren();
+
+        originalCards.forEach((card, index) => {
+            const dot = document.createElement("button");
+
+            dot.type = "button";
+            dot.className = "near-market-dot";
+            dot.setAttribute("aria-label", `Show market card ${index + 1}`);
+            dot.addEventListener("click", () => {
+                const animation = track.getAnimations()[0];
+
+                if (animation) {
+                    animation.currentTime = index * stepDuration;
+                    animation.play();
+                    updateDots();
+                }
+            });
+
+            dotsContainer.appendChild(dot);
+            dots.push(dot);
+        });
+    }
+
+    function updateDots() {
+        const animation = track.getAnimations()[0];
+        if (!animation || !dots.length) return;
+
+        const time = Number(animation.currentTime) || 0;
+        const normalizedTime = ((time % duration) + duration) % duration;
+        const activeIndex = Math.floor(normalizedTime / stepDuration);
+
+        dots.forEach((dot, index) => {
+            const active = index === activeIndex;
+            dot.classList.toggle("active", active);
+
+            if (active) {
+                dot.setAttribute("aria-current", "true");
+            } else {
+                dot.removeAttribute("aria-current");
+            }
+        });
+    }
 
     function moveNearCarousel(direction) {
         const animation = track.getAnimations()[0];
 
         if (animation) {
-            const stepDuration = duration / originalCardCount;
             animation.currentTime =
                 (Number(animation.currentTime) || 0) +
                 direction * stepDuration;
+
+            animation.play();
+            updateDots();
         }
     }
 
-    if (prev) {
-        prev.addEventListener("click", () => moveNearCarousel(-1));
-    }
-
-    if (next) {
-        next.addEventListener("click", () => moveNearCarousel(1));
-    }
+    prev?.addEventListener("click", () => moveNearCarousel(-1));
+    next?.addEventListener("click", () => moveNearCarousel(1));
 
     viewport.addEventListener("mouseenter", () => {
         track.style.animationPlayState = "paused";
@@ -2329,7 +2431,276 @@ setInterval(() => {
     viewport.addEventListener("focusout", () => {
         track.style.animationPlayState = "running";
     });
+
+    updateDots();
+    window.setInterval(updateDots, 150);
 })();
 
+// ==========================================
+// DEVELOPER PLATFORM — API KEY MANAGEMENT
+// ==========================================
 
+const developerKeyName = document.getElementById("developerKeyName");
+const createDeveloperKeyButton = document.getElementById("createDeveloperKey");
+const refreshDeveloperKeysButton = document.getElementById("refreshDeveloperKeys");
+const developerKeyStatus = document.getElementById("developerKeyStatus");
+const developerKeyList = document.getElementById("developerKeyList");
+const developerNewKeyPanel = document.getElementById("developerNewKeyPanel");
+const developerNewKey = document.getElementById("developerNewKey");
+const developerCopyStatus = document.getElementById("developerCopyStatus");
 
+function developerDate(timestamp) {
+    if (!timestamp) return "Never";
+    const date = new Date(Number(timestamp) * 1000);
+    return Number.isNaN(date.getTime()) ? "Unknown" : date.toLocaleString();
+}
+
+function developerEscape(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function clearDeveloperApiKeys() {
+    developerKeyList.replaceChildren();
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 6;
+    cell.textContent = "Log in to load your API keys.";
+    row.appendChild(cell);
+    developerKeyList.appendChild(row);
+
+    document.getElementById("developerActiveCount").textContent = "—";
+    document.getElementById("developerRevokedCount").textContent = "—";
+    document.getElementById("developerLastActivity").textContent = "—";
+
+    developerKeyStatus.textContent = "Log in to manage your developer API keys.";
+    developerNewKey.value = "";
+    developerNewKeyPanel.classList.add("hidden");
+}
+
+async function developerResponse(response) {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const detail = data.detail;
+        const message = typeof detail === "string"
+            ? detail
+            : "Request failed with status " + response.status;
+        throw new Error(message);
+    }
+
+    return data;
+}
+
+async function loadDeveloperApiKeys() {
+    developerKeyStatus.textContent = "Loading your API keys...";
+
+    try {
+        const response = await fetch("/developer/api-keys", {
+            method: "GET",
+            credentials: "same-origin"
+        });
+
+        const data = await developerResponse(response);
+        const keys = Array.isArray(data.api_keys) ? data.api_keys : [];
+
+        developerKeyList.replaceChildren();
+
+        let activeCount = 0;
+        let revokedCount = 0;
+        let latestActivity = 0;
+
+        if (!keys.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 6;
+            cell.textContent = "No API keys found. Generate your first key above.";
+            row.appendChild(cell);
+            developerKeyList.appendChild(row);
+        }
+
+        keys.forEach(key => {
+            const revoked = Boolean(key.revoked_at);
+
+            if (revoked) {
+                revokedCount++;
+            } else {
+                activeCount++;
+            }
+
+            if (key.last_used_at && Number(key.last_used_at) > latestActivity) {
+                latestActivity = Number(key.last_used_at);
+            }
+
+            const row = document.createElement("tr");
+
+            const values = [
+                key.name,
+                key.key_prefix,
+                developerDate(key.created_at),
+                developerDate(key.last_used_at)
+            ];
+
+            values.forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value || "—";
+                row.appendChild(cell);
+            });
+
+            const statusCell = document.createElement("td");
+            const statusBadge = document.createElement("span");
+            statusBadge.className = revoked
+                ? "developer-key-status revoked"
+                : "developer-key-status active";
+            statusBadge.textContent = revoked ? "Revoked" : "Active";
+            statusCell.appendChild(statusBadge);
+            row.appendChild(statusCell);
+
+            const actionCell = document.createElement("td");
+
+            if (!revoked) {
+                const revokeButton = document.createElement("button");
+                revokeButton.type = "button";
+                revokeButton.className = "developer-revoke-button";
+                revokeButton.textContent = "Revoke";
+                revokeButton.addEventListener("click", () => revokeDeveloperKey(key.id, key.name));
+                actionCell.appendChild(revokeButton);
+            } else {
+                actionCell.textContent = "—";
+            }
+
+            row.appendChild(actionCell);
+            developerKeyList.appendChild(row);
+        });
+
+        document.getElementById("developerActiveCount").textContent = activeCount;
+        document.getElementById("developerRevokedCount").textContent = revokedCount;
+        document.getElementById("developerLastActivity").textContent =
+            latestActivity ? developerDate(latestActivity) : "No activity";
+
+        developerKeyStatus.textContent =
+            "Loaded " + keys.length + " API key record(s) for your account.";
+
+    } catch (error) {
+        developerKeyStatus.textContent = error.message;
+        developerKeyList.replaceChildren();
+
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 6;
+        cell.textContent = error.message;
+        row.appendChild(cell);
+        developerKeyList.appendChild(row);
+    }
+}
+
+async function createDeveloperApiKey() {
+    const name = developerKeyName.value.trim();
+
+    if (!name) {
+        developerKeyStatus.textContent = "Enter a name for your API key.";
+        developerKeyName.focus();
+        return;
+    }
+
+    createDeveloperKeyButton.disabled = true;
+    developerKeyStatus.textContent = "Generating your API key...";
+
+    try {
+        const data = await authPost("/developer/api-keys", { name });
+
+        developerNewKey.value = data.api_key;
+        developerNewKey.type = "password";
+        developerNewKeyPanel.classList.remove("hidden");
+        developerCopyStatus.textContent = data.warning ||
+            "Copy this key now. It cannot be displayed again.";
+
+        developerKeyName.value = "";
+        developerKeyStatus.textContent = "API key created successfully.";
+
+        await loadDeveloperApiKeys();
+
+        developerNewKeyPanel.classList.remove("hidden");
+
+    } catch (error) {
+        developerKeyStatus.textContent = error.message;
+    } finally {
+        createDeveloperKeyButton.disabled = false;
+    }
+}
+
+async function revokeDeveloperKey(keyId, keyName) {
+    if (!window.confirm("Revoke the API key '" + keyName + "'? This cannot be undone.")) {
+        return;
+    }
+
+    developerKeyStatus.textContent = "Revoking API key...";
+
+    try {
+        const response = await fetch("/developer/api-keys/" + encodeURIComponent(keyId), {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: authHeaders()
+        });
+
+        const data = await developerResponse(response);
+        developerKeyStatus.textContent = data.message || "API key revoked.";
+        await loadDeveloperApiKeys();
+
+    } catch (error) {
+        developerKeyStatus.textContent = error.message;
+    }
+}
+
+createDeveloperKeyButton.addEventListener("click", createDeveloperApiKey);
+refreshDeveloperKeysButton.addEventListener("click", loadDeveloperApiKeys);
+
+document.getElementById("toggleDeveloperKey").addEventListener("click", () => {
+    const visible = developerNewKey.type === "text";
+    developerNewKey.type = visible ? "password" : "text";
+    document.getElementById("toggleDeveloperKey").textContent =
+        visible ? "Show" : "Hide";
+});
+
+document.getElementById("copyDeveloperKey").addEventListener("click", async () => {
+    try {
+        await navigator.clipboard.writeText(developerNewKey.value);
+        developerCopyStatus.textContent = "API key copied. Store it securely.";
+    } catch (error) {
+        developerCopyStatus.textContent =
+            "Clipboard access unavailable. Select and copy the key manually.";
+        developerNewKey.type = "text";
+        developerNewKey.select();
+    }
+});
+
+document.getElementById("dismissDeveloperKey").addEventListener("click", () => {
+    developerNewKey.value = "";
+    developerNewKeyPanel.classList.add("hidden");
+    developerNewKey.type = "password";
+    developerCopyStatus.textContent = "";
+});
+
+document.querySelectorAll(".developer-copy-code").forEach(button => {
+    button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        if (!target) return;
+
+        try {
+            await navigator.clipboard.writeText(target.textContent);
+            button.textContent = "Copied!";
+            window.setTimeout(() => button.textContent = "Copy", 1500);
+        } catch (error) {
+            button.textContent = "Select text";
+        }
+    });
+});
+
+// Load metadata on page entry. Unauthenticated visitors receive
+// the normal login-required response; no raw keys are returned.
+loadDeveloperApiKeys();

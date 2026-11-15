@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgentGuard AI | Security Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261114-mobile-auth-fix1">
+    <link rel="stylesheet" href="/static/styles.css?v=20261115-feature-organisation1">
 </head>
 
 <body>
@@ -22,32 +22,86 @@
                 <h2>AgentGuard<span>AI</span></h2>
             </div>
 
-            <nav>
-    <div class="nav-group">
-        <span class="nav-group-label">MAIN</span>
-        <a href="#dashboard" class="active">Dashboard</a>
+            <nav class="main-navigation" aria-label="Main navigation">
+
+    <div class="nav-group nav-overview">
+        <a href="#dashboard" class="active">
+            <span class="nav-icon">⌂</span>
+            Overview
+        </a>
     </div>
 
-    <div class="nav-group">
-        <span class="nav-group-label">NEAR SECURITY</span>
-        <a href="#near-network">Network Activity</a>
-        <a href="#near-transaction-investigator">Transaction Investigator</a>
-        <a href="#access-keys">Access-Key Scanner</a>
-        <a href="#multi-account">Multi-Account Scanner</a>
-    </div>
+    <details class="nav-group" open>
+        <summary class="nav-group-label">NEAR EXPLORER</summary>
+        <a href="#near-network">
+            <span class="nav-icon">◈</span>Network Activity
+        </a>
+        <a href="#near-market-dashboard">
+            <span class="nav-icon">◉</span>NEAR Market
+        </a>
+    </details>
 
-    <div class="nav-group">
-        <span class="nav-group-label">PROTECTION</span>
-        <a href="#transaction">Transaction Security</a>
-        <a href="#history">Transaction History</a>
-        <a href="#approvals">Approval Center</a>
-    </div>
+    <details class="nav-group" open>
+        <summary class="nav-group-label">INVESTIGATION CENTER</summary>
+        <a href="#near-transaction-investigator">
+            <span class="nav-icon">⌕</span>Transaction Investigator
+        </a>
+        <a href="#access-keys">
+            <span class="nav-icon">⌑</span>Access-Key Scanner
+        </a>
+        <a href="#multi-account">
+            <span class="nav-icon">◎</span>Multi-Account Scanner
+        </a>
+    </details>
 
-    <div class="nav-group">
-        <span class="nav-group-label">INTELLIGENCE</span>
-        <a href="#security-intelligence">Security Intelligence</a>
-        <a href="#near-market-dashboard">NEAR Market</a>
-    </div>
+    <details class="nav-group">
+        <summary class="nav-group-label">INTELLIGENCE CENTER</summary>
+        <a href="#security-intelligence">
+            <span class="nav-icon">◈</span>Risk Intelligence
+        </a>
+    </details>
+
+    <details class="nav-group" open>
+        <summary class="nav-group-label">PROTECTION CENTER</summary>
+        <a href="#transaction">
+            <span class="nav-icon">⬡</span>Transaction Security
+        </a>
+        <a href="#approvals">
+            <span class="nav-icon">✓</span>Approval Center
+        </a>
+        <a href="#history">
+            <span class="nav-icon">◷</span>Transaction History
+        </a>
+    </details>
+
+    <details class="nav-group" open>
+        <summary class="nav-group-label">DEVELOPER PLATFORM</summary>
+        <a href="#developer-platform">
+            <span class="nav-icon">⌘</span>API Key Management
+        </a>
+        <a href="#developer-sdk">
+            <span class="nav-icon">⌨</span>Python SDK
+        </a>
+        <a href="#developer-api-reference">
+            <span class="nav-icon">⌑</span>API Reference
+        </a>
+        <a href="#developer-usage">
+            <span class="nav-icon">◷</span>Usage Insights
+        </a>
+    </details>
+    <details class="nav-group">
+        <summary class="nav-group-label">ACCOUNT &amp; SETTINGS</summary>
+        <a href="#account-access">
+            <span class="nav-icon">♙</span>Account Access
+        </a>
+        <a href="#email-verification">
+            <span class="nav-icon">✉</span>Email Verification
+        </a>
+        <a href="#approval-key-management">
+            <span class="nav-icon">⌑</span>Approval Key Management
+        </a>
+    </details>
+
 </nav>
 
             <div class="sidebar-footer" id="sidebarEngineStatus" aria-live="polite">
@@ -761,10 +815,248 @@
         <button id="refreshApprovals">Refresh</button>
     </div>
 
+
+    <div class="approval-filter">
+        <label for="approvalStatus">Filter by status:</label>
+        <select id="approvalStatus">
+            <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+            <option value="CONSUMED">Consumed</option>
+            <option value="EXPIRED">Expired</option>
+        </select>
+    </div>
+
+    <div id="approvalList" class="record-list">
+        <p class="empty-state">Log in and unlock the Approval Center with your Personal Approval Key to view private approval records.</p>
+    </div>
+</section>
+<section class="panel developer-platform-section" id="developer-platform">
+
+    <div class="panel-heading">
+        <div>
+            <h2>Developer Platform</h2>
+            <p>Manage API credentials and integrate AgentGuard AI into your applications.</p>
+        </div>
+        <span class="developer-badge">DEVELOPER TOOLS</span>
+    </div>
+
+    <div class="developer-stats-grid" id="developer-usage">
+
+        <article class="developer-stat-card">
+            <span>Active API Keys</span>
+            <strong id="developerActiveCount">—</strong>
+            <small>Currently active credentials</small>
+        </article>
+
+        <article class="developer-stat-card">
+            <span>Revoked API Keys</span>
+            <strong id="developerRevokedCount">—</strong>
+            <small>Revoked credentials</small>
+        </article>
+
+        <article class="developer-stat-card">
+            <span>Last Recorded Activity</span>
+            <strong id="developerLastActivity">—</strong>
+            <small>Most recent recorded key usage</small>
+        </article>
+
+    </div>
+
+    <div class="developer-card" id="developer-key-management">
+
+        <div class="developer-card-heading">
+            <div>
+                <h3>API Key Management</h3>
+                <p>Create and manage credentials for authenticated developer requests.</p>
+            </div>
+            <button type="button" id="refreshDeveloperKeys" class="auth-secondary">
+                Refresh
+            </button>
+        </div>
+
+        <div class="developer-create-row">
+            <div class="form-group">
+                <label for="developerKeyName">API Key Name</label>
+                <input
+                    id="developerKeyName"
+                    type="text"
+                    maxlength="80"
+                    placeholder="e.g. My Python Agent"
+                >
+            </div>
+
+            <button type="button" id="createDeveloperKey">
+                Generate API Key
+            </button>
+        </div>
+
+        <p id="developerKeyStatus" class="auth-status" role="status">
+            Log in to manage your developer API keys.
+        </p>
+
+        <div id="developerNewKeyPanel" class="developer-new-key hidden">
+            <div>
+                <h4>New API Key Generated</h4>
+                <p>This key will not be displayed again. Copy and store it securely.</p>
+            </div>
+
+            <div class="developer-copy-row">
+                <input id="developerNewKey" type="password" readonly autocomplete="off">
+                <button type="button" id="toggleDeveloperKey">Show</button>
+                <button type="button" id="copyDeveloperKey">Copy Key</button>
+            </div>
+
+            <p id="developerCopyStatus" role="status"></p>
+
+            <button type="button" id="dismissDeveloperKey" class="auth-secondary">
+                I have saved my key
+            </button>
+        </div>
+
+        <div class="developer-table-wrap">
+            <table class="developer-key-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Key Prefix</th>
+                        <th>Created</th>
+                        <th>Last Used</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="developerKeyList">
+                    <tr>
+                        <td colspan="6">Log in to load your API keys.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="developer-card" id="developer-sdk">
+
+        <div class="developer-card-heading">
+            <div>
+                <h3>Python SDK</h3>
+                <p>Connect your Python applications and AI agents to AgentGuard AI.</p>
+            </div>
+            <span class="developer-badge">v0.1.0</span>
+        </div>
+
+        <h4>Installation</h4>
+        <p>Install the locally built SDK wheel from your project distribution folder:</p>
+
+        <div class="developer-code-block">
+            <pre id="developerInstallCode">python -m pip install dist\agentguard_ai-0.1.0-py3-none-any.whl</pre>
+            <button type="button" class="developer-copy-code" data-copy-target="developerInstallCode">Copy</button>
+        </div>
+
+        <h4>Authentication</h4>
+        <p>Set your API key as an environment variable. Never hardcode it into your source code.</p>
+
+        <div class="developer-code-block">
+            <pre id="developerAuthCode">$env:AGENTGUARD_API_KEY = "YOUR_AGENTGUARD_API_KEY"</pre>
+            <button type="button" class="developer-copy-code" data-copy-target="developerAuthCode">Copy</button>
+        </div>
+
+        <h4>Quick Start</h4>
+
+        <div class="developer-code-block">
+            <pre id="developerPythonCode">import os
+from agentguard import AgentGuardClient, AgentGuardError
+
+client = AgentGuardClient(
+    api_key=os.environ["AGENTGUARD_API_KEY"]
+)
+
+transaction = {
+    "transaction_id": "agentguard-demo-001",
+    "amount": 0.1,
+    "network": "ethereum",
+    "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
+    "recipient_known": True,
+    "new_contract": False
+}
+
+try:
+    result = client.inspect(transaction)
+    print("Gateway:", result["gateway_status"])
+    print("Decision:", result["security_report"]["decision"])
+    print("Risk score:", result["security_report"]["risk_score"])
+except AgentGuardError as error:
+    print("AgentGuard error:", error)</pre>
+            <button type="button" class="developer-copy-code" data-copy-target="developerPythonCode">Copy</button>
+        </div>
+
+        <p class="developer-security-note">
+            The SDK is inspection-only. It does not sign or broadcast blockchain transactions.
+            A PERMITTED decision does not authorize real transaction execution.
+        </p>
+
+    </div>
+
+    <div class="developer-card" id="developer-api-reference">
+
+        <div class="developer-card-heading">
+            <div>
+                <h3>API Reference</h3>
+                <p>Available developer gateway endpoints.</p>
+            </div>
+        </div>
+
+        <div class="developer-endpoint">
+            <span class="http-method post">POST</span>
+            <code>/agent/inspect</code>
+            <p>Submit a proposed transaction for authenticated security inspection.</p>
+            <small>Authentication: X-API-Key header</small>
+        </div>
+
+        <div class="developer-endpoint">
+            <span class="http-method post">POST</span>
+            <code>/developer/api-keys</code>
+            <p>Create a developer API key for your authenticated account.</p>
+            <small>Session authentication and CSRF protection required.</small>
+        </div>
+
+        <div class="developer-endpoint">
+            <span class="http-method get">GET</span>
+            <code>/developer/api-keys</code>
+            <p>Retrieve your API key metadata, status and last-used timestamps.</p>
+            <small>Session authentication required.</small>
+        </div>
+
+        <div class="developer-endpoint">
+            <span class="http-method delete">DELETE</span>
+            <code>/developer/api-keys/{key_id}</code>
+            <p>Revoke an API key belonging to your account.</p>
+            <small>Session authentication and CSRF protection required.</small>
+        </div>
+
+        <div class="developer-endpoint">
+            <span class="http-method get">GET</span>
+            <code>/docs</code>
+            <p>Explore the FastAPI-generated interactive API documentation.</p>
+            <a href="/docs" target="_blank" rel="noopener">Open API Documentation ↗</a>
+        </div>
+
+    </div>
+
+</section>
+<section class="panel account-settings-section" id="account-settings">
+    <div class="panel-heading">
+        <div>
+            <h2>Account &amp; Settings</h2>
+            <p>Manage your account, verify your email and protect your personal approvals.</p>
+        </div>
+    </div>
+
     <div class="approval-auth auth-layout">
 
     <!-- ACCOUNT ACCESS -->
-    <div class="auth-card">
+    <div class="auth-card" id="account-access">
         <div class="auth-card-heading">
             <h3>Account Access</h3>
             <p>Register or sign in to manage your personal approvals.</p>
@@ -828,7 +1120,7 @@
     </div>
 
     <!-- EMAIL VERIFICATION -->
-    <div class="auth-card">
+    <div class="auth-card" id="email-verification">
         <div class="auth-card-heading">
             <h3>Email Verification</h3>
             <p>Verify your email address to activate account access.</p>
@@ -844,7 +1136,7 @@
     </div>
 
     <!-- APPROVAL KEY MANAGEMENT -->
-    <div class="auth-card">
+    <div class="auth-card" id="approval-key-management">
         <div class="auth-card-heading">
             <h3>Personal Approval Key</h3>
             <p>Generate, recover and manage your private Approval Key.</p>
@@ -881,20 +1173,7 @@
 
 </div>
 
-    <div class="approval-filter">
-        <label for="approvalStatus">Filter by status:</label>
-        <select id="approvalStatus">
-            <option value="">All statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="CONSUMED">Consumed</option>
-            <option value="EXPIRED">Expired</option>
-        </select>
-    </div>
 
-    <div id="approvalList" class="record-list">
-        <p class="empty-state">Loading approvals...</p>
-    </div>
 </section>
             </div>
             <footer>
@@ -906,9 +1185,7 @@
 
     </div>
 
-    <script src="/static/app.js?v=20261113-publickey1"></script>
+    <script src="/static/app.js?v=20261115-developer-platform1"></script>
 
 </body>
 </html>
-
-

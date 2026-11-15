@@ -197,7 +197,19 @@ def register_user(payload: RegistrationRequest):
             current_time + 1800
         )
 
-        send_verification_email(email, verification_token)
+        dev_mode = os.getenv("AGENTGUARD_DEV_MODE", "false").lower() == "true"
+        public_url = os.getenv("AGENTGUARD_PUBLIC_URL", "").lower()
+        local_url = public_url.startswith(("http://127.0.0.1", "http://localhost"))
+
+        if dev_mode and local_url and not os.getenv("RENDER"):
+            print(
+                "\n[AGENTGUARD LOCAL DEVELOPMENT] "
+                "Email verification token:\n"
+                f"{verification_token}\n",
+                flush=True
+            )
+        else:
+            send_verification_email(email, verification_token)
 
         return {
             "success": True,
