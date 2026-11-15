@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import json
 from pathlib import Path
 from contextlib import closing
@@ -295,6 +295,27 @@ class SQLiteTransactionTracker:
                     )
                 """)
 
+                # Safely add ownership to existing wallet history records.
+                wallet_history_columns = {
+                    row[1] for row in connection.execute(
+                        "PRAGMA table_info(wallet_behavior_history)"
+                    ).fetchall()
+                }
+
+                if "owner_user_id" not in wallet_history_columns:
+                    connection.execute("""
+                        ALTER TABLE wallet_behavior_history
+                        ADD COLUMN owner_user_id INTEGER
+                        REFERENCES users(id)
+                    """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_wallet_behavior_history_owner
+                    ON wallet_behavior_history(
+                        owner_user_id, account_id, network, created_at DESC
+                    )
+                """)
                 connection.execute("""
                     CREATE INDEX IF NOT EXISTS
                     idx_wallet_behavior_history_account
@@ -1750,10 +1771,24 @@ class SQLiteTransactionTracker:
     # NEAR WALLET BEHAVIOUR INVESTIGATION HISTORY
     # ==========================================
 
+    def _validate_wallet_history_owner_user_id(self, owner_user_id):
+        if owner_user_id is None:
+            return None
+
+        if type(owner_user_id) is not int or owner_user_id <= 0:
+            raise ValueError("Invalid wallet history owner ID")
+
+        return owner_user_id
+
     def save_wallet_behavior_report(
-        self, account_id, network, report, created_at=None
+        self, account_id, network, report, created_at=None,
+        owner_user_id=None
     ):
         import time
+
+        owner_user_id = self._validate_wallet_history_owner_user_id(
+            owner_user_id
+        )
 
         if not isinstance(account_id, str) or not account_id.strip():
             raise ValueError("Wallet account ID is required")
@@ -1807,21 +1842,28 @@ class SQLiteTransactionTracker:
                     """
                     INSERT INTO wallet_behavior_history (
                         account_id, network, risk_score, risk_level,
-                        transaction_count, created_at, report_json
+                        transaction_count, created_at, report_json,
+                        owner_user_id
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         account_id, network, risk_score, risk_level,
-                        transaction_count, created_at, report_json
+                        transaction_count, created_at, report_json,
+                        owner_user_id
                     )
                 )
 
         return cursor.lastrowid
 
     def get_wallet_behavior_history(
-        self, account_id, network="mainnet", limit=20
+        self, account_id, network="mainnet", limit=20,
+        owner_user_id=None
     ):
+        owner_user_id = self._validate_wallet_history_owner_user_id(
+            owner_user_id
+        )
+
         if not isinstance(account_id, str) or not account_id.strip():
             raise ValueError("Wallet account ID is required")
 
@@ -1831,17 +1873,30 @@ class SQLiteTransactionTracker:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("History limit must be between 1 and 100")
 
+        query = """
+            SELECT id, account_id, network, risk_score, risk_level,
+                   transaction_count, created_at
+            FROM wallet_behavior_history
+            WHERE account_id = ? AND network = ?
+        """
+        parameters = [
+            account_id.strip().lower(),
+            network
+        ]
+
+        if owner_user_id is not None:
+            query += " AND owner_user_id = ?"
+            parameters.append(owner_user_id)
+
+        query += """
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        """
+        parameters.append(limit)
+
         with closing(self._connect()) as connection:
             rows = connection.execute(
-                """
-                SELECT id, account_id, network, risk_score, risk_level,
-                       transaction_count, created_at
-                FROM wallet_behavior_history
-                WHERE account_id = ? AND network = ?
-                ORDER BY created_at DESC, id DESC
-                LIMIT ?
-                """,
-                (account_id.strip().lower(), network, limit)
+                query, tuple(parameters)
             ).fetchall()
 
         columns = (
@@ -1850,19 +1905,31 @@ class SQLiteTransactionTracker:
         )
         return [dict(zip(columns, row)) for row in rows]
 
-    def get_wallet_behavior_report(self, report_id):
+    def get_wallet_behavior_report(
+        self, report_id, owner_user_id=None
+    ):
+        owner_user_id = self._validate_wallet_history_owner_user_id(
+            owner_user_id
+        )
+
         if type(report_id) is not int or report_id <= 0:
             raise ValueError("Invalid investigation report ID")
 
+        query = """
+            SELECT id, account_id, network, risk_score, risk_level,
+                   transaction_count, created_at, report_json
+            FROM wallet_behavior_history
+            WHERE id = ?
+        """
+        parameters = [report_id]
+
+        if owner_user_id is not None:
+            query += " AND owner_user_id = ?"
+            parameters.append(owner_user_id)
+
         with closing(self._connect()) as connection:
             row = connection.execute(
-                """
-                SELECT id, account_id, network, risk_score, risk_level,
-                       transaction_count, created_at, report_json
-                FROM wallet_behavior_history
-                WHERE id = ?
-                """,
-                (report_id,)
+                query, tuple(parameters)
             ).fetchone()
 
         if row is None:
@@ -1875,4 +1942,3 @@ class SQLiteTransactionTracker:
         result = dict(zip(columns, row))
         result["report"] = json.loads(result.pop("report_json"))
         return result
-

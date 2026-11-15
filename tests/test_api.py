@@ -1604,7 +1604,11 @@ class TestAgentGuardAPI(unittest.TestCase):
             }
         }
         return self.tracker.save_wallet_behavior_report(
-            account, network, report, created_at=created_at
+            account,
+            network,
+            report,
+            created_at=created_at,
+            owner_user_id=self.user_id
         )
 
     def test_wallet_behavior_history_returns_saved_reports(self):
@@ -1723,7 +1727,173 @@ class TestAgentGuardAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+    # ==========================================
+    # SPRINT 6 - WALLET BEHAVIOUR OWNER ISOLATION
+    # ==========================================
+
+    def test_wallet_behavior_routes_require_authenticated_user(self):
+        unauthenticated = TestClient(api.app)
+
+        try:
+            responses = [
+                unauthenticated.post(
+                    "/near/accounts/alice.near/behavior",
+                    json={"transactions": []}
+                ),
+                unauthenticated.get(
+                    "/near/accounts/alice.near/behavior/history"
+                ),
+                unauthenticated.get(
+                    "/near/behavior/report/1"
+                ),
+                unauthenticated.get(
+                    "/near/behavior/history/compare",
+                    params={"first_id": 1, "second_id": 2}
+                )
+            ]
+
+            for response in responses:
+                self.assertEqual(response.status_code, 401)
+
+        finally:
+            unauthenticated.close()
+
+    def test_wallet_behavior_report_and_comparison_enforce_owner(self):
+        own_report_id = self._save_history_report()
+
+        import time
+        from app.auth import hash_password
+
+        password_hash, password_salt = hash_password(
+            "OtherUserPassword123!"
+        )
+
+        other_id = self.tracker.create_user(
+            "other-user@example.com",
+            password_hash,
+            password_salt,
+            int(time.time())
+        )
+        self.tracker.verify_user_email(other_id, int(time.time()))
+
+        other_report = {
+            "analysis_type": "deterministic_wallet_behavior_analysis",
+            "account_id": "alice.near",
+            "network": "mainnet",
+            "transaction_count": 5,
+            "behavioural_assessment": {
+                "risk_score": 70,
+                "risk_level": "HIGH"
+            }
+        }
+
+        other_report_id = self.tracker.save_wallet_behavior_report(
+            "alice.near",
+            "mainnet",
+            other_report,
+            created_at=2000,
+            owner_user_id=other_id
+        )
+
+        try:
+            response = self.client.get(
+                f"/near/behavior/report/{other_report_id}"
+            )
+            self.assertEqual(response.status_code, 404)
+
+            response = self.client.get(
+                "/near/behavior/history/compare",
+                params={
+                    "first_id": own_report_id,
+                    "second_id": other_report_id
+                }
+            )
+            self.assertEqual(response.status_code, 404)
+
+        finally:
+            pass
+
+    def test_wallet_behavior_history_isolated_by_owner(self):
+        own_report_id = self._save_history_report()
+
+        import time
+        from app.auth import hash_password
+
+        password_hash, password_salt = hash_password(
+            "OtherUserPassword123!"
+        )
+
+        other_id = self.tracker.create_user(
+            "history-owner@example.com",
+            password_hash,
+            password_salt,
+            int(time.time())
+        )
+        self.tracker.verify_user_email(other_id, int(time.time()))
+
+        other_report = {
+            "analysis_type": "deterministic_wallet_behavior_analysis",
+            "account_id": "alice.near",
+            "network": "mainnet",
+            "transaction_count": 8,
+            "behavioural_assessment": {
+                "risk_score": 85,
+                "risk_level": "HIGH"
+            }
+        }
+
+        self.tracker.save_wallet_behavior_report(
+            "alice.near",
+            "mainnet",
+            other_report,
+            created_at=2000,
+            owner_user_id=other_id
+        )
+
+        response = self.client.get(
+            "/near/accounts/alice.near/behavior/history"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(
+            response.json()["history"][0]["id"],
+            own_report_id
+        )
+
+    def test_wallet_behavior_legacy_ownerless_report_hidden_from_api(self):
+        legacy_report = {
+            "analysis_type": "deterministic_wallet_behavior_analysis",
+            "account_id": "alice.near",
+            "network": "mainnet",
+            "transaction_count": 2,
+            "behavioural_assessment": {
+                "risk_score": 15,
+                "risk_level": "LOW"
+            }
+        }
+
+        legacy_report_id = self.tracker.save_wallet_behavior_report(
+            "alice.near",
+            "mainnet",
+            legacy_report,
+            created_at=500
+        )
+
+        response = self.client.get(
+            f"/near/behavior/report/{legacy_report_id}"
+        )
+        self.assertEqual(response.status_code, 404)
+
+        response = self.client.get(
+            "/near/accounts/alice.near/behavior/history"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 0)
+
 if __name__ == "__main__":
     unittest.main()
+
+
 
 

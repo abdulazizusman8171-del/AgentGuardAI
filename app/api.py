@@ -1,4 +1,4 @@
-import os
+﻿import os
 from app.wallet_behavior_analyzer import analyze_wallet_behavior
 import logging
 import hmac
@@ -1252,11 +1252,14 @@ def revoke_developer_api_key(key_id: int, request: Request):
 # NEAR WALLET BEHAVIOUR INTELLIGENCE
 @app.post("/near/accounts/{account_id}/behavior")
 def inspect_wallet_behavior(
+    request: Request,
     account_id: str,
     payload: dict[str, Any],
     network: str = "mainnet"
 ):
     """Analyse supplied finalized NEAR transactions without executing them."""
+
+    user = get_authenticated_user(request)
 
     if not isinstance(network, str) or network not in ("mainnet", "testnet"):
         raise HTTPException(
@@ -1345,7 +1348,8 @@ def inspect_wallet_behavior(
         history_id = tracker.save_wallet_behavior_report(
             normalized_account_id,
             network,
-            result
+            result,
+            owner_user_id=user["id"]
         )
         result["history_id"] = history_id
 
@@ -1362,10 +1366,13 @@ def inspect_wallet_behavior(
 # NEAR WALLET BEHAVIOUR HISTORY
 @app.get("/near/accounts/{account_id}/behavior/history")
 def get_wallet_behavior_history(
+    request: Request,
     account_id: str,
     network: str = "mainnet",
     limit: int = Query(default=20, ge=1, le=100)
 ):
+    user = get_authenticated_user(request)
+
     try:
         client = NearRPCClient(network=network)
         normalized_account_id = client.validate_account_id(account_id)
@@ -1373,7 +1380,8 @@ def get_wallet_behavior_history(
         history = tracker.get_wallet_behavior_history(
             normalized_account_id,
             network,
-            limit
+            limit,
+            owner_user_id=user["id"]
         )
 
         return {
@@ -1389,9 +1397,13 @@ def get_wallet_behavior_history(
 
 
 @app.get("/near/behavior/report/{report_id}")
-def get_wallet_behavior_history_report(report_id: int):
+def get_wallet_behavior_history_report(report_id: int, request: Request):
+    user = get_authenticated_user(request)
     try:
-        report = tracker.get_wallet_behavior_report(report_id)
+        report = tracker.get_wallet_behavior_report(
+            report_id,
+            owner_user_id=user["id"]
+        )
         if report is None:
             raise HTTPException(
                 status_code=404,
@@ -1406,17 +1418,25 @@ def get_wallet_behavior_history_report(report_id: int):
 
 @app.get("/near/behavior/history/compare")
 def compare_wallet_behavior_reports(
+    request: Request,
     first_id: int = Query(..., ge=1),
     second_id: int = Query(..., ge=1)
 ):
+    user = get_authenticated_user(request)
     if first_id == second_id:
         raise HTTPException(
             status_code=400,
             detail="Choose two different investigation reports"
         )
 
-    first = tracker.get_wallet_behavior_report(first_id)
-    second = tracker.get_wallet_behavior_report(second_id)
+    first = tracker.get_wallet_behavior_report(
+        first_id,
+        owner_user_id=user["id"]
+    )
+    second = tracker.get_wallet_behavior_report(
+        second_id,
+        owner_user_id=user["id"]
+    )
 
     if first is None or second is None:
         raise HTTPException(
@@ -1472,4 +1492,5 @@ def compare_wallet_behavior_reports(
             "It does not establish continuous wallet monitoring."
         )
     }
+
 
