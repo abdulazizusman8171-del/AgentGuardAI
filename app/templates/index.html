@@ -46,6 +46,9 @@
         <a href="#near-transaction-investigator">
             <span class="nav-icon">⌕</span>Transaction Investigator
         </a>
+                <a href="#near-wallet-behavior">
+            <span class="nav-icon">◉</span>Wallet Behaviour
+        </a>
         <a href="#access-keys">
             <span class="nav-icon">⌑</span>Access-Key Scanner
         </a>
@@ -324,7 +327,191 @@
                     </div>
                 </section>
 
-                <!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
+                                <!-- AGENTGUARD NEAR WALLET BEHAVIOUR INVESTIGATOR -->
+                <section class="near-network-panel near-wallet-behavior-panel"
+                         id="near-wallet-behavior"
+                         aria-label="NEAR wallet behaviour investigation">
+
+                    <div class="near-network-heading">
+                        <div>
+                            <span class="near-network-eyebrow">READ-ONLY WALLET INTELLIGENCE</span>
+                            <h3>NEAR Wallet Behaviour Investigator</h3>
+                            <p>Build an evidence-based wallet profile from supplied finalized transactions.</p>
+                        </div>
+
+                        <div class="near-network-status">
+                            <span id="wallet-behavior-status-dot" class="near-investigator-status-dot is-idle"></span>
+                            <span id="wallet-behavior-status">Ready to investigate</span>
+                        </div>
+                    </div>
+
+                    <div class="wallet-behavior-notice">
+                        <strong>Read-only investigation</strong>
+                        <p>No wallet connection, private keys, signing, broadcasting or transaction execution is required.</p>
+                    </div>
+
+                    <form id="wallet-behavior-form" class="wallet-behavior-form">
+
+                        <div class="wallet-behavior-top-controls">
+                            <div class="near-investigator-field">
+                                <label for="wallet-behavior-account">Wallet Account ID</label>
+                                <input type="text"
+                                       id="wallet-behavior-account"
+                                       placeholder="example.near"
+                                       maxlength="64"
+                                       autocomplete="off"
+                                       autocapitalize="off"
+                                       spellcheck="false"
+                                       required>
+                            </div>
+
+                            <div class="near-investigator-field">
+                                <label for="wallet-behavior-network">Network</label>
+                                <select id="wallet-behavior-network">
+                                    <option value="mainnet">Mainnet</option>
+                                    <option value="testnet">Testnet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="wallet-behavior-samples-heading">
+                            <div>
+                                <h4>Finalized Transaction Samples</h4>
+                                <p>Add transactions involving the wallet you want to investigate.</p>
+                            </div>
+                            <span id="wallet-behavior-sample-count">1 / 20 samples</span>
+                        </div>
+
+                        <div id="wallet-behavior-rows"></div>
+
+                        <div class="wallet-behavior-actions">
+                            <button type="button" id="wallet-behavior-add" class="wallet-behavior-secondary">
+                                + Add Transaction
+                            </button>
+
+                            <button type="submit" id="wallet-behavior-submit">
+                                Investigate Wallet Behaviour
+                            </button>
+                        </div>
+                    </form>
+
+                    <p id="wallet-behavior-message" class="access-key-message" role="status" aria-live="polite">
+                        Enter a wallet account and at least one finalized transaction sample.
+                    </p>
+
+                    <div id="wallet-behavior-results" hidden>
+
+                        <div class="near-network-grid wallet-behavior-metrics">
+                            <div class="near-network-metric near-network-primary">
+                                <span>Behaviour Risk Score</span>
+                                <strong id="wallet-behavior-score">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Risk Level</span>
+                                <strong id="wallet-behavior-risk">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Confidence</span>
+                                <strong id="wallet-behavior-confidence">--</strong>
+                            </div>
+                            <div class="near-network-metric">
+                                <span>Transactions Analysed</span>
+                                <strong id="wallet-behavior-transactions">--</strong>
+                            </div>
+                        </div>
+
+                        <div class="near-investigator-assessment wallet-behavior-assessment">
+                            <div>
+                                <span>Sample Status</span>
+                                <strong id="wallet-behavior-sample-status">--</strong>
+                            </div>
+                            <div>
+                                <span>Investigation Completeness</span>
+                                <strong id="wallet-behavior-completeness">--</strong>
+                            </div>
+                            <div>
+                                <span>Threat Verdict</span>
+                                <strong id="wallet-behavior-verdict">--</strong>
+                            </div>
+                        </div>
+
+                        <div class="wallet-behavior-disclaimer">
+                            <strong>How to interpret this score</strong>
+                            <p>The score represents observed indicators in the supplied samples. It is not a probability of compromise, and unusual activity does not establish malicious intent.</p>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Activity Profile</h4>
+                            <div class="near-network-grid wallet-behavior-activity">
+                                <div class="near-network-metric">
+                                    <span>Unique Involved Accounts</span>
+                                    <strong id="wallet-behavior-counterparty-count">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>High-Impact Findings</span>
+                                    <strong id="wallet-behavior-high-impact">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>Incomplete Transactions</span>
+                                    <strong id="wallet-behavior-incomplete">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>Behaviour Indicators</span>
+                                    <strong id="wallet-behavior-indicators">--</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Receipt Execution Summary</h4>
+                            <div class="near-network-grid wallet-behavior-activity">
+                                <div class="near-network-metric">
+                                    <span>Total Receipts</span>
+                                    <strong id="wallet-behavior-receipts-total">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>Successful</span>
+                                    <strong id="wallet-behavior-receipts-success">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>Failed</span>
+                                    <strong id="wallet-behavior-receipts-failed">--</strong>
+                                </div>
+                                <div class="near-network-metric">
+                                    <span>Unresolved</span>
+                                    <strong id="wallet-behavior-receipts-unresolved">--</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Other Involved Accounts</h4>
+                            <p class="wallet-behavior-help">Includes accounts observed in transaction evidence and receipt participants; not necessarily direct transfer counterparties.</p>
+                            <div id="wallet-behavior-counterparties" class="near-investigator-accounts"></div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Contract Action Counts</h4>
+                            <div id="wallet-behavior-contract-actions" class="wallet-behavior-list"></div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Behavioural Findings</h4>
+                            <div id="wallet-behavior-findings" class="near-investigator-findings"></div>
+                        </div>
+
+                        <div class="near-investigator-result-block">
+                            <h4>Scope Limitations</h4>
+                            <ul id="wallet-behavior-limitations" class="wallet-behavior-limitations"></ul>
+                        </div>
+
+                        <p class="access-key-disclaimer">
+                            Analysis uses only the finalized transactions supplied for this investigation.
+                            It does not represent complete wallet history or infer hourly or daily activity trends.
+                        </p>
+                    </div>
+                </section>
+<!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
                 <section class="near-network-panel access-key-panel" id="access-keys" aria-label="NEAR access-key security analysis">
                     <div class="near-network-heading">
                         <div>
@@ -1279,7 +1466,7 @@ except AgentGuardError as error:
 
     </div>
 
-    <script src="/static/app.js?v=20261115-developer-platform1"></script>
+    <script src="/static/app.js?v=20261115-wallet-behavior1"></script>
 
 </body>
 </html>

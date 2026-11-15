@@ -2861,3 +2861,375 @@ document.getElementById("refreshDeveloperAnalytics")
 // the normal login-required response; no raw keys are returned.
 loadDeveloperApiKeys();
 loadDeveloperAnalytics();
+
+
+// ==========================================
+// AGENTGUARD NEAR WALLET BEHAVIOUR INVESTIGATOR
+// ==========================================
+
+(function initializeNearWalletBehavior() {
+    const form = document.getElementById("wallet-behavior-form");
+    if (!form) return;
+
+    const rows = document.getElementById("wallet-behavior-rows");
+    const addButton = document.getElementById("wallet-behavior-add");
+    const submitButton = document.getElementById("wallet-behavior-submit");
+    const message = document.getElementById("wallet-behavior-message");
+    const results = document.getElementById("wallet-behavior-results");
+    const status = document.getElementById("wallet-behavior-status");
+    const statusDot = document.getElementById("wallet-behavior-status-dot");
+    const sampleCount = document.getElementById("wallet-behavior-sample-count");
+    const accountInput = document.getElementById("wallet-behavior-account");
+    let previousAccountId = accountInput.value.trim();
+
+    const MAX_SAMPLES = 20;
+
+    function element(tag, value, className) {
+        const node = document.createElement(tag);
+        if (value !== undefined && value !== null) {
+            node.textContent = String(value);
+        }
+        if (className) node.className = className;
+        return node;
+    }
+
+    function setStatus(label, state) {
+        status.textContent = label;
+        statusDot.className = "near-investigator-status-dot " + state;
+    }
+
+    function updateCount() {
+        const count = rows.querySelectorAll(".wallet-behavior-row").length;
+        sampleCount.textContent = count + " / " + MAX_SAMPLES + " samples";
+        addButton.disabled = count >= MAX_SAMPLES;
+    }
+
+    function invalidateReport() {
+        if (results.hidden) return;
+
+        results.hidden = true;
+        message.textContent = "Your inputs have changed. Investigate again to generate an updated report.";
+        setStatus("Results outdated", "");
+    }
+
+    function addRow() {
+        if (rows.querySelectorAll(".wallet-behavior-row").length >= MAX_SAMPLES) {
+            message.textContent = "The maximum is 20 transaction samples.";
+            return;
+        }
+
+        const row = element("div", null, "wallet-behavior-row");
+
+        const hashField = element("div", null, "near-investigator-field");
+        const hashLabel = element("label", "Transaction Hash");
+        const hashInput = element("input");
+        hashInput.type = "text";
+        hashInput.placeholder = "Finalized transaction hash";
+        hashInput.maxLength = 50;
+        hashInput.autocomplete = "off";
+        hashInput.autocapitalize = "off";
+        hashInput.spellcheck = false;
+        hashInput.required = true;
+        hashInput.dataset.field = "hash";
+        hashLabel.appendChild(hashInput);
+        hashField.appendChild(hashLabel);
+
+        const senderField = element("div", null, "near-investigator-field");
+        const senderLabel = element("label", "Sender Account ID");
+        const senderInput = element("input");
+        senderInput.type = "text";
+        senderInput.placeholder = "example.near";
+        senderInput.value = accountInput.value.trim();
+        senderInput.maxLength = 64;
+        senderInput.autocomplete = "off";
+        senderInput.autocapitalize = "off";
+        senderInput.spellcheck = false;
+        senderInput.required = true;
+        senderInput.dataset.field = "sender";
+        senderLabel.appendChild(senderInput);
+        senderField.appendChild(senderLabel);
+
+        const remove = element("button", "Remove", "wallet-behavior-remove");
+        remove.type = "button";
+        remove.setAttribute("aria-label", "Remove transaction sample");
+        remove.addEventListener("click", function () {
+            row.remove();
+            if (!rows.children.length) addRow();
+            updateCount();
+            invalidateReport();
+        });
+
+        row.append(hashField, senderField, remove);
+        rows.appendChild(row);
+        updateCount();
+    }
+
+    function setText(id, value) {
+        document.getElementById(id).textContent =
+            value === undefined || value === null ? "--" : String(value);
+    }
+
+    function renderMap(containerId, values, emptyText) {
+        const container = document.getElementById(containerId);
+        container.replaceChildren();
+
+        const entries = Object.entries(values || {});
+
+        if (!entries.length) {
+            container.appendChild(element("p", emptyText, "near-investigator-empty"));
+            return;
+        }
+
+        entries.forEach(([key, value]) => {
+            const card = element("div", null, "wallet-behavior-list-item");
+            card.append(
+                element("span", key.replaceAll("_", " ")),
+                element("strong", value)
+            );
+            container.appendChild(card);
+        });
+    }
+
+    function renderFindings(findings) {
+        const container = document.getElementById("wallet-behavior-findings");
+        container.replaceChildren();
+
+        if (!Array.isArray(findings) || !findings.length) {
+            container.appendChild(
+                element("p", "No weighted behavioural findings were identified in the supplied samples.", "near-investigator-empty")
+            );
+            return;
+        }
+
+        findings.forEach((finding) => {
+            const card = element("article", null, "near-investigator-finding");
+            const heading = element("div", null, "near-investigator-finding-heading");
+            const title = element("h5", finding.title || finding.finding_id || "Finding");
+            const badge = element(
+                "span",
+                finding.severity || "INFO",
+                "near-investigator-severity"
+            );
+
+            heading.append(title, badge);
+            card.appendChild(heading);
+
+            card.appendChild(
+                element("p", "Indicator weight: " + (finding.weight ?? 0))
+            );
+
+            if (finding.transaction_hash) {
+                card.appendChild(
+                    element("small", "Transaction: " + finding.transaction_hash)
+                );
+            }
+
+            if (Array.isArray(finding.transaction_hashes)) {
+                card.appendChild(
+                    element("small", "Related samples: " + finding.transaction_hashes.length)
+                );
+            }
+
+            if (finding.evidence) {
+                const details = element("details", null, "near-investigator-evidence");
+                details.appendChild(element("summary", "View evidence"));
+                details.appendChild(
+                    element("pre", JSON.stringify(finding.evidence, null, 2))
+                );
+                card.appendChild(details);
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    function renderReport(data) {
+        const assessment = data.behavioural_assessment || {};
+        const activity = data.activity_profile || {};
+        const receipts = activity.receipt_summary || {};
+
+        setText("wallet-behavior-score", assessment.risk_score ?? 0);
+        setText("wallet-behavior-risk", assessment.risk_level);
+        setText("wallet-behavior-confidence", data.confidence);
+        setText("wallet-behavior-transactions", data.transaction_count);
+        setText("wallet-behavior-sample-status", data.sample_status);
+        setText(
+            "wallet-behavior-completeness",
+            data.investigation_complete ? "Complete" : "Limited"
+        );
+        setText("wallet-behavior-verdict", data.threat_verdict);
+        setText("wallet-behavior-counterparty-count", activity.unique_counterparties ?? 0);
+        setText("wallet-behavior-high-impact", activity.high_impact_findings ?? 0);
+        setText("wallet-behavior-incomplete", data.incomplete_transaction_count ?? 0);
+        setText("wallet-behavior-indicators", assessment.anomaly_count ?? 0);
+
+        setText("wallet-behavior-receipts-total", receipts.total ?? 0);
+        setText("wallet-behavior-receipts-success", receipts.successful ?? 0);
+        setText("wallet-behavior-receipts-failed", receipts.failed ?? 0);
+        setText("wallet-behavior-receipts-unresolved", receipts.unresolved ?? 0);
+
+        const counterparties = document.getElementById("wallet-behavior-counterparties");
+        counterparties.replaceChildren();
+
+        const accounts = Object.entries(activity.counterparty_interactions || {});
+        if (!accounts.length) {
+            counterparties.appendChild(
+                element("p", "No other involved accounts identified.", "near-investigator-empty")
+            );
+        } else {
+            accounts.forEach(([account, count]) => {
+                const badge = element(
+                    "span",
+                    account + " · " + count + " interaction(s)",
+                    "near-investigator-account"
+                );
+                counterparties.appendChild(badge);
+            });
+        }
+
+        renderMap(
+            "wallet-behavior-contract-actions",
+            activity.contract_action_counts,
+            "No contract actions identified in the supplied samples."
+        );
+
+        renderFindings(assessment.findings);
+
+        const limitations = document.getElementById("wallet-behavior-limitations");
+        limitations.replaceChildren();
+
+        (data.scope_limitations || []).forEach((item) => {
+            limitations.appendChild(element("li", item));
+        });
+
+        if (!limitations.children.length) {
+            limitations.appendChild(element("li", "No scope limitation details returned."));
+        }
+
+        results.hidden = false;
+    }
+
+    accountInput.addEventListener("input", function () {
+        const currentAccountId = accountInput.value.trim();
+
+        rows.querySelectorAll('[data-field="sender"]').forEach((sender) => {
+            if (!sender.value.trim() || sender.value.trim() === previousAccountId) {
+                sender.value = currentAccountId;
+            }
+        });
+
+        previousAccountId = currentAccountId;
+        invalidateReport();
+    });
+
+    form.addEventListener("input", invalidateReport);
+    form.addEventListener("change", invalidateReport);
+
+    addButton.addEventListener("click", addRow);
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const accountId = document.getElementById("wallet-behavior-account").value.trim();
+        const network = document.getElementById("wallet-behavior-network").value;
+
+        const transactionRows = Array.from(
+            rows.querySelectorAll(".wallet-behavior-row")
+        );
+
+        const transactions = transactionRows.map((row) => ({
+            transaction_hash: row.querySelector('[data-field="hash"]').value.trim(),
+            sender_account_id: row.querySelector('[data-field="sender"]').value.trim()
+        }));
+
+        if (!accountId) {
+            message.textContent = "Enter the wallet account ID.";
+            return;
+        }
+
+        if (!transactions.length || transactions.some(
+            (item) => !item.transaction_hash || !item.sender_account_id
+        )) {
+            message.textContent = "Complete every transaction hash and sender account field.";
+            return;
+        }
+
+        if (transactions.length > MAX_SAMPLES) {
+            message.textContent = "A maximum of 20 transaction samples is allowed.";
+            return;
+        }
+
+        const hashes = transactions.map((item) => item.transaction_hash);
+        if (new Set(hashes).size !== hashes.length) {
+            message.textContent = "Duplicate transaction hashes are not allowed.";
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Investigating...";
+        addButton.disabled = true;
+        results.hidden = true;
+
+        message.textContent = "Retrieving finalized transactions and building the wallet behaviour profile...";
+        setStatus("Investigation in progress", "is-loading");
+
+        try {
+            const endpoint =
+                "/near/accounts/" + encodeURIComponent(accountId) +
+                "/behavior?network=" + encodeURIComponent(network);
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                cache: "no-store",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ transactions })
+            });
+
+            const responseText = await response.text();
+            let payload = {};
+
+            try {
+                payload = responseText ? JSON.parse(responseText) : {};
+            } catch {
+                throw new Error("The server returned an unreadable response. Please try again.");
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    (typeof payload.detail === "string" ? payload.detail : null) ||
+                    "Wallet behaviour investigation failed."
+                );
+            }
+
+            if (
+                payload.analysis_type !== "deterministic_wallet_behavior_analysis" ||
+                !payload.behavioural_assessment ||
+                !payload.activity_profile
+            ) {
+                throw new Error("The API returned an unexpected wallet analysis response.");
+            }
+
+            renderReport(payload);
+
+            message.textContent =
+                "Wallet behaviour investigation completed using supplied finalized NEAR transactions.";
+
+            setStatus("Investigation complete", "is-live");
+
+        } catch (error) {
+            console.error("Wallet behaviour investigation failed:", error);
+            message.textContent = error.message || "Unable to investigate this wallet.";
+            setStatus("Investigation failed", "is-error");
+
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = "Investigate Wallet Behaviour";
+            updateCount();
+        }
+    });
+
+    addRow();
+})();
