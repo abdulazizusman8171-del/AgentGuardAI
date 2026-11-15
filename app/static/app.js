@@ -264,11 +264,11 @@ document.getElementById("verifyEmailAccount").addEventListener("click", async ()
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("loginAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; await loadDeveloperApiKeys(); }
+    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; await loadDeveloperApiKeys(); await loadDeveloperAnalytics(); }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("logoutAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/logout"); approvalApiKey = ""; approvalApiKeyInput.value = ""; approvalList.textContent = "Log in to view approvals."; clearDeveloperApiKeys(); accountStatus.textContent = data.message; }
+    try { const data = await authPost("/auth/logout"); approvalApiKey = ""; approvalApiKeyInput.value = ""; approvalList.textContent = "Log in to view approvals."; clearDeveloperApiKeys(); clearDeveloperAnalytics(); accountStatus.textContent = data.message; }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("createApprovalKey").addEventListener("click", async () => {
@@ -2701,6 +2701,163 @@ document.querySelectorAll(".developer-copy-code").forEach(button => {
     });
 });
 
+
+
+// DEVELOPER API ANALYTICS
+
+const developerAnalyticsStatus =
+    document.getElementById("developerAnalyticsStatus");
+
+const developerAnalyticsEvents =
+    document.getElementById("developerAnalyticsEvents");
+
+function clearDeveloperAnalytics() {
+    const fields = [
+        "analyticsTotalInspections",
+        "analyticsPermitted",
+        "analyticsApprovalRequired",
+        "analyticsRejected",
+        "analyticsRateLimits",
+        "analyticsDuplicates",
+        "analyticsAverageRisk",
+        "analyticsHighestRisk"
+    ];
+
+    fields.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = "?";
+    });
+
+    if (developerAnalyticsEvents) {
+        developerAnalyticsEvents.replaceChildren();
+
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 6;
+        cell.textContent = "Log in to load recent activity.";
+
+        row.appendChild(cell);
+        developerAnalyticsEvents.appendChild(row);
+    }
+
+    if (developerAnalyticsStatus) {
+        developerAnalyticsStatus.textContent =
+            "Log in to view your API analytics.";
+    }
+}
+
+function analyticsValue(value) {
+    return value === null || value === undefined
+        ? "?"
+        : String(value);
+}
+
+async function loadDeveloperAnalytics() {
+    if (!developerAnalyticsStatus || !developerAnalyticsEvents) return;
+
+    developerAnalyticsStatus.textContent =
+        "Loading your developer analytics...";
+
+    try {
+        const response = await fetch("/developer/analytics?limit=50", {
+            method: "GET",
+            credentials: "same-origin"
+        });
+
+        const data = await developerResponse(response);
+        const analytics = data.analytics || {};
+        const summary = analytics.summary || {};
+
+        const values = {
+            analyticsTotalInspections: summary.total_inspections,
+            analyticsPermitted: summary.permitted,
+            analyticsApprovalRequired: summary.approval_required,
+            analyticsRejected: summary.rejected,
+            analyticsRateLimits: summary.rate_limit_events,
+            analyticsDuplicates: summary.duplicate_inspections,
+            analyticsAverageRisk: summary.average_risk_score,
+            analyticsHighestRisk: summary.highest_risk_score
+        };
+
+        Object.entries(values).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (!element) return;
+
+            element.textContent = analyticsValue(value);
+        });
+
+        developerAnalyticsEvents.replaceChildren();
+
+        const events = Array.isArray(analytics.recent_events)
+            ? analytics.recent_events
+            : [];
+
+        if (!events.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 6;
+            cell.textContent = "No API activity recorded yet.";
+
+            row.appendChild(cell);
+            developerAnalyticsEvents.appendChild(row);
+        }
+
+        events.forEach(event => {
+            const row = document.createElement("tr");
+
+            const eventName = event.event_type === "RATE_LIMIT"
+                ? "Rate Limit"
+                : event.event_type === "INSPECTION"
+                    ? "Inspection"
+                    : analyticsValue(event.event_type);
+
+            const decision = event.gateway_status || "?";
+
+            const cells = [
+                developerDate(event.created_at),
+                event.api_key_name || "Unknown key",
+                eventName,
+                decision,
+                analyticsValue(event.risk_score),
+                analyticsValue(event.http_status)
+            ];
+
+            cells.forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = String(value);
+                row.appendChild(cell);
+            });
+
+            developerAnalyticsEvents.appendChild(row);
+        });
+
+        developerAnalyticsStatus.textContent =
+            "Analytics updated successfully. Showing " +
+            events.length + " recent event(s).";
+
+    } catch (error) {
+        developerAnalyticsStatus.textContent = error.message;
+
+        developerAnalyticsEvents.replaceChildren();
+
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 6;
+        cell.textContent = error.message;
+
+        row.appendChild(cell);
+        developerAnalyticsEvents.appendChild(row);
+    }
+}
+
+document.getElementById("refreshDeveloperAnalytics")
+    .addEventListener("click", loadDeveloperAnalytics);
+
+
 // Load metadata on page entry. Unauthenticated visitors receive
 // the normal login-required response; no raw keys are returned.
 loadDeveloperApiKeys();
+loadDeveloperAnalytics();

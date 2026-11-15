@@ -863,6 +863,100 @@
 
     </div>
 
+    <div class="developer-card" id="developer-analytics">
+
+        <div class="developer-card-heading">
+            <div>
+                <h3>Developer API Analytics</h3>
+                <p>Monitor inspection activity, gateway decisions and API usage.</p>
+            </div>
+            <button type="button" id="refreshDeveloperAnalytics" class="auth-secondary">
+                Refresh Analytics
+            </button>
+        </div>
+
+        <p id="developerAnalyticsStatus" class="auth-status" role="status">
+            Log in to view your API analytics.
+        </p>
+
+        <div class="developer-stats-grid developer-analytics-grid">
+
+            <article class="developer-stat-card">
+                <span>Total Inspections</span>
+                <strong id="analyticsTotalInspections">&#8212;</strong>
+                <small>Recorded inspection attempts</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Permitted</span>
+                <strong id="analyticsPermitted">&#8212;</strong>
+                <small>Passed gateway inspection</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Approval Required</span>
+                <strong id="analyticsApprovalRequired">&#8212;</strong>
+                <small>Require additional review</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Rejected</span>
+                <strong id="analyticsRejected">&#8212;</strong>
+                <small>Rejected by the gateway</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Rate-Limit Events</span>
+                <strong id="analyticsRateLimits">&#8212;</strong>
+                <small>Requests limited by gateway</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Duplicate Inspections</span>
+                <strong id="analyticsDuplicates">&#8212;</strong>
+                <small>Repeated inspection attempts</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Average Risk Score</span>
+                <strong id="analyticsAverageRisk">&#8212;</strong>
+                <small>Average recorded inspection risk</small>
+            </article>
+
+            <article class="developer-stat-card">
+                <span>Highest Risk Score</span>
+                <strong id="analyticsHighestRisk">&#8212;</strong>
+                <small>Highest recorded inspection risk</small>
+            </article>
+
+        </div>
+
+        <div class="developer-analytics-activity">
+            <h4>Recent API Activity</h4>
+
+            <div class="developer-table-wrap">
+                <table class="developer-key-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>API Key</th>
+                            <th>Event</th>
+                            <th>Gateway Decision</th>
+                            <th>Risk</th>
+                            <th>HTTP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="developerAnalyticsEvents">
+                        <tr>
+                            <td colspan="6">Log in to load recent activity.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
     <div class="developer-card" id="developer-key-management">
 
         <div class="developer-card-heading">

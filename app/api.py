@@ -1,4 +1,5 @@
 import os
+import logging
 import hmac
 import time
 from datetime import datetime, timezone
@@ -10,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from app.main import evaluate_transaction
 from app.security_intelligence import generate_security_insights
@@ -585,7 +588,25 @@ def inspect_agent_transaction(
             detail="Invalid or revoked AgentGuard API key."
         )
 
-    enforce_gateway_rate_limit(request, key_record["id"])
+    def record_event_safely(**event):
+        try:
+            tracker.record_developer_api_event(**event)
+        except Exception:
+            # Analytics must never interrupt security inspection.
+            logger.exception("Unable to record developer analytics event")
+
+    try:
+        enforce_gateway_rate_limit(request, key_record["id"])
+    except HTTPException as error:
+        if error.status_code == 429:
+            record_event_safely(
+                user_id=key_record["user_id"],
+                api_key_id=key_record["id"],
+                event_type="RATE_LIMIT",
+                http_status=429,
+                created_at=int(time.time())
+            )
+        raise
 
     if not tracker.update_developer_api_key_usage(
         key_record["id"], int(time.time())
@@ -601,13 +622,42 @@ def inspect_agent_transaction(
             blocked_recipients=BLOCKED_RECIPIENTS
         )
 
-        return gateway.inspect_transaction(payload)
+        result = gateway.inspect_transaction(payload)
+        security_report = result.get("security_report") or {}
+
+        risk_score = security_report.get("risk_score")
+        if type(risk_score) is not int or not 0 <= risk_score <= 100:
+            risk_score = None
+
+        record_event_safely(
+            user_id=key_record["user_id"],
+            api_key_id=key_record["id"],
+            event_type="INSPECTION",
+            gateway_status=result["gateway_status"],
+            risk_score=risk_score,
+            duplicate_inspection=(
+                security_report.get("duplicate_inspection") is True
+            ),
+            http_status=200,
+            created_at=int(time.time())
+        )
+
+        return result
 
     except ValueError as error:
+        record_event_safely(
+            user_id=key_record["user_id"],
+            api_key_id=key_record["id"],
+            event_type="INSPECTION",
+            http_status=400,
+            created_at=int(time.time())
+        )
+
         raise HTTPException(
             status_code=400,
             detail=str(error)
         )
+
 
 @app.post("/intelligence")
 def security_intelligence(payload: dict[str, Any]):
@@ -1150,6 +1200,26 @@ def list_developer_api_keys(request: Request):
     return {
         "success": True,
         "api_keys": tracker.list_developer_api_keys(user["id"])
+    }
+
+
+@app.get("/developer/analytics")
+def developer_api_analytics(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200),
+    api_key_id: int | None = Query(default=None, ge=1)
+):
+    user = get_authenticated_user(request)
+
+    analytics = tracker.get_developer_api_analytics(
+        user_id=user["id"],
+        limit=limit,
+        api_key_id=api_key_id
+    )
+
+    return {
+        "success": True,
+        "analytics": analytics
     }
 
 

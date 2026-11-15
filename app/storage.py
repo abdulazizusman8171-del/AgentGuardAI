@@ -100,6 +100,57 @@ class SQLiteTransactionTracker:
                     ON developer_api_keys(user_id)
                 """)
 
+                # DEVELOPER API ANALYTICS EVENTS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS developer_api_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        api_key_id INTEGER NOT NULL,
+                        event_type TEXT NOT NULL CHECK (
+                            event_type IN (
+                                'INSPECTION',
+                                'RATE_LIMIT'
+                            )
+                        ),
+                        gateway_status TEXT CHECK (
+                            gateway_status IS NULL OR gateway_status IN (
+                                'PERMITTED',
+                                'APPROVAL_REQUIRED',
+                                'REJECTED'
+                            )
+                        ),
+                        risk_score INTEGER CHECK (
+                            risk_score IS NULL OR
+                            (risk_score >= 0 AND risk_score <= 100)
+                        ),
+                        duplicate_inspection INTEGER NOT NULL DEFAULT 0
+                            CHECK (duplicate_inspection IN (0, 1)),
+                        http_status INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        FOREIGN KEY (api_key_id)
+                            REFERENCES developer_api_keys(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_developer_api_events_user_time
+                    ON developer_api_events(user_id, created_at DESC)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_developer_api_events_key_time
+                    ON developer_api_events(api_key_id, created_at DESC)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_developer_api_events_type
+                    ON developer_api_events(user_id, event_type, gateway_status)
+                """)
+
                 # USER AUTHENTICATION SESSIONS
                 connection.execute("""
                     CREATE TABLE IF NOT EXISTS user_sessions (
@@ -1438,6 +1489,189 @@ class SQLiteTransactionTracker:
                 )
 
         return result.rowcount == 1
+
+    def record_developer_api_event(
+        self,
+        user_id,
+        api_key_id,
+        event_type,
+        http_status,
+        created_at,
+        gateway_status=None,
+        risk_score=None,
+        duplicate_inspection=False
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if type(api_key_id) is not int or api_key_id <= 0:
+            raise ValueError("Invalid API key ID")
+
+        if event_type not in ("INSPECTION", "RATE_LIMIT"):
+            raise ValueError("Invalid analytics event type")
+
+        if type(http_status) is not int or not 100 <= http_status <= 599:
+            raise ValueError("Invalid HTTP status")
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid event timestamp")
+
+        if gateway_status is not None and gateway_status not in (
+            "PERMITTED", "APPROVAL_REQUIRED", "REJECTED"
+        ):
+            raise ValueError("Invalid gateway status")
+
+        if risk_score is not None:
+            if type(risk_score) is not int or not 0 <= risk_score <= 100:
+                raise ValueError("Invalid risk score")
+
+        if type(duplicate_inspection) is not bool:
+            raise ValueError("Duplicate inspection flag must be boolean")
+
+        if event_type == "RATE_LIMIT" and gateway_status is not None:
+            raise ValueError("Rate-limit events cannot have a gateway status")
+
+        if event_type == "RATE_LIMIT" and risk_score is not None:
+            raise ValueError("Rate-limit events cannot have a risk score")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    INSERT INTO developer_api_events (
+                        user_id, api_key_id, event_type,
+                        gateway_status, risk_score,
+                        duplicate_inspection, http_status, created_at
+                    )
+                    SELECT
+                        k.user_id, k.id, ?, ?, ?, ?, ?, ?
+                    FROM developer_api_keys AS k
+                    JOIN users AS u ON u.id = k.user_id
+                    WHERE k.id = ?
+                      AND k.user_id = ?
+                      AND u.email_verified = 1
+                    """,
+                    (
+                        event_type,
+                        gateway_status,
+                        risk_score,
+                        int(duplicate_inspection),
+                        http_status,
+                        created_at,
+                        api_key_id,
+                        user_id
+                    )
+                )
+
+        if result.rowcount != 1:
+            raise ValueError("Developer API key ownership could not be verified")
+
+        return result.lastrowid
+
+    def get_developer_api_analytics(
+        self,
+        user_id,
+        limit=50,
+        api_key_id=None
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("Limit must be between 1 and 200")
+
+        if api_key_id is not None:
+            if type(api_key_id) is not int or api_key_id <= 0:
+                raise ValueError("Invalid API key ID")
+
+        with closing(self._connect()) as connection:
+            ownership = ""
+            parameters = [user_id]
+
+            if api_key_id is not None:
+                ownership = " AND api_key_id = ?"
+                parameters.append(api_key_id)
+
+            summary = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_events,
+                    SUM(CASE WHEN event_type = 'INSPECTION'
+                        THEN 1 ELSE 0 END) AS total_inspections,
+                    SUM(CASE WHEN event_type = 'RATE_LIMIT'
+                        THEN 1 ELSE 0 END) AS rate_limit_events,
+                    SUM(CASE WHEN gateway_status = 'PERMITTED'
+                        THEN 1 ELSE 0 END) AS permitted,
+                    SUM(CASE WHEN gateway_status = 'APPROVAL_REQUIRED'
+                        THEN 1 ELSE 0 END) AS approval_required,
+                    SUM(CASE WHEN gateway_status = 'REJECTED'
+                        THEN 1 ELSE 0 END) AS rejected,
+                    SUM(CASE WHEN duplicate_inspection = 1
+                        THEN 1 ELSE 0 END) AS duplicate_inspections,
+                    AVG(CASE WHEN event_type = 'INSPECTION'
+                        THEN risk_score END) AS average_risk_score,
+                    MAX(CASE WHEN event_type = 'INSPECTION'
+                        THEN risk_score END) AS highest_risk_score
+                FROM developer_api_events
+                WHERE user_id = ?
+                """ + ownership,
+                parameters
+            ).fetchone()
+
+            events = connection.execute(
+                """
+                SELECT
+                    e.id,
+                    e.api_key_id,
+                    k.name AS api_key_name,
+                    e.event_type,
+                    e.gateway_status,
+                    e.risk_score,
+                    e.duplicate_inspection,
+                    e.http_status,
+                    e.created_at
+                FROM developer_api_events AS e
+                JOIN developer_api_keys AS k ON k.id = e.api_key_id
+                WHERE e.user_id = ?
+                """ + ownership + """
+                ORDER BY e.created_at DESC, e.id DESC
+                LIMIT ?
+                """,
+                parameters + [limit]
+            ).fetchall()
+
+        summary_columns = [
+            "total_events",
+            "total_inspections",
+            "rate_limit_events",
+            "permitted",
+            "approval_required",
+            "rejected",
+            "duplicate_inspections",
+            "average_risk_score",
+            "highest_risk_score"
+        ]
+
+        summary_data = dict(zip(summary_columns, summary))
+
+        for key, value in summary_data.items():
+            if key in ("average_risk_score",):
+                summary_data[key] = round(value, 2) if value is not None else None
+            elif value is None:
+                summary_data[key] = 0
+
+        event_columns = [
+            "id", "api_key_id", "api_key_name",
+            "event_type", "gateway_status", "risk_score",
+            "duplicate_inspection", "http_status", "created_at"
+        ]
+
+        return {
+            "summary": summary_data,
+            "recent_events": [
+                dict(zip(event_columns, row)) for row in events
+            ]
+        }
 
     def revoke_developer_api_key(self, user_id, key_id, revoked_at):
         if type(user_id) is not int or user_id <= 0:

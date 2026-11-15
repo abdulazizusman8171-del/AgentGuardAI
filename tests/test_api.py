@@ -1177,6 +1177,108 @@ class TestAgentGuardAPI(unittest.TestCase):
             final_security._GATEWAY_KEY_MAX_REQUESTS = original_limit
             final_security._GATEWAY_ATTEMPTS[key].clear()
 
+    # DEVELOPER ANALYTICS API TESTS
+
+    def test_developer_analytics_records_successful_inspection(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.safe_transaction,
+            headers=self.agent_headers
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        analytics_response = self.client.get("/developer/analytics")
+
+        self.assertEqual(analytics_response.status_code, 200)
+
+        analytics = analytics_response.json()["analytics"]
+        summary = analytics["summary"]
+
+        self.assertEqual(summary["total_events"], 1)
+        self.assertEqual(summary["total_inspections"], 1)
+        self.assertEqual(summary["permitted"], 1)
+
+        event = analytics["recent_events"][0]
+        self.assertEqual(event["event_type"], "INSPECTION")
+        self.assertEqual(event["gateway_status"], "PERMITTED")
+        self.assertEqual(event["http_status"], 200)
+
+    def test_developer_analytics_records_rejected_inspection(self):
+        response = self.client.post(
+            "/agent/inspect",
+            json=self.unknown_transaction,
+            headers=self.agent_headers
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        analytics_response = self.client.get("/developer/analytics")
+        self.assertEqual(analytics_response.status_code, 200)
+
+        summary = analytics_response.json()["analytics"]["summary"]
+
+        self.assertEqual(summary["total_inspections"], 1)
+        self.assertEqual(summary["approval_required"], 1)
+
+    def test_developer_analytics_records_rate_limit(self):
+        from app.auth import hash_token
+        import app.final_security as final_security
+
+        key_record = self.tracker.get_developer_api_key(
+            hash_token(self.agent_api_key)
+        )
+        limiter_key = ("gateway_api_key", key_record["id"])
+        original_limit = final_security._GATEWAY_KEY_MAX_REQUESTS
+
+        try:
+            final_security._GATEWAY_ATTEMPTS[limiter_key].clear()
+            final_security._GATEWAY_KEY_MAX_REQUESTS = 1
+
+            first = self.client.post(
+                "/agent/inspect",
+                json=self.safe_transaction,
+                headers=self.agent_headers
+            )
+
+            second = self.client.post(
+                "/agent/inspect",
+                json={
+                    **self.safe_transaction,
+                    "transaction_id": "api-rate-limit-002"
+                },
+                headers=self.agent_headers
+            )
+
+            self.assertEqual(first.status_code, 200)
+            self.assertEqual(second.status_code, 429)
+
+            analytics_response = self.client.get("/developer/analytics")
+            self.assertEqual(analytics_response.status_code, 200)
+
+            summary = analytics_response.json()["analytics"]["summary"]
+
+            self.assertEqual(summary["total_inspections"], 1)
+            self.assertEqual(summary["rate_limit_events"], 1)
+
+            event = analytics_response.json()["analytics"]["recent_events"][0]
+            self.assertEqual(event["event_type"], "RATE_LIMIT")
+            self.assertEqual(event["http_status"], 429)
+
+        finally:
+            final_security._GATEWAY_KEY_MAX_REQUESTS = original_limit
+            final_security._GATEWAY_ATTEMPTS[limiter_key].clear()
+
+    def test_developer_analytics_requires_login(self):
+        client = TestClient(api.app)
+
+        try:
+            response = client.get("/developer/analytics")
+            self.assertEqual(response.status_code, 401)
+        finally:
+            client.close()
+
+
     # DEVELOPER API KEY TESTS
 
     def test_developer_api_key_creation(self):
