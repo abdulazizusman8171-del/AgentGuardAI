@@ -2151,6 +2151,270 @@ setInterval(() => {
         results.hidden = false;
     }
 
+
+    // WALLET BEHAVIOUR SAVED INVESTIGATION HISTORY
+
+    const historyList = document.getElementById("wallet-history-list");
+    const historyMessage = document.getElementById("wallet-history-message");
+    const historyRefresh = document.getElementById("wallet-history-refresh");
+    const historyFirst = document.getElementById("wallet-history-first");
+    const historySecond = document.getElementById("wallet-history-second");
+    const historyCompare = document.getElementById("wallet-history-compare");
+    const historyComparison = document.getElementById("wallet-history-comparison");
+    const networkInput = document.getElementById("wallet-behavior-network");
+
+    let savedHistory = [];
+
+    function historyNode(tag, value, className) {
+        const node = document.createElement(tag);
+        if (value !== undefined && value !== null) {
+            node.textContent = String(value);
+        }
+        if (className) node.className = className;
+        return node;
+    }
+
+    function updateCompareButton() {
+        historyCompare.disabled = !(
+            historyFirst.value &&
+            historySecond.value &&
+            historyFirst.value !== historySecond.value
+        );
+    }
+
+    function formatHistoryDate(timestamp) {
+        const date = new Date(Number(timestamp) * 1000);
+        if (Number.isNaN(date.getTime())) return "Date unavailable";
+        return date.toLocaleString();
+    }
+
+    async function loadWalletBehaviorHistory() {
+        const accountId = accountInput.value.trim();
+        const network = networkInput.value;
+
+        historyComparison.hidden = true;
+        historyComparison.replaceChildren();
+
+        if (!accountId) {
+            historyMessage.textContent = "Enter a wallet account to load saved investigations.";
+            historyList.replaceChildren(
+                historyNode("p", "No wallet account selected.", "near-investigator-empty")
+            );
+            return;
+        }
+
+        historyMessage.textContent = "Loading saved investigations...";
+        historyRefresh.disabled = true;
+
+        try {
+            const response = await fetch(
+                `/near/accounts/${encodeURIComponent(accountId)}/behavior/history?network=${encodeURIComponent(network)}&limit=50`
+            );
+
+            const raw = await response.text();
+            let payload;
+
+            try {
+                payload = JSON.parse(raw);
+            } catch {
+                throw new Error("The history API returned an invalid response.");
+            }
+
+            if (!response.ok) {
+                throw new Error(payload.detail || "Unable to load investigation history.");
+            }
+
+            savedHistory = Array.isArray(payload.history) ? payload.history : [];
+            historyList.replaceChildren();
+
+            historyFirst.replaceChildren(
+                historyNode("option", "Select a report")
+            );
+            historySecond.replaceChildren(
+                historyNode("option", "Select a report")
+            );
+
+            if (!savedHistory.length) {
+                historyList.appendChild(
+                    historyNode(
+                        "p",
+                        "No saved investigations found for this wallet and network.",
+                        "near-investigator-empty"
+                    )
+                );
+            }
+
+            savedHistory.forEach((record) => {
+                const card = historyNode("article", null, "wallet-history-card");
+                const details = historyNode("div", null, "wallet-history-card-details");
+
+                details.append(
+                    historyNode("strong", `Report #${record.id}`),
+                    historyNode("span", formatHistoryDate(record.created_at)),
+                    historyNode(
+                        "span",
+                        `Risk: ${record.risk_score}/100 ? ${record.risk_level}`
+                    ),
+                    historyNode(
+                        "span",
+                        `${record.transaction_count} supplied transaction(s)`
+                    )
+                );
+
+                const viewButton = historyNode("button", "View Report", "wallet-behavior-secondary");
+                viewButton.type = "button";
+                viewButton.addEventListener("click", () => viewWalletBehaviorReport(record.id));
+
+                card.append(details, viewButton);
+                historyList.appendChild(card);
+
+                const label = `#${record.id} ? ${record.risk_level} (${record.risk_score}/100) ? ${formatHistoryDate(record.created_at)}`;
+
+                const firstOption = historyNode("option", label);
+                firstOption.value = String(record.id);
+                historyFirst.appendChild(firstOption);
+
+                const secondOption = historyNode("option", label);
+                secondOption.value = String(record.id);
+                historySecond.appendChild(secondOption);
+            });
+
+            historyMessage.textContent =
+                `${savedHistory.length} saved investigation(s) ? ${accountId} ? ${network}`;
+
+            updateCompareButton();
+
+        } catch (error) {
+            historyMessage.textContent = error.message || "Unable to load history.";
+            historyList.replaceChildren(
+                historyNode("p", historyMessage.textContent, "near-investigator-empty")
+            );
+        } finally {
+            historyRefresh.disabled = false;
+        }
+    }
+
+    async function viewWalletBehaviorReport(reportId) {
+        historyMessage.textContent = `Loading report #${reportId}...`;
+
+        try {
+            const response = await fetch(
+                `/near/behavior/report/${encodeURIComponent(reportId)}`
+            );
+
+            const raw = await response.text();
+            let payload;
+
+            try {
+                payload = JSON.parse(raw);
+            } catch {
+                throw new Error("The report API returned an invalid response.");
+            }
+
+            if (!response.ok) {
+                throw new Error(payload.detail || "Unable to retrieve this report.");
+            }
+
+            if (!payload.record || !payload.record.report) {
+                throw new Error("The saved report is incomplete.");
+            }
+
+            renderReport(payload.record.report);
+            results.scrollIntoView({ behavior: "smooth", block: "start" });
+            historyMessage.textContent = `Displaying saved report #${reportId}.`;
+
+        } catch (error) {
+            historyMessage.textContent = error.message || "Unable to open saved report.";
+        }
+    }
+
+    async function compareWalletBehaviorHistory() {
+        const firstId = historyFirst.value;
+        const secondId = historySecond.value;
+
+        if (!firstId || !secondId || firstId === secondId) {
+            historyMessage.textContent = "Select two different reports to compare.";
+            return;
+        }
+
+        historyCompare.disabled = true;
+        historyMessage.textContent = "Comparing saved investigations...";
+
+        try {
+            const query = new URLSearchParams({
+                first_id: firstId,
+                second_id: secondId
+            });
+
+            const response = await fetch(
+                `/near/behavior/history/compare?${query.toString()}`
+            );
+
+            const raw = await response.text();
+            let payload;
+
+            try {
+                payload = JSON.parse(raw);
+            } catch {
+                throw new Error("The comparison API returned an invalid response.");
+            }
+
+            if (!response.ok) {
+                throw new Error(payload.detail || "Unable to compare these reports.");
+            }
+
+            const older = payload.older;
+            const newer = payload.newer;
+            const changes = payload.changes;
+
+            historyComparison.replaceChildren();
+
+            historyComparison.append(
+                historyNode("h4", "Investigation Comparison"),
+                historyNode("p", `${payload.account_id} ? ${payload.network}`),
+                historyNode(
+                    "p",
+                    `First selected report: #${older.id} ? ${older.risk_level} ? ${older.risk_score}/100`
+                ),
+                historyNode(
+                    "p",
+                    `Second selected report: #${newer.id} ? ${newer.risk_level} ? ${newer.risk_score}/100`
+                ),
+                historyNode(
+                    "strong",
+                    `Risk score change: ${changes.risk_score > 0 ? "+" : ""}${changes.risk_score}`
+                ),
+                historyNode(
+                    "p",
+                    `Transaction sample count change: ${changes.transaction_count > 0 ? "+" : ""}${changes.transaction_count}`
+                ),
+                historyNode(
+                    "p",
+                    `Risk level changed: ${changes.risk_level_changed ? "Yes" : "No"}`
+                ),
+                historyNode("p", payload.notice || "", "wallet-history-footnote")
+            );
+
+            historyComparison.hidden = false;
+            historyMessage.textContent = "Comparison completed.";
+
+        } catch (error) {
+            historyMessage.textContent = error.message || "Comparison failed.";
+            historyComparison.hidden = true;
+        } finally {
+            updateCompareButton();
+        }
+    }
+
+    historyRefresh.addEventListener("click", loadWalletBehaviorHistory);
+    historyCompare.addEventListener("click", compareWalletBehaviorHistory);
+    historyFirst.addEventListener("change", updateCompareButton);
+    historySecond.addEventListener("change", updateCompareButton);
+
+    accountInput.addEventListener("change", loadWalletBehaviorHistory);
+    networkInput.addEventListener("change", loadWalletBehaviorHistory);
+
+
     form.addEventListener("submit", async function (event) {
         event.preventDefault();
 
@@ -3213,6 +3477,8 @@ loadDeveloperAnalytics();
             }
 
             renderReport(payload);
+
+            await loadWalletBehaviorHistory();
 
             message.textContent =
                 "Wallet behaviour investigation completed using supplied finalized NEAR transactions.";

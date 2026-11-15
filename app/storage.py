@@ -274,6 +274,35 @@ class SQLiteTransactionTracker:
                     ON pending_approvals(owner_user_id)
                 """)
 
+
+                # PERSISTENT NEAR WALLET BEHAVIOUR INVESTIGATION HISTORY
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS wallet_behavior_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        account_id TEXT NOT NULL,
+                        network TEXT NOT NULL CHECK (
+                            network IN ('mainnet', 'testnet')
+                        ),
+                        risk_score INTEGER NOT NULL CHECK (
+                            risk_score >= 0 AND risk_score <= 100
+                        ),
+                        risk_level TEXT NOT NULL CHECK (
+                            risk_level IN ('LOW', 'MEDIUM', 'HIGH')
+                        ),
+                        transaction_count INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        report_json TEXT NOT NULL
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_wallet_behavior_history_account
+                    ON wallet_behavior_history(
+                        account_id, network, created_at DESC
+                    )
+                """)
+
     def _validate_transaction_id(self, transaction_id):
 
         if not isinstance(transaction_id, str) or not transaction_id.strip():
@@ -1715,3 +1744,135 @@ class SQLiteTransactionTracker:
                 )
 
         return result.rowcount == 1
+
+
+    # ==========================================
+    # NEAR WALLET BEHAVIOUR INVESTIGATION HISTORY
+    # ==========================================
+
+    def save_wallet_behavior_report(
+        self, account_id, network, report, created_at=None
+    ):
+        import time
+
+        if not isinstance(account_id, str) or not account_id.strip():
+            raise ValueError("Wallet account ID is required")
+
+        account_id = account_id.strip().lower()
+
+        if network not in ("mainnet", "testnet"):
+            raise ValueError("Invalid NEAR network")
+
+        if not isinstance(report, dict):
+            raise ValueError("Investigation report must be an object")
+
+        if report.get("analysis_type") != (
+            "deterministic_wallet_behavior_analysis"
+        ):
+            raise ValueError("Unsupported wallet investigation report")
+
+        if report.get("account_id") != account_id:
+            raise ValueError("Report account does not match requested account")
+
+        assessment = report.get("behavioural_assessment")
+        if not isinstance(assessment, dict):
+            raise ValueError("Invalid behavioural assessment")
+
+        risk_score = assessment.get("risk_score")
+        risk_level = assessment.get("risk_level")
+        transaction_count = report.get("transaction_count")
+
+        if type(risk_score) is not int or not 0 <= risk_score <= 100:
+            raise ValueError("Invalid wallet behaviour risk score")
+
+        if risk_level not in ("LOW", "MEDIUM", "HIGH"):
+            raise ValueError("Invalid wallet behaviour risk level")
+
+        if type(transaction_count) is not int or transaction_count < 1:
+            raise ValueError("Invalid transaction count")
+
+        if created_at is None:
+            created_at = int(time.time())
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid investigation timestamp")
+
+        report_json = json.dumps(
+            report, sort_keys=True, separators=(",", ":")
+        )
+
+        with closing(self._connect()) as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO wallet_behavior_history (
+                        account_id, network, risk_score, risk_level,
+                        transaction_count, created_at, report_json
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        account_id, network, risk_score, risk_level,
+                        transaction_count, created_at, report_json
+                    )
+                )
+
+        return cursor.lastrowid
+
+    def get_wallet_behavior_history(
+        self, account_id, network="mainnet", limit=20
+    ):
+        if not isinstance(account_id, str) or not account_id.strip():
+            raise ValueError("Wallet account ID is required")
+
+        if network not in ("mainnet", "testnet"):
+            raise ValueError("Invalid NEAR network")
+
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("History limit must be between 1 and 100")
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """
+                SELECT id, account_id, network, risk_score, risk_level,
+                       transaction_count, created_at
+                FROM wallet_behavior_history
+                WHERE account_id = ? AND network = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (account_id.strip().lower(), network, limit)
+            ).fetchall()
+
+        columns = (
+            "id", "account_id", "network", "risk_score", "risk_level",
+            "transaction_count", "created_at"
+        )
+        return [dict(zip(columns, row)) for row in rows]
+
+    def get_wallet_behavior_report(self, report_id):
+        if type(report_id) is not int or report_id <= 0:
+            raise ValueError("Invalid investigation report ID")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT id, account_id, network, risk_score, risk_level,
+                       transaction_count, created_at, report_json
+                FROM wallet_behavior_history
+                WHERE id = ?
+                """,
+                (report_id,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        columns = (
+            "id", "account_id", "network", "risk_score", "risk_level",
+            "transaction_count", "created_at", "report_json"
+        )
+        result = dict(zip(columns, row))
+        result["report"] = json.loads(result.pop("report_json"))
+        return result
+

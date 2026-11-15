@@ -4392,3 +4392,127 @@ html, body {
         width: 100%;
     }
 }
+
+/* SPRINT 5 - WALLET INVESTIGATION HISTORY */
+
+.wallet-history-panel {
+    margin-top: 28px;
+    padding: 24px;
+    border: 1px solid var(--border-color, rgba(148, 163, 184, 0.22));
+    border-radius: 18px;
+    background: var(--panel-background, rgba(15, 23, 42, 0.35));
+}
+
+.wallet-history-heading,
+.wallet-history-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.wallet-history-heading {
+    margin-bottom: 18px;
+}
+
+.wallet-history-heading h3,
+.wallet-history-compare h4 {
+    margin: 6px 0;
+}
+
+.wallet-history-heading p,
+.wallet-history-compare > p {
+    margin: 6px 0;
+    opacity: 0.78;
+}
+
+.wallet-history-notice {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    border-radius: 12px;
+    background: rgba(234, 179, 8, 0.07);
+}
+
+.wallet-history-notice p {
+    margin: 6px 0 0;
+    line-height: 1.55;
+}
+
+.wallet-history-list {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0 24px;
+}
+
+.wallet-history-card {
+    padding: 14px;
+    border: 1px solid var(--border-color, rgba(148, 163, 184, 0.2));
+    border-radius: 12px;
+}
+
+.wallet-history-card-details {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.wallet-history-card-details span {
+    overflow-wrap: anywhere;
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.wallet-history-compare {
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color, rgba(148, 163, 184, 0.2));
+}
+
+.wallet-history-selects {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+}
+
+.wallet-history-selects select {
+    width: 100%;
+}
+
+.wallet-history-comparison {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color, rgba(148, 163, 184, 0.2));
+}
+
+.wallet-history-comparison p,
+.wallet-history-comparison h4 {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.wallet-history-footnote {
+    margin-top: 18px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    opacity: 0.78;
+}
+
+@media (max-width: 650px) {
+    .wallet-history-heading,
+    .wallet-history-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .wallet-history-selects {
+        grid-template-columns: 1fr;
+    }
+
+    .wallet-history-panel {
+        padding: 16px;
+    }
+}

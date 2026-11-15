@@ -392,3 +392,143 @@ class TestSQLiteTransactionTracker(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWalletBehaviorHistory(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.database = Path(self.temp_dir.name) / "wallet_history.db"
+        self.tracker = SQLiteTransactionTracker(self.database)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def make_report(self, account="alice.near", score=25,
+                    level="MEDIUM", count=3):
+        return {
+            "analysis_type": "deterministic_wallet_behavior_analysis",
+            "account_id": account,
+            "network": "mainnet",
+            "transaction_count": count,
+            "behavioural_assessment": {
+                "risk_score": score,
+                "risk_level": level
+            }
+        }
+
+    def test_save_and_retrieve_wallet_report(self):
+        report = self.make_report()
+        report_id = self.tracker.save_wallet_behavior_report(
+            "alice.near", "mainnet", report, created_at=1000
+        )
+
+        record = self.tracker.get_wallet_behavior_report(report_id)
+
+        self.assertIsNotNone(record)
+        self.assertEqual(record["account_id"], "alice.near")
+        self.assertEqual(record["network"], "mainnet")
+        self.assertEqual(record["risk_score"], 25)
+        self.assertEqual(record["report"], report)
+
+    def test_history_returns_newest_first(self):
+        first = self.tracker.save_wallet_behavior_report(
+            "alice.near", "mainnet",
+            self.make_report(score=10, level="LOW"),
+            created_at=1000
+        )
+        second = self.tracker.save_wallet_behavior_report(
+            "alice.near", "mainnet",
+            self.make_report(score=70, level="HIGH"),
+            created_at=2000
+        )
+
+        history = self.tracker.get_wallet_behavior_history(
+            "alice.near", "mainnet"
+        )
+
+        self.assertEqual([item["id"] for item in history], [second, first])
+
+    def test_history_is_isolated_by_wallet_and_network(self):
+        self.tracker.save_wallet_behavior_report(
+            "alice.near", "mainnet", self.make_report(), created_at=1000
+        )
+        self.tracker.save_wallet_behavior_report(
+            "bob.near", "mainnet",
+            self.make_report("bob.near"), created_at=1001
+        )
+        self.tracker.save_wallet_behavior_report(
+            "alice.near", "testnet",
+            self.make_report(), created_at=1002
+        )
+
+        history = self.tracker.get_wallet_behavior_history(
+            "alice.near", "mainnet"
+        )
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["account_id"], "alice.near")
+        self.assertEqual(history[0]["network"], "mainnet")
+
+    def test_history_limit_is_respected(self):
+        for timestamp in range(1, 4):
+            self.tracker.save_wallet_behavior_report(
+                "alice.near", "mainnet", self.make_report(),
+                created_at=timestamp
+            )
+
+        history = self.tracker.get_wallet_behavior_history(
+            "alice.near", "mainnet", limit=2
+        )
+
+        self.assertEqual(len(history), 2)
+
+    def test_missing_report_returns_none(self):
+        self.assertIsNone(
+            self.tracker.get_wallet_behavior_report(999)
+        )
+
+    def test_invalid_report_id_is_rejected(self):
+        for report_id in (0, -1, "1", True):
+            with self.subTest(report_id=report_id):
+                with self.assertRaises(ValueError):
+                    self.tracker.get_wallet_behavior_report(report_id)
+
+    def test_invalid_network_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.tracker.get_wallet_behavior_history(
+                "alice.near", "invalid"
+            )
+
+    def test_invalid_history_limit_is_rejected(self):
+        for limit in (0, 101, True):
+            with self.subTest(limit=limit):
+                with self.assertRaises(ValueError):
+                    self.tracker.get_wallet_behavior_history(
+                        "alice.near", "mainnet", limit
+                    )
+
+    def test_report_account_mismatch_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.tracker.save_wallet_behavior_report(
+                "alice.near", "mainnet",
+                self.make_report("bob.near")
+            )
+
+    def test_invalid_report_risk_score_is_rejected(self):
+        for score in (-1, 101, True):
+            with self.subTest(score=score):
+                report = self.make_report(score=score)
+                with self.assertRaises(ValueError):
+                    self.tracker.save_wallet_behavior_report(
+                        "alice.near", "mainnet", report
+                    )
+
+    def test_invalid_report_type_is_rejected(self):
+        report = self.make_report()
+        report["analysis_type"] = "unknown"
+
+        with self.assertRaises(ValueError):
+            self.tracker.save_wallet_behavior_report(
+                "alice.near", "mainnet", report
+            )

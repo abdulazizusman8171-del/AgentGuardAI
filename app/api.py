@@ -1342,6 +1342,13 @@ def inspect_wallet_behavior(
         result["transaction_signed"] = False
         result["transaction_broadcast"] = False
 
+        history_id = tracker.save_wallet_behavior_report(
+            normalized_account_id,
+            network,
+            result
+        )
+        result["history_id"] = history_id
+
         return result
 
     except ValueError as exc:
@@ -1349,4 +1356,114 @@ def inspect_wallet_behavior(
 
     except NearRPCError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+
+# NEAR WALLET BEHAVIOUR HISTORY
+@app.get("/near/accounts/{account_id}/behavior/history")
+def get_wallet_behavior_history(
+    account_id: str,
+    network: str = "mainnet",
+    limit: int = Query(default=20, ge=1, le=100)
+):
+    try:
+        client = NearRPCClient(network=network)
+        normalized_account_id = client.validate_account_id(account_id)
+
+        history = tracker.get_wallet_behavior_history(
+            normalized_account_id,
+            network,
+            limit
+        )
+
+        return {
+            "success": True,
+            "account_id": normalized_account_id,
+            "network": network,
+            "count": len(history),
+            "history": history
+        }
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/near/behavior/report/{report_id}")
+def get_wallet_behavior_history_report(report_id: int):
+    try:
+        report = tracker.get_wallet_behavior_report(report_id)
+        if report is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Investigation report not found"
+            )
+
+        return {"success": True, "record": report}
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/near/behavior/history/compare")
+def compare_wallet_behavior_reports(
+    first_id: int = Query(..., ge=1),
+    second_id: int = Query(..., ge=1)
+):
+    if first_id == second_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Choose two different investigation reports"
+        )
+
+    first = tracker.get_wallet_behavior_report(first_id)
+    second = tracker.get_wallet_behavior_report(second_id)
+
+    if first is None or second is None:
+        raise HTTPException(
+            status_code=404,
+            detail="One or both investigation reports were not found"
+        )
+
+    if (
+        first["account_id"] != second["account_id"]
+        or first["network"] != second["network"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Reports must belong to the same wallet and network"
+        )
+
+    return {
+        "success": True,
+        "comparison_scope": "TWO_SAVED_SAMPLE_BASED_INVESTIGATIONS",
+        "account_id": first["account_id"],
+        "network": first["network"],
+        "older": {
+            "id": first["id"],
+            "created_at": first["created_at"],
+            "risk_score": first["risk_score"],
+            "risk_level": first["risk_level"],
+            "transaction_count": first["transaction_count"]
+        },
+        "newer": {
+            "id": second["id"],
+            "created_at": second["created_at"],
+            "risk_score": second["risk_score"],
+            "risk_level": second["risk_level"],
+            "transaction_count": second["transaction_count"]
+        },
+        "changes": {
+            "risk_score": second["risk_score"] - first["risk_score"],
+            "transaction_count": (
+                second["transaction_count"] - first["transaction_count"]
+            ),
+            "risk_level_changed": (
+                first["risk_level"] != second["risk_level"]
+            )
+        },
+        "notice": (
+            "This compares two supplied transaction samples. "
+            "It does not establish continuous wallet monitoring."
+        )
+    }
 

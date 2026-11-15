@@ -1585,6 +1585,144 @@ class TestAgentGuardAPI(unittest.TestCase):
             self.assertEqual(response.status_code, 400)
             mock_client.return_value.get_transaction.assert_called_once()
 
+    # ==========================================
+    # SPRINT 5 - WALLET BEHAVIOUR HISTORY API
+    # ==========================================
+
+    def _save_history_report(
+        self, account="alice.near", network="mainnet",
+        score=25, level="MEDIUM", count=3, created_at=1000
+    ):
+        report = {
+            "analysis_type": "deterministic_wallet_behavior_analysis",
+            "account_id": account,
+            "network": network,
+            "transaction_count": count,
+            "behavioural_assessment": {
+                "risk_score": score,
+                "risk_level": level
+            }
+        }
+        return self.tracker.save_wallet_behavior_report(
+            account, network, report, created_at=created_at
+        )
+
+    def test_wallet_behavior_history_returns_saved_reports(self):
+        report_id = self._save_history_report()
+
+        response = self.client.get(
+            "/near/accounts/alice.near/behavior/history"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["account_id"], "alice.near")
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["history"][0]["id"], report_id)
+
+    def test_wallet_behavior_history_filters_network(self):
+        self._save_history_report(network="mainnet")
+        self._save_history_report(
+            network="testnet",
+        )
+
+        response = self.client.get(
+            "/near/accounts/alice.near/behavior/history",
+            params={"network": "testnet"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["network"], "testnet")
+
+    def test_wallet_behavior_history_rejects_invalid_wallet(self):
+        with patch("app.api.NearRPCClient") as mock_client:
+            mock_client.return_value.validate_account_id.side_effect = (
+                ValueError("Invalid NEAR account ID")
+            )
+
+            response = self.client.get(
+                "/near/accounts/invalid/behavior/history"
+            )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_wallet_behavior_history_report_retrieval(self):
+        report_id = self._save_history_report(score=42)
+
+        response = self.client.get(
+            f"/near/behavior/report/{report_id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["record"]["id"], report_id)
+        self.assertEqual(data["record"]["report"]["account_id"], "alice.near")
+
+    def test_wallet_behavior_history_report_not_found(self):
+        response = self.client.get("/near/behavior/report/99999")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_wallet_behavior_reports_can_be_compared(self):
+        first_id = self._save_history_report(
+            score=20, level="LOW", count=3, created_at=1000
+        )
+        second_id = self._save_history_report(
+            score=65, level="HIGH", count=5, created_at=2000
+        )
+
+        response = self.client.get(
+            "/near/behavior/history/compare",
+            params={
+                "first_id": first_id,
+                "second_id": second_id
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(
+            data["comparison_scope"],
+            "TWO_SAVED_SAMPLE_BASED_INVESTIGATIONS"
+        )
+        self.assertEqual(data["changes"]["risk_score"], 45)
+        self.assertEqual(data["changes"]["transaction_count"], 2)
+        self.assertTrue(data["changes"]["risk_level_changed"])
+
+    def test_wallet_behavior_comparison_rejects_different_wallets(self):
+        first_id = self._save_history_report(account="alice.near")
+        second_id = self._save_history_report(
+            account="bob.near"
+        )
+
+        response = self.client.get(
+            "/near/behavior/history/compare",
+            params={
+                "first_id": first_id,
+                "second_id": second_id
+            }
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_wallet_behavior_comparison_rejects_same_report(self):
+        report_id = self._save_history_report()
+
+        response = self.client.get(
+            "/near/behavior/history/compare",
+            params={
+                "first_id": report_id,
+                "second_id": report_id
+            }
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
 if __name__ == "__main__":
     unittest.main()
 

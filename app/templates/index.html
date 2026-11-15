@@ -511,7 +511,73 @@
                         </p>
                     </div>
                 </section>
-<!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
+
+                <!-- WALLET BEHAVIOUR INVESTIGATION HISTORY -->
+                <div class="wallet-history-panel" id="wallet-behavior-history">
+                    <div class="wallet-history-heading">
+                        <div>
+                            <span class="near-network-eyebrow">SAVED INVESTIGATIONS</span>
+                            <h3>Wallet Investigation History</h3>
+                            <p>Review and compare previously saved sample-based investigations.</p>
+                        </div>
+                        <button type="button" id="wallet-history-refresh"
+                                class="wallet-behavior-secondary">
+                            Refresh History
+                        </button>
+                    </div>
+
+                    <div class="wallet-history-notice">
+                        <strong>History visibility notice</strong>
+                        <p>
+                            Reports are stored by wallet account and network.
+                            These endpoints do not currently enforce user ownership
+                            or private access. Do not treat this history as private.
+                        </p>
+                    </div>
+
+                    <p id="wallet-history-message" role="status" aria-live="polite">
+                        Enter a wallet account to load saved investigations.
+                    </p>
+
+                    <div id="wallet-history-list" class="wallet-history-list">
+                        <p class="near-investigator-empty">No history loaded.</p>
+                    </div>
+
+                    <div class="wallet-history-compare">
+                        <h4>Compare Two Investigations</h4>
+                        <p>Select two reports belonging to the same wallet and network.</p>
+
+                        <div class="wallet-history-selects">
+                            <div class="near-investigator-field">
+                                <label for="wallet-history-first">First report</label>
+                                <select id="wallet-history-first">
+                                    <option value="">Select a report</option>
+                                </select>
+                            </div>
+                            <div class="near-investigator-field">
+                                <label for="wallet-history-second">Second report</label>
+                                <select id="wallet-history-second">
+                                    <option value="">Select a report</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="button" id="wallet-history-compare" disabled>
+                            Compare Investigations
+                        </button>
+
+                        <div id="wallet-history-comparison" class="wallet-history-comparison"
+                             hidden aria-live="polite"></div>
+                    </div>
+
+                    <p class="wallet-history-footnote">
+                        Comparisons describe two saved transaction samples.
+                        They do not establish continuous monitoring, wallet compromise,
+                        or changes in activity over time.
+                    </p>
+                </div>
+
+                <!-- NEAR ACCESS-KEY SECURITY ANALYSIS -->
                 <section class="near-network-panel access-key-panel" id="access-keys" aria-label="NEAR access-key security analysis">
                     <div class="near-network-heading">
                         <div>
@@ -1466,7 +1532,7 @@ except AgentGuardError as error:
 
     </div>
 
-    <script src="/static/app.js?v=20261115-wallet-behavior1"></script>
+    <script src="/static/app.js?v=20261115-wallet-history1"></script>
 
 </body>
 </html>
