@@ -59,8 +59,8 @@ The platform also provides blockchain intelligence and monitoring capabilities, 
 - Contract interaction analysis.
 - Receipt execution evidence.
 - Delegate transaction analysis.
-- NEAR market monitoring.
-- Large-buy activity monitoring.
+- NEAR market monitoring, subject to external data availability.
+- Large-buy activity monitoring, dependent on external market data.
 
 ### Security Intelligence
 - Access-key security analysis.
@@ -89,6 +89,10 @@ AgentGuard AI consists of four main layers:
 | Developer SDK | Python integration for AI agents |
 
 The platform uses SQLite for application data storage and integrates with NEAR network data services.
+
+### Wallet Investigation Data Protection
+
+Saved wallet behaviour reports are associated with the authenticated user who created them. The API restricts history, individual report retrieval and comparisons to the report owner. Unauthenticated requests are rejected.
 
 ---
 
@@ -232,6 +236,8 @@ python -m pip wheel . --no-deps --no-build-isolation --wheel-dir dist
 The reported final regression run completed with **307 tests passing**.
 
 The SDK wheel was also successfully built and installed in the development environment.
+
+The latest targeted Sprint 6 verification completed with 131 passing API and storage tests.
 
 ---
 
