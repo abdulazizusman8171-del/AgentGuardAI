@@ -1,0 +1,31 @@
+﻿# Remix local data
+.deps/
+.states/
+
+# Node dependencies
+node_modules/
+
+# Python environments and cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Generated Solidity build artifacts
+artifacts/
+
+# Generated Solidity build artifacts
+artifacts/
+
+artifacts/
