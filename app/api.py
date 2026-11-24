@@ -26,7 +26,7 @@ from app.near_transaction_analyzer import analyze_near_transaction
 from app.access_key_analyzer import analyze_access_key
 from app.near_market import NearMarketClient, NearMarketError
 from app.auth import hash_password, verify_password, generate_session_token, hash_token, generate_approval_key, verify_approval_key
-from app.auth_models import RegistrationRequest, EmailVerificationRequest, LoginRequest, ApprovalKeyRecoveryRequest
+from app.auth_models import RegistrationRequest, EmailVerificationRequest, LoginRequest, ApprovalKeyRecoveryRequest, OrganizationCreateRequest, OrganizationInvitationRequest, OrganizationInvitationAcceptRequest
 from app.email_service import send_verification_email, send_approval_key_recovery_email, send_password_reset_email
 from app.final_security import (
     enforce_login_rate_limit,
@@ -912,6 +912,333 @@ def get_authenticated_user(request: Request):
         raise HTTPException(status_code=401, detail="Authentication required.")
 
     return user
+
+
+def require_organization_access(
+    request: Request,
+    organization_id: int,
+    allowed_roles=None
+):
+    """Authenticate a user and enforce active organization membership."""
+
+    user = get_authenticated_user(request)
+
+    if type(organization_id) is not int or organization_id <= 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Organization not found."
+        )
+
+    access = tracker.get_organization_member_access(
+        organization_id,
+        user["id"]
+    )
+
+    if (
+        access is None
+        or access["organization_status"] != "ACTIVE"
+        or access["membership_status"] != "ACTIVE"
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Organization not found."
+        )
+
+    if allowed_roles is not None:
+        if access["role"] not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient organization permissions."
+            )
+
+    return {
+        "user": user,
+        "organization": access
+    }
+
+
+@app.post("/organizations", status_code=201)
+def create_organization_endpoint(
+    payload: OrganizationCreateRequest,
+    request: Request
+):
+    user = get_authenticated_user(request)
+    require_csrf(request)
+
+    current_time = int(time.time())
+
+    try:
+        organization_id = tracker.create_organization(
+            user["id"],
+            payload.name,
+            current_time
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return {
+        "success": True,
+        "organization": {
+            "id": organization_id,
+            "name": payload.name.strip(),
+            "role": "OWNER",
+            "status": "ACTIVE",
+            "created_at": current_time
+        }
+    }
+
+
+@app.get("/organizations")
+def list_organizations_endpoint(request: Request):
+    user = get_authenticated_user(request)
+
+    organizations = tracker.get_user_organizations(user["id"])
+
+    return {
+        "success": True,
+        "organizations": organizations
+    }
+
+
+@app.get("/organizations/{organization_id}")
+def get_organization_details_endpoint(
+    organization_id: int,
+    request: Request
+):
+    access = require_organization_access(request, organization_id)
+
+    organization = tracker.get_organization_details(organization_id)
+
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    return {
+        "success": True,
+        "organization": organization,
+        "membership": {
+            "user_id": access["user"]["id"],
+            "role": access["organization"]["role"]
+        }
+    }
+
+
+@app.get("/organizations/{organization_id}/members")
+def list_organization_members_endpoint(
+    organization_id: int,
+    request: Request
+):
+    require_organization_access(request, organization_id)
+
+    members = tracker.get_organization_members(organization_id)
+
+    return {
+        "success": True,
+        "organization_id": organization_id,
+        "members": members,
+        "count": len(members)
+    }
+
+
+@app.post("/organizations/{organization_id}/invitations", status_code=201)
+def create_organization_invitation_endpoint(
+    organization_id: int,
+    payload: OrganizationInvitationRequest,
+    request: Request
+):
+    access = require_organization_access(
+        request,
+        organization_id,
+        allowed_roles={"OWNER", "ADMINISTRATOR"}
+    )
+
+    require_csrf(request)
+
+    current_time = int(time.time())
+
+    try:
+        invitation = tracker.create_organization_invitation(
+            organization_id,
+            access["user"]["id"],
+            payload.email,
+            payload.role,
+            current_time,
+            payload.expires_in_seconds
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return {
+        "success": True,
+        "invitation": invitation
+    }
+
+
+@app.post("/organizations/invitations/accept")
+def accept_organization_invitation_endpoint(
+    payload: OrganizationInvitationAcceptRequest,
+    request: Request
+):
+    user = get_authenticated_user(request)
+    require_csrf(request)
+
+    current_time = int(time.time())
+
+    try:
+        result = tracker.accept_organization_invitation(
+            user["id"],
+            payload.token,
+            current_time
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return {
+        "success": True,
+        "membership": result
+    }
+
+
+@app.delete("/organizations/{organization_id}/invitations/{invitation_id}")
+def revoke_organization_invitation_endpoint(
+    organization_id: int,
+    invitation_id: int,
+    request: Request
+):
+    access = require_organization_access(
+        request,
+        organization_id,
+        allowed_roles={"OWNER", "ADMINISTRATOR"}
+    )
+
+    require_csrf(request)
+
+    try:
+        result = tracker.revoke_organization_invitation(
+            organization_id,
+            access["user"]["id"],
+            invitation_id,
+            int(time.time())
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
+    except ValueError as error:
+        message = str(error)
+        status_code = 404 if "does not exist" in message.lower() else 403
+        raise HTTPException(status_code=status_code, detail=message)
+
+    return {
+        "success": True,
+        "invitation": result
+    }
+
+
+
+@app.post("/organizations/{organization_id}/members/{member_user_id}/suspend")
+def suspend_organization_member_endpoint(
+    organization_id: int,
+    member_user_id: int,
+    request: Request
+):
+    access = require_organization_access(
+        request,
+        organization_id,
+        allowed_roles={"OWNER", "ADMINISTRATOR"}
+    )
+
+    require_csrf(request)
+
+    try:
+        result = tracker.suspend_organization_member(
+            organization_id,
+            access["user"]["id"],
+            member_user_id,
+            int(time.time())
+        )
+    except ValueError as error:
+        message = str(error)
+        status_code = (
+            404 if "does not exist" in message.lower() else 403
+        )
+        raise HTTPException(status_code=status_code, detail=message)
+
+    return {
+        "success": True,
+        "membership": result
+    }
+
+
+
+@app.post("/organizations/{organization_id}/members/{member_user_id}/restore")
+def restore_organization_member_endpoint(
+    organization_id: int,
+    member_user_id: int,
+    request: Request
+):
+    access = require_organization_access(
+        request,
+        organization_id,
+        allowed_roles={"OWNER", "ADMINISTRATOR"}
+    )
+
+    require_csrf(request)
+
+    try:
+        result = tracker.restore_organization_member(
+            organization_id,
+            access["user"]["id"],
+            member_user_id,
+            int(time.time())
+        )
+    except ValueError as error:
+        message = str(error)
+        status_code = (
+            404 if "does not exist" in message.lower() else 403
+        )
+        raise HTTPException(status_code=status_code, detail=message)
+
+    return {
+        "success": True,
+        "membership": result
+    }
+
+
+
+@app.delete("/organizations/{organization_id}/members/{member_user_id}")
+def remove_organization_member_endpoint(
+    organization_id: int,
+    member_user_id: int,
+    request: Request
+):
+    access = require_organization_access(
+        request,
+        organization_id,
+        allowed_roles={"OWNER", "ADMINISTRATOR"}
+    )
+
+    require_csrf(request)
+
+    try:
+        result = tracker.remove_organization_member(
+            organization_id,
+            access["user"]["id"],
+            member_user_id,
+            int(time.time())
+        )
+    except ValueError as error:
+        message = str(error)
+        status_code = (
+            404 if "does not exist" in message.lower() else 403
+        )
+        raise HTTPException(status_code=status_code, detail=message)
+
+    return {
+        "success": True,
+        "membership": result
+    }
 
 
 @app.post("/auth/login")

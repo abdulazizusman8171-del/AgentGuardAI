@@ -1,5 +1,7 @@
 ﻿import sqlite3
 import json
+import secrets
+import hashlib
 from pathlib import Path
 from contextlib import closing
 
@@ -22,7 +24,9 @@ class SQLiteTransactionTracker:
         self._initialize_database()
 
     def _connect(self):
-        return sqlite3.connect(self.database_path)
+        connection = sqlite3.connect(self.database_path)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
 
     def _initialize_database(self):
         with closing(self._connect()) as connection:
@@ -324,6 +328,112 @@ class SQLiteTransactionTracker:
                     )
                 """)
 
+                # V7: ORGANIZATION AND MEMBERSHIP FOUNDATION
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS organizations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL CHECK (
+                            length(trim(name)) BETWEEN 2 AND 120
+                        ),
+                        created_by INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE'
+                            CHECK (status IN ('ACTIVE', 'SUSPENDED', 'CLOSED')),
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL,
+                        FOREIGN KEY (created_by) REFERENCES users(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS organization_members (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        role TEXT NOT NULL CHECK (
+                            role IN (
+                                'OWNER',
+                                'ADMINISTRATOR',
+                                'SECURITY_OFFICER',
+                                'DEVELOPER',
+                                'VIEWER'
+                            )
+                        ),
+                        status TEXT NOT NULL DEFAULT 'ACTIVE'
+                            CHECK (status IN ('ACTIVE', 'SUSPENDED', 'REMOVED')),
+                        joined_at INTEGER NOT NULL,
+                        UNIQUE (organization_id, user_id),
+                        FOREIGN KEY (organization_id)
+                            REFERENCES organizations(id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id)
+                            REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_organization_members_user
+                    ON organization_members(user_id, status)
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_organization_members_org
+                    ON organization_members(organization_id, status, role)
+                """)
+                # V7: SECURE ORGANIZATION INVITATIONS
+                connection.execute("""
+                    CREATE TABLE IF NOT EXISTS organization_invitations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id INTEGER NOT NULL,
+                        email TEXT NOT NULL CHECK (
+                            length(trim(email)) BETWEEN 5 AND 254
+                        ),
+                        role TEXT NOT NULL CHECK (
+                            role IN (
+                                'ADMINISTRATOR',
+                                'SECURITY_OFFICER',
+                                'DEVELOPER',
+                                'VIEWER'
+                            )
+                        ),
+                        token_hash TEXT NOT NULL UNIQUE,
+                        invited_by INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING'
+                            CHECK (
+                                status IN (
+                                    'PENDING',
+                                    'ACCEPTED',
+                                    'EXPIRED',
+                                    'REVOKED'
+                                )
+                            ),
+                        created_at INTEGER NOT NULL,
+                        expires_at INTEGER NOT NULL,
+                        accepted_at INTEGER,
+                        accepted_by_user_id INTEGER,
+                        CHECK (expires_at > created_at),
+                        FOREIGN KEY (organization_id)
+                            REFERENCES organizations(id) ON DELETE CASCADE,
+                        FOREIGN KEY (invited_by)
+                            REFERENCES users(id),
+                        FOREIGN KEY (accepted_by_user_id)
+                            REFERENCES users(id)
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_org_invitations_org_status
+                    ON organization_invitations(
+                        organization_id, status
+                    )
+                """)
+
+                connection.execute("""
+                    CREATE INDEX IF NOT EXISTS
+                    idx_org_invitations_email
+                    ON organization_invitations(email, status)
+                """)
     def _validate_transaction_id(self, transaction_id):
 
         if not isinstance(transaction_id, str) or not transaction_id.strip():
@@ -973,6 +1083,972 @@ class SQLiteTransactionTracker:
 
         return dict(zip(columns, row))
 
+    def get_organization_details(self, organization_id):
+        if isinstance(organization_id, bool) or not isinstance(organization_id, int) or organization_id <= 0:
+            raise ValueError("organization_id must be a positive integer")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT id, name, status, created_at, updated_at
+                FROM organizations
+                WHERE id = ?
+                """,
+                (organization_id,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return {
+            "id": row[0],
+            "name": row[1],
+            "status": row[2],
+            "created_at": row[3],
+            "updated_at": row[4]
+        }
+
+    def get_organization_members(self, organization_id):
+        if isinstance(organization_id, bool) or not isinstance(organization_id, int) or organization_id <= 0:
+            raise ValueError("organization_id must be a positive integer")
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    m.user_id,
+                    u.email,
+                    m.role,
+                    m.status,
+                    m.joined_at
+                FROM organization_members AS m
+                JOIN users AS u ON u.id = m.user_id
+                WHERE m.organization_id = ?
+                  AND m.status IN ('ACTIVE', 'SUSPENDED')
+                ORDER BY
+                    CASE m.role
+                        WHEN 'OWNER' THEN 1
+                        WHEN 'ADMINISTRATOR' THEN 2
+                        WHEN 'SECURITY_OFFICER' THEN 3
+                        WHEN 'DEVELOPER' THEN 4
+                        WHEN 'VIEWER' THEN 5
+                    END,
+                    m.joined_at ASC,
+                    m.user_id ASC
+                """,
+                (organization_id,)
+            ).fetchall()
+
+        return [
+            {
+                "user_id": row[0],
+                "email": row[1],
+                "role": row[2],
+                "status": row[3],
+                "joined_at": row[4]
+            }
+            for row in rows
+        ]
+
+    def get_organization_member_access(self, organization_id, user_id):
+        if type(organization_id) is not int or organization_id <= 0:
+            raise ValueError("Invalid organization ID")
+
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    o.id AS organization_id,
+                    o.status AS organization_status,
+                    m.user_id,
+                    m.role,
+                    m.status AS membership_status
+                FROM organizations o
+                LEFT JOIN organization_members m
+                    ON m.organization_id = o.id
+                    AND m.user_id = ?
+                WHERE o.id = ?
+                """,
+                (user_id, organization_id)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return {
+            "organization_id": row[0],
+            "organization_status": row[1],
+            "user_id": row[2],
+            "role": row[3],
+            "membership_status": row[4],
+        }
+
+    def create_organization(self, user_id, name, created_at):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(name, str):
+            raise ValueError("Organization name must be text")
+
+        name = name.strip()
+
+        if not 2 <= len(name) <= 120:
+            raise ValueError("Organization name must be 2-120 characters")
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid organization creation time")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                user = connection.execute(
+                    "SELECT id FROM users WHERE id = ?",
+                    (user_id,)
+                ).fetchone()
+
+                if user is None:
+                    raise ValueError("Organization creator does not exist")
+
+                cursor = connection.execute(
+                    """
+                    INSERT INTO organizations (
+                        name, created_by, status, created_at, updated_at
+                    )
+                    VALUES (?, ?, 'ACTIVE', ?, ?)
+                    """,
+                    (name, user_id, created_at, created_at)
+                )
+
+                organization_id = cursor.lastrowid
+
+                connection.execute(
+                    """
+                    INSERT INTO organization_members (
+                        organization_id, user_id, role, status, joined_at
+                    )
+                    VALUES (?, ?, 'OWNER', 'ACTIVE', ?)
+                    """,
+                    (organization_id, user_id, created_at)
+                )
+
+                return organization_id
+    def get_user_organizations(self, user_id):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    o.id AS organization_id,
+                    o.name,
+                    o.status,
+                    o.created_at,
+                    o.updated_at,
+                    m.role,
+                    m.joined_at
+                FROM organizations o
+                INNER JOIN organization_members m
+                    ON m.organization_id = o.id
+                WHERE m.user_id = ?
+                    AND m.status = 'ACTIVE'
+                    AND o.status = 'ACTIVE'
+                ORDER BY o.created_at DESC, o.id DESC
+                """,
+                (user_id,)
+            ).fetchall()
+
+        return [
+            {
+                "organization_id": row[0],
+                "name": row[1],
+                "status": row[2],
+                "created_at": row[3],
+                "updated_at": row[4],
+                "role": row[5],
+                "joined_at": row[6],
+            }
+            for row in rows
+        ]
+
+    def add_organization_member(
+        self,
+        organization_id,
+        actor_user_id,
+        member_user_id,
+        role,
+        joined_at
+    ):
+        for value, label in (
+            (organization_id, "Organization ID"),
+            (actor_user_id, "Actor user ID"),
+            (member_user_id, "Member user ID")
+        ):
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"Invalid {label}")
+
+        allowed_roles = {
+            "ADMINISTRATOR",
+            "SECURITY_OFFICER",
+            "DEVELOPER",
+            "VIEWER"
+        }
+
+        if not isinstance(role, str):
+            raise ValueError("Invalid organization role")
+
+        role = role.strip().upper()
+
+        if role not in allowed_roles:
+            raise ValueError("Role cannot be assigned")
+
+        if type(joined_at) is not int or joined_at <= 0:
+            raise ValueError("Invalid membership timestamp")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None:
+                    raise ValueError("Organization does not exist")
+
+                if organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Actor is not an active organization member")
+
+                if actor[0] == "OWNER":
+                    pass
+                elif actor[0] == "ADMINISTRATOR":
+                    if role not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only add developers or viewers"
+                        )
+                else:
+                    raise ValueError(
+                        "Insufficient organization permissions"
+                    )
+
+                member = connection.execute(
+                    "SELECT id FROM users WHERE id = ?",
+                    (member_user_id,)
+                ).fetchone()
+
+                if member is None:
+                    raise ValueError("Target user does not exist")
+
+                existing = connection.execute(
+                    """
+                    SELECT id
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, member_user_id)
+                ).fetchone()
+
+                if existing is not None:
+                    raise ValueError("User is already an organization member")
+
+                cursor = connection.execute(
+                    """
+                    INSERT INTO organization_members (
+                        organization_id,
+                        user_id,
+                        role,
+                        status,
+                        joined_at
+                    )
+                    VALUES (?, ?, ?, 'ACTIVE', ?)
+                    """,
+                    (
+                        organization_id,
+                        member_user_id,
+                        role,
+                        joined_at
+                    )
+                )
+
+                return cursor.lastrowid
+    def suspend_organization_member(
+        self,
+        organization_id,
+        actor_user_id,
+        member_user_id,
+        suspended_at
+    ):
+        for value, label in (
+            (organization_id, "Organization ID"),
+            (actor_user_id, "Actor user ID"),
+            (member_user_id, "Member user ID"),
+            (suspended_at, "Suspension timestamp")
+        ):
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"Invalid {label}")
+
+        if actor_user_id == member_user_id:
+            raise ValueError("Members cannot suspend themselves")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None or organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Actor is not an active organization member")
+
+                target = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, member_user_id)
+                ).fetchone()
+
+                if target is None:
+                    raise ValueError("Target membership does not exist")
+
+                if target[0] == "OWNER":
+                    raise ValueError("Organization owner cannot be suspended")
+
+                if target[1] != "ACTIVE":
+                    raise ValueError("Target member is not active")
+
+                if actor[0] == "OWNER":
+                    pass
+                elif actor[0] == "ADMINISTRATOR":
+                    if target[0] not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only suspend developers or viewers"
+                        )
+                else:
+                    raise ValueError("Insufficient suspension permissions")
+
+                updated = connection.execute(
+                    """
+                    UPDATE organization_members
+                    SET status = 'SUSPENDED'
+                    WHERE organization_id = ?
+                      AND user_id = ?
+                      AND status = 'ACTIVE'
+                      AND role != 'OWNER'
+                    """,
+                    (organization_id, member_user_id)
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError("Membership could not be suspended")
+
+                return {
+                    "organization_id": organization_id,
+                    "user_id": member_user_id,
+                    "status": "SUSPENDED"
+                }
+    def restore_organization_member(
+        self,
+        organization_id,
+        actor_user_id,
+        member_user_id,
+        restored_at
+    ):
+        for value, label in (
+            (organization_id, "Organization ID"),
+            (actor_user_id, "Actor user ID"),
+            (member_user_id, "Member user ID"),
+            (restored_at, "Restoration timestamp")
+        ):
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"Invalid {label}")
+
+        if actor_user_id == member_user_id:
+            raise ValueError("Members cannot restore themselves")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None or organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Actor is not an active organization member")
+
+                target = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, member_user_id)
+                ).fetchone()
+
+                if target is None:
+                    raise ValueError("Target membership does not exist")
+
+                if target[0] == "OWNER":
+                    raise ValueError("Owner restoration is not permitted")
+
+                if target[1] != "SUSPENDED":
+                    raise ValueError("Target member is not suspended")
+
+                if actor[0] == "OWNER":
+                    pass
+                elif actor[0] == "ADMINISTRATOR":
+                    if target[0] not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only restore developers or viewers"
+                        )
+                else:
+                    raise ValueError("Insufficient restoration permissions")
+
+                updated = connection.execute(
+                    """
+                    UPDATE organization_members
+                    SET status = 'ACTIVE'
+                    WHERE organization_id = ?
+                      AND user_id = ?
+                      AND status = 'SUSPENDED'
+                      AND role != 'OWNER'
+                    """,
+                    (organization_id, member_user_id)
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError("Membership could not be restored")
+
+                return {
+                    "organization_id": organization_id,
+                    "user_id": member_user_id,
+                    "role": target[0],
+                    "status": "ACTIVE"
+                }
+    def remove_organization_member(
+        self,
+        organization_id,
+        actor_user_id,
+        member_user_id,
+        removed_at
+    ):
+        for value, label in (
+            (organization_id, "Organization ID"),
+            (actor_user_id, "Actor user ID"),
+            (member_user_id, "Member user ID"),
+            (removed_at, "Removal timestamp")
+        ):
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"Invalid {label}")
+
+        if actor_user_id == member_user_id:
+            raise ValueError("Members cannot remove themselves")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None or organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Actor is not an active organization member")
+
+                target = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, member_user_id)
+                ).fetchone()
+
+                if target is None:
+                    raise ValueError("Target membership does not exist")
+
+                if target[0] == "OWNER":
+                    raise ValueError("Organization owner cannot be removed")
+
+                if target[1] != "ACTIVE":
+                    raise ValueError("Target member is not active")
+
+                if actor[0] == "OWNER":
+                    pass
+                elif actor[0] == "ADMINISTRATOR":
+                    if target[0] not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only remove developers or viewers"
+                        )
+                else:
+                    raise ValueError("Insufficient member removal permissions")
+
+                updated = connection.execute(
+                    """
+                    UPDATE organization_members
+                    SET status = 'REMOVED'
+                    WHERE organization_id = ?
+                      AND user_id = ?
+                      AND status = 'ACTIVE'
+                      AND role != 'OWNER'
+                    """,
+                    (organization_id, member_user_id)
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError("Membership could not be removed")
+
+                return {
+                    "organization_id": organization_id,
+                    "user_id": member_user_id,
+                    "status": "REMOVED"
+                }
+    def create_organization_invitation(
+        self,
+        organization_id,
+        actor_user_id,
+        email,
+        role,
+        created_at,
+        expires_in_seconds=604800
+    ):
+        import re
+
+        if type(organization_id) is not int or organization_id <= 0:
+            raise ValueError("Invalid organization ID")
+
+        if type(actor_user_id) is not int or actor_user_id <= 0:
+            raise ValueError("Invalid inviter user ID")
+
+        if not isinstance(email, str):
+            raise ValueError("Valid invitation email is required")
+
+        email = email.strip().lower()
+
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+            raise ValueError("Invalid invitation email")
+
+        if not isinstance(role, str):
+            raise ValueError("Invalid invitation role")
+
+        role = role.strip().upper()
+
+        allowed_roles = {
+            "ADMINISTRATOR",
+            "SECURITY_OFFICER",
+            "DEVELOPER",
+            "VIEWER"
+        }
+
+        if role not in allowed_roles:
+            raise ValueError("Invalid invitation role")
+
+        if type(created_at) is not int or created_at <= 0:
+            raise ValueError("Invalid invitation creation time")
+
+        if (
+            type(expires_in_seconds) is not int
+            or not 60 <= expires_in_seconds <= 2592000
+        ):
+            raise ValueError("Invitation expiry must be between 60 seconds and 30 days")
+
+        expires_at = created_at + expires_in_seconds
+
+        with closing(self._connect()) as connection:
+            with connection:
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None:
+                    raise ValueError("Organization does not exist")
+
+                if organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Inviter is not an active organization member")
+
+                if actor[0] == "OWNER":
+                    pass
+                elif actor[0] == "ADMINISTRATOR":
+                    if role not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only invite developers or viewers"
+                        )
+                else:
+                    raise ValueError("Insufficient invitation permissions")
+
+                existing_member = connection.execute(
+                    """
+                    SELECT m.id
+                    FROM organization_members AS m
+                    JOIN users AS u ON u.id = m.user_id
+                    WHERE m.organization_id = ?
+                      AND u.email = ?
+                      AND m.status = 'ACTIVE'
+                    """,
+                    (organization_id, email)
+                ).fetchone()
+
+                if existing_member is not None:
+                    raise ValueError("User is already an active organization member")
+
+                pending = connection.execute(
+                    """
+                    SELECT id
+                    FROM organization_invitations
+                    WHERE organization_id = ?
+                      AND email = ?
+                      AND status = 'PENDING'
+                      AND expires_at > ?
+                    """,
+                    (organization_id, email, created_at)
+                ).fetchone()
+
+                if pending is not None:
+                    raise ValueError("A pending invitation already exists")
+
+                raw_token = secrets.token_urlsafe(32)
+                token_hash = hashlib.sha256(
+                    raw_token.encode("utf-8")
+                ).hexdigest()
+
+                cursor = connection.execute(
+                    """
+                    INSERT INTO organization_invitations (
+                        organization_id,
+                        email,
+                        role,
+                        token_hash,
+                        invited_by,
+                        status,
+                        created_at,
+                        expires_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)
+                    """,
+                    (
+                        organization_id,
+                        email,
+                        role,
+                        token_hash,
+                        actor_user_id,
+                        created_at,
+                        expires_at
+                    )
+                )
+
+                return {
+                    "invitation_id": cursor.lastrowid,
+                    "token": raw_token,
+                    "email": email,
+                    "role": role,
+                    "expires_at": expires_at
+                }
+    def accept_organization_invitation(
+        self,
+        user_id,
+        token,
+        accepted_at
+    ):
+        if type(user_id) is not int or user_id <= 0:
+            raise ValueError("Invalid user ID")
+
+        if not isinstance(token, str) or not 20 <= len(token) <= 200:
+            raise ValueError("Invalid invitation token")
+
+        if type(accepted_at) is not int or accepted_at <= 0:
+            raise ValueError("Invalid acceptance time")
+
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        with closing(self._connect()) as connection:
+            with connection:
+                invitation = connection.execute(
+                    """
+                    SELECT
+                        id,
+                        organization_id,
+                        email,
+                        role,
+                        status,
+                        expires_at
+                    FROM organization_invitations
+                    WHERE token_hash = ?
+                    """,
+                    (token_hash,)
+                ).fetchone()
+
+                if invitation is None:
+                    raise ValueError("Invalid invitation")
+
+                (
+                    invitation_id,
+                    organization_id,
+                    invited_email,
+                    invited_role,
+                    invitation_status,
+                    expires_at
+                ) = invitation
+
+                if invitation_status != "PENDING":
+                    raise ValueError("Invitation is no longer available")
+
+                if accepted_at >= expires_at:
+                    raise ValueError("Invitation has expired")
+
+                user = connection.execute(
+                    """
+                    SELECT email, email_verified
+                    FROM users
+                    WHERE id = ?
+                    """,
+                    (user_id,)
+                ).fetchone()
+
+                if user is None:
+                    raise ValueError("User does not exist")
+
+                user_email, email_verified = user
+
+                if not email_verified:
+                    raise ValueError("Account email must be verified")
+
+                if user_email.strip().lower() != invited_email:
+                    raise ValueError("Account email does not match invitation")
+
+                organization = connection.execute(
+                    """
+                    SELECT status
+                    FROM organizations
+                    WHERE id = ?
+                    """,
+                    (organization_id,)
+                ).fetchone()
+
+                if organization is None or organization[0] != "ACTIVE":
+                    raise ValueError("Organization is not active")
+
+                existing_member = connection.execute(
+                    """
+                    SELECT id
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, user_id)
+                ).fetchone()
+
+                if existing_member is not None:
+                    raise ValueError("User already has a membership record")
+
+                updated = connection.execute(
+                    """
+                    UPDATE organization_invitations
+                    SET
+                        status = 'ACCEPTED',
+                        accepted_at = ?,
+                        accepted_by_user_id = ?
+                    WHERE id = ?
+                      AND status = 'PENDING'
+                      AND expires_at > ?
+                    """,
+                    (
+                        accepted_at,
+                        user_id,
+                        invitation_id,
+                        accepted_at
+                    )
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError("Invitation is no longer available")
+
+                connection.execute(
+                    """
+                    INSERT INTO organization_members (
+                        organization_id,
+                        user_id,
+                        role,
+                        status,
+                        joined_at
+                    )
+                    VALUES (?, ?, ?, 'ACTIVE', ?)
+                    """,
+                    (
+                        organization_id,
+                        user_id,
+                        invited_role,
+                        accepted_at
+                    )
+                )
+
+                return {
+                    "organization_id": organization_id,
+                    "user_id": user_id,
+                    "role": invited_role,
+                    "status": "ACTIVE"
+                }
+    def revoke_organization_invitation(
+        self,
+        organization_id,
+        actor_user_id,
+        invitation_id,
+        revoked_at
+    ):
+        for value, label in [
+            (organization_id, "organization ID"),
+            (actor_user_id, "actor user ID"),
+            (invitation_id, "invitation ID"),
+            (revoked_at, "revocation time")
+        ]:
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"Invalid {label}")
+
+        with closing(self._connect()) as connection:
+            with connection:
+                actor = connection.execute(
+                    """
+                    SELECT role, status
+                    FROM organization_members
+                    WHERE organization_id = ? AND user_id = ?
+                    """,
+                    (organization_id, actor_user_id)
+                ).fetchone()
+
+                if actor is None or actor[1] != "ACTIVE":
+                    raise ValueError("Actor is not an active organization member")
+
+                invitation = connection.execute(
+                    """
+                    SELECT role, status, expires_at
+                    FROM organization_invitations
+                    WHERE id = ? AND organization_id = ?
+                    """,
+                    (invitation_id, organization_id)
+                ).fetchone()
+
+                if invitation is None:
+                    raise ValueError("Invitation does not exist")
+
+                invited_role, status, expires_at = invitation
+
+                if status != "PENDING":
+                    raise ValueError("Invitation is no longer pending")
+
+                if revoked_at >= expires_at:
+                    raise ValueError("Expired invitations cannot be revoked")
+
+                actor_role = actor[0]
+
+                if actor_role == "OWNER":
+                    pass
+                elif actor_role == "ADMINISTRATOR":
+                    if invited_role not in {"DEVELOPER", "VIEWER"}:
+                        raise ValueError(
+                            "Administrators can only revoke developer or viewer invitations"
+                        )
+                else:
+                    raise ValueError("Insufficient invitation revocation permissions")
+
+                updated = connection.execute(
+                    """
+                    UPDATE organization_invitations
+                    SET status = 'REVOKED'
+                    WHERE id = ?
+                      AND organization_id = ?
+                      AND status = 'PENDING'
+                      AND expires_at > ?
+                    """,
+                    (invitation_id, organization_id, revoked_at)
+                )
+
+                if updated.rowcount != 1:
+                    raise ValueError("Invitation is no longer available")
+
+                return {
+                    "invitation_id": invitation_id,
+                    "status": "REVOKED"
+                }
     def update_user_password(
         self,
         user_id,
@@ -1942,3 +3018,8 @@ class SQLiteTransactionTracker:
         result = dict(zip(columns, row))
         result["report"] = json.loads(result.pop("report_json"))
         return result
+
+
+
+
+

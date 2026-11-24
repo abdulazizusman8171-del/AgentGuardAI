@@ -17,3 +17,20 @@ class LoginRequest(BaseModel):
 
 class ApprovalKeyRecoveryRequest(BaseModel):
     email: str = Field(min_length=5, max_length=254)
+
+
+class OrganizationCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+
+class OrganizationInvitationRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    role: str = Field(min_length=3, max_length=30)
+    expires_in_seconds: int = Field(
+        default=604800,
+        ge=60,
+        le=2592000
+    )
+
+class OrganizationInvitationAcceptRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+
