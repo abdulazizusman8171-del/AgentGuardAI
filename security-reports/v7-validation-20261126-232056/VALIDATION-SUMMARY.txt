@@ -1,0 +1,5 @@
+V7 baseline Solidity suite : PASS
+V7 adversarial Solidity suite : PASS
+Full Python regression suite : PASS
+Frontend JavaScript syntax : PASS
+Slither : AVAILABLE
