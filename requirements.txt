@@ -2,3 +2,5 @@ fastapi==0.162.2
 uvicorn==0.54.0
 jinja2==3.1.6
 httpx==0.28.1
+eth-abi==6.0.0
+eth-hash==0.8.0

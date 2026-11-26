@@ -4516,3 +4516,1905 @@ html, body {
         padding: 16px;
     }
 }
+
+/* ==========================================================
+   AGENTGUARDAI V7 - PUBLIC DEVELOPMENT EXPERIENCE
+   Isolated styles; existing feature styles remain untouched.
+   ========================================================== */
+
+.ag-v7-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at 85% 15%, rgba(34, 211, 238, 0.15), transparent 40%),
+        linear-gradient(120deg, #101c2c, #102b35 75%);
+    border: 1px solid rgba(34, 211, 238, 0.28);
+    padding: 38px;
+}
+
+.ag-v7-label {
+    display: block;
+    color: #67e8f9;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+}
+
+.ag-v7-hero h2 {
+    color: #f8fafc;
+    font-size: clamp(30px, 4vw, 46px);
+    line-height: 1.12;
+    margin-bottom: 16px;
+}
+
+.ag-v7-hero p {
+    color: #cbd5e1;
+    max-width: 680px;
+    line-height: 1.8;
+}
+
+.ag-v7-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 22px 0;
+}
+
+.ag-v7-badges span,
+.ag-beta-status {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(103, 232, 249, 0.25);
+    border-radius: 30px;
+    padding: 8px 12px;
+    color: #a5f3fc;
+    background: rgba(8, 47, 73, 0.35);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+}
+
+.ag-v7-primary-link {
+    display: inline-block;
+    padding: 12px 18px;
+    border-radius: 8px;
+    background: #0891b2;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.ag-v7-primary-link:hover {
+    background: #0e7490;
+    transform: translateY(-2px);
+}
+
+.ag-public-progress {
+    margin: 35px 0 42px;
+    padding: 26px;
+    border: 1px solid rgba(103, 232, 249, 0.16);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #101a2a, #111f2c);
+}
+
+.ag-progress-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.ag-progress-heading h2 {
+    color: #f1f5f9;
+    font-size: 25px;
+    margin-bottom: 8px;
+}
+
+.ag-progress-heading p {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.ag-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ag-progress-card {
+    min-width: 0;
+    padding: 19px;
+    border: 1px solid #26384a;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.72);
+}
+
+.ag-progress-card h3 {
+    color: #e2e8f0;
+    font-size: 16px;
+    margin: 13px 0 9px;
+}
+
+.ag-progress-card p {
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.ag-progress-state {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #94a3b8;
+}
+
+.ag-progress-card.is-complete {
+    border-top: 2px solid #34d399;
+}
+
+.ag-progress-card.is-complete .ag-progress-state {
+    color: #6ee7b7;
+}
+
+.ag-progress-card.is-active {
+    border-top: 2px solid #22d3ee;
+}
+
+.ag-progress-card.is-active .ag-progress-state {
+    color: #67e8f9;
+}
+
+.ag-progress-card.is-planned {
+    border-top: 2px solid #64748b;
+}
+
+.ag-progress-disclaimer {
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.6;
+    margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+    .ag-progress-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ag-progress-heading {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 600px) {
+    .ag-v7-hero {
+        padding: 25px 20px;
+    }
+
+    .ag-public-progress {
+        padding: 19px;
+    }
+
+    .ag-progress-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ag-v7-badges {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+
+/* V7 NEAR NETWORK METRIC REFINEMENTS */
+#near-block-producer {
+    font-size: 17px;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.near-network-metric {
+    min-width: 0;
+}
+
+
+/* =====================================================
+   AGENTGUARDAI V8 — COMMAND CENTER
+   ===================================================== */
+
+.ag-command-center {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 28px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(100, 130, 160, 0.18);
+    border-radius: 20px;
+    background: linear-gradient(145deg, #101b2b, #0b1421 65%, #101d2c);
+    color: #edf5ff;
+}
+
+.ag-command-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+    gap: 30px;
+    align-items: center;
+}
+
+.ag-command-eyebrow,
+.ag-metric-label,
+.ag-command-panel-label {
+    color: #6edfc9;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+}
+
+.ag-command-intro h2 {
+    margin: 17px 0 12px;
+    font-size: clamp(32px, 4vw, 52px);
+    line-height: 1.08;
+    letter-spacing: -1.8px;
+}
+
+.ag-command-intro h2 span {
+    color: #61dfc2;
+}
+
+.ag-command-intro > p {
+    max-width: 590px;
+    color: #a9b9ca;
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.ag-command-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.ag-command-primary,
+.ag-command-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.ag-command-primary {
+    background: #62dfc3;
+    color: #071b1b;
+}
+
+.ag-command-primary:hover {
+    background: #8af0d9;
+}
+
+.ag-command-secondary {
+    border: 1px solid #34485b;
+    color: #dce8f4;
+}
+
+.ag-command-secondary:hover {
+    border-color: #62dfc3;
+}
+
+.ag-command-status-panel {
+    padding: 22px;
+    border: 1px solid rgba(105, 143, 166, 0.25);
+    border-radius: 14px;
+    background: rgba(4, 13, 23, 0.55);
+}
+
+.ag-command-live {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.ag-command-live strong {
+    margin-left: auto;
+    color: #65e0b8;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.ag-command-live-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #62dfb4;
+    box-shadow: 0 0 12px rgba(98, 223, 180, 0.65);
+}
+
+.ag-command-status-divider {
+    height: 1px;
+    margin: 18px 0;
+    background: rgba(145, 170, 190, 0.16);
+}
+
+.ag-command-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    color: #9dafc0;
+    font-size: 11px;
+}
+
+.ag-command-status-row strong {
+    color: #e0eaf4;
+    font-size: 10px;
+    text-align: right;
+}
+
+.ag-command-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ag-command-metric {
+    padding: 20px;
+    border: 1px solid rgba(105, 143, 166, 0.19);
+    border-radius: 12px;
+    background: rgba(17, 34, 51, 0.75);
+    min-width: 0;
+}
+
+.ag-command-metric > strong {
+    display: block;
+    margin-top: 12px;
+    color: #f0f6fc;
+    font-size: 17px;
+    overflow-wrap: anywhere;
+}
+
+.ag-command-metric p {
+    margin: 8px 0 0;
+    color: #9eafc1;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.ag-command-products {
+    padding-top: 8px;
+}
+
+.ag-command-products-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ag-command-products-heading h3 {
+    margin: 8px 0 0;
+    font-size: 21px;
+}
+
+.ag-command-beta {
+    padding: 7px 10px;
+    border: 1px solid rgba(98, 223, 195, 0.3);
+    border-radius: 20px;
+    color: #70dfc8;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.ag-command-product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ag-command-product {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid rgba(105, 143, 166, 0.2);
+    border-radius: 12px;
+    background: rgba(17, 34, 51, 0.55);
+    color: #edf5ff;
+    text-decoration: none;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.ag-command-product:hover {
+    transform: translateY(-3px);
+    border-color: #62dfc3;
+}
+
+.ag-product-icon {
+    margin-bottom: 18px;
+    color: #65dfc5;
+    font-size: 25px;
+}
+
+.ag-product-tag {
+    color: #7b9aaf;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+}
+
+.ag-command-product h4 {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.ag-command-product p {
+    flex: 1;
+    margin: 0 0 20px;
+    color: #a2b3c4;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.ag-product-link {
+    color: #69dfc5;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+@media (max-width: 900px) {
+    .ag-command-top {
+        grid-template-columns: 1fr;
+    }
+
+    .ag-command-product-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .ag-command-center {
+        padding: 18px;
+        gap: 22px;
+    }
+
+    .ag-command-intro h2 {
+        font-size: 34px;
+    }
+
+    .ag-command-metrics,
+    .ag-command-product-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ag-command-status-row {
+        flex-wrap: wrap;
+    }
+
+    .ag-command-products-heading {
+        align-items: flex-start;
+    }
+}
+
+/* ================================================
+   AGENTGUARDAI V8.1 — TRANSACTION PROTECTION
+   ================================================ */
+
+.ag-transaction-console,
+.ag-tx-results {
+    padding: 26px;
+    margin: 25px 0;
+    border: 1px solid rgba(100, 145, 170, .2);
+    border-radius: 18px;
+    background: linear-gradient(145deg, #101b2b, #0b1421);
+    color: #edf5ff;
+}
+
+.ag-tx-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 25px;
+}
+
+.ag-tx-eyebrow,
+.ag-tx-step {
+    color: #69dfc5;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.ag-tx-heading h2 {
+    margin: 12px 0 8px;
+    font-size: clamp(25px, 3vw, 36px);
+}
+
+.ag-tx-heading p {
+    color: #a6b7c8;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.ag-tx-beta,
+.ag-tx-report-badge {
+    padding: 8px 11px;
+    border: 1px solid rgba(98, 223, 195, .3);
+    border-radius: 20px;
+    color: #6ee1c8;
+    font-size: 9px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ag-tx-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(250px, .8fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.ag-tx-input-panel,
+.ag-tx-process-panel {
+    min-width: 0;
+    padding: 23px;
+    border: 1px solid rgba(105, 143, 166, .2);
+    border-radius: 13px;
+    background: rgba(17, 34, 51, .65);
+}
+
+.ag-tx-panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.ag-tx-panel-heading h3,
+.ag-tx-process-panel h3 {
+    margin: 9px 0;
+    font-size: 19px;
+}
+
+.ag-tx-icon {
+    color: #65dfc5;
+    font-size: 28px;
+}
+
+.ag-tx-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px;
+}
+
+.ag-tx-input-panel .form-group {
+    min-width: 0;
+}
+
+.ag-tx-input-panel label {
+    display: block;
+    margin-bottom: 8px;
+    color: #c7d5e2;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.ag-tx-input-panel input[type="text"],
+.ag-tx-input-panel input[type="number"],
+.ag-tx-input-panel select {
+    width: 100%;
+    min-width: 0;
+    min-height: 45px;
+    padding: 11px 12px;
+    border: 1px solid #34495d;
+    border-radius: 8px;
+    background: #0b1623;
+    color: #edf5ff;
+    font-size: 13px;
+}
+
+.ag-tx-input-panel input:focus,
+.ag-tx-input-panel select:focus {
+    outline: 2px solid rgba(98, 223, 195, .45);
+    border-color: #62dfc3;
+}
+
+.ag-tx-security-options {
+    display: grid;
+    gap: 12px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(145, 170, 190, .15);
+}
+
+.ag-tx-security-options > .ag-tx-step {
+    margin-bottom: 4px;
+}
+
+.ag-tx-security-options label {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 !important;
+    padding: 13px;
+    border: 1px solid rgba(105, 143, 166, .18);
+    border-radius: 9px;
+    background: rgba(5, 15, 26, .4);
+    cursor: pointer;
+}
+
+.ag-tx-security-options input {
+    margin-top: 3px;
+    accent-color: #62dfc3;
+}
+
+.ag-tx-security-options strong {
+    display: block;
+    color: #e5eef7;
+    font-size: 12px;
+}
+
+.ag-tx-security-options small {
+    display: block;
+    margin-top: 5px;
+    color: #93a8ba;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.ag-tx-submit-area {
+    margin-top: 23px;
+}
+
+.ag-tx-submit-area button {
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    border-radius: 9px;
+    background: #62dfc3;
+    color: #071b1b;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ag-tx-submit-area button:hover {
+    background: #8af0d9;
+}
+
+.ag-tx-submit-area button:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.ag-tx-submit-area p {
+    margin-top: 10px;
+    color: #91a6b9;
+    font-size: 10px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.ag-tx-process-panel {
+    position: relative;
+}
+
+.ag-tx-process-step {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.ag-tx-process-step > span {
+    display: flex;
+    flex: 0 0 29px;
+    width: 29px;
+    height: 29px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(98, 223, 195, .4);
+    border-radius: 50%;
+    color: #68dfc5;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.ag-tx-process-step strong {
+    color: #e3edf7;
+    font-size: 12px;
+}
+
+.ag-tx-process-step p {
+    margin-top: 6px;
+    color: #9cafc0;
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.ag-tx-safety-note {
+    margin-top: 25px;
+    padding: 14px;
+    border: 1px solid rgba(98, 223, 195, .2);
+    border-radius: 9px;
+    background: rgba(98, 223, 195, .05);
+}
+
+.ag-tx-safety-note strong {
+    color: #70e0c8;
+    font-size: 11px;
+}
+
+.ag-tx-safety-note p {
+    margin-top: 7px;
+    color: #a7b8c8;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.ag-tx-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    color: #70e0c8;
+    font-size: 12px;
+}
+
+.ag-tx-spinner {
+    width: 17px;
+    height: 17px;
+    border: 2px solid #34515c;
+    border-top-color: #62dfc3;
+    border-radius: 50%;
+    animation: ag-tx-spin .8s linear infinite;
+}
+
+@keyframes ag-tx-spin {
+    to { transform: rotate(360deg); }
+}
+
+.ag-tx-result-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 13px;
+}
+
+.ag-tx-result-overview article,
+.ag-tx-summary-panel,
+.ag-tx-execution-panel,
+.ag-tx-findings-panel {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid rgba(105, 143, 166, .2);
+    border-radius: 11px;
+    background: rgba(17, 34, 51, .65);
+}
+
+.ag-tx-result-overview h2 {
+    margin: 15px 0 7px;
+    font-size: clamp(22px, 3vw, 32px);
+    overflow-wrap: anywhere;
+}
+
+.ag-tx-result-overview p,
+.ag-tx-execution-panel p {
+    color: #9cafc0;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.ag-tx-summary-panel,
+.ag-tx-execution-panel,
+.ag-tx-findings-panel {
+    margin-top: 16px;
+}
+
+.ag-tx-summary-panel > div {
+    margin-top: 12px;
+    color: #d2dfeb;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.ag-tx-execution-panel {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.ag-tx-execution-panel h3,
+.ag-tx-findings-panel h3 {
+    margin-top: 9px;
+    font-size: 17px;
+}
+
+.ag-tx-execution-panel > strong {
+    color: #70dfc3;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.ag-tx-execution-panel p {
+    grid-column: 1 / -1;
+}
+
+.ag-tx-findings-panel #intelligence-results {
+    margin-top: 15px;
+}
+
+@media (max-width: 850px) {
+    .ag-tx-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .ag-transaction-console,
+    .ag-tx-results {
+        padding: 16px;
+    }
+
+    .ag-tx-heading {
+        flex-direction: column;
+    }
+
+    .ag-tx-form-grid,
+    .ag-tx-result-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .ag-tx-input-panel,
+    .ag-tx-process-panel {
+        padding: 16px;
+    }
+
+    .ag-tx-execution-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .ag-tx-report-badge,
+    .ag-tx-beta {
+        white-space: normal;
+    }
+}
+
+/* ==========================================
+   AGENTGUARDAI V8.1 — SIDEBAR COLLAPSE
+   ========================================== */
+
+@media (min-width: 901px) {
+    body.ag-sidebar-collapsed .sidebar {
+        width: 76px !important;
+        transition: width .25s ease;
+    }
+
+    body.ag-sidebar-collapsed .main-content {
+        margin-left: 76px !important;
+        width: calc(100% - 76px) !important;
+        transition: margin-left .25s ease, width .25s ease;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand h2,
+    body.ag-sidebar-collapsed .sidebar .nav-group-label,
+    body.ag-sidebar-collapsed .sidebar .nav-group a:not(.active) {
+        white-space: nowrap;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand {
+        justify-content: center;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand h2,
+    body.ag-sidebar-collapsed .sidebar .nav-group-label,
+    body.ag-sidebar-collapsed .sidebar .nav-group a {
+        font-size: 0;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group a {
+        justify-content: center;
+        padding: 13px 8px;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-icon {
+        font-size: 19px;
+        margin: 0;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group > summary {
+        font-size: 0;
+        justify-content: center;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group > summary::after {
+        display: none;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group a {
+        position: relative;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group a:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 66px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1500;
+        background: #111c2b;
+        color: #fff;
+        font-size: 12px;
+        padding: 9px 12px;
+        border-radius: 7px;
+        white-space: nowrap;
+    }
+}
+
+/* Sidebar collapse button */
+
+.ag-sidebar-collapse {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(148, 163, 184, .2);
+    border-radius: 9px;
+    background: rgba(148, 163, 184, .08);
+    color: inherit;
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.ag-sidebar-collapse:hover {
+    border-color: #22c7a7;
+    color: #22c7a7;
+}
+
+/* ==========================================
+   V8.1 — SECURITY OPTION ALIGNMENT
+   ========================================== */
+
+.ag-tx-security-options label {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 13px !important;
+    text-align: left !important;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.ag-tx-security-options label input[type="checkbox"] {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.ag-tx-security-options label > span {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    text-align: left;
+    min-width: 0;
+}
+
+.ag-tx-security-options label strong,
+.ag-tx-security-options label small {
+    text-align: left;
+}
+
+/* ==========================================
+   V8.1 — GUIDED INPUT WORKFLOW
+   ========================================== */
+
+.ag-tx-wizard-progress {
+    display: flex;
+    gap: 6px;
+    margin: 18px 0 22px;
+}
+
+.ag-tx-wizard-progress span {
+    height: 4px;
+    flex: 1;
+    border-radius: 10px;
+    background: rgba(148, 163, 184, .2);
+}
+
+.ag-tx-wizard-progress span.is-complete {
+    background: #22c7a7;
+}
+
+.ag-tx-wizard-step {
+    min-height: 210px;
+}
+
+.ag-tx-wizard-step[hidden] {
+    display: none !important;
+}
+
+.ag-tx-wizard-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.ag-tx-wizard-controls button {
+    border-radius: 9px;
+    padding: 11px 18px;
+    cursor: pointer;
+}
+
+.ag-tx-wizard-controls .ag-wizard-next {
+    background: #16b99a;
+    color: #07131b;
+    border: 0;
+    font-weight: 700;
+}
+
+.ag-tx-wizard-controls .ag-wizard-back {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, .3);
+    color: inherit;
+}
+
+.ag-tx-wizard-controls button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+    .ag-sidebar-collapse {
+        display: none;
+    }
+}
+
+
+/* V8.1 SIDEBAR COLLAPSE REFINEMENT */
+@media (min-width: 901px) {
+    .sidebar .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .sidebar .brand h2 {
+        flex: 1;
+        min-width: 0;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand h2 {
+        display: none;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .brand .brand-icon {
+        margin: 0 auto;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group > summary {
+        display: none !important;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group {
+        margin-top: 8px;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .nav-group a {
+        font-size: 0;
+    }
+
+    body.ag-sidebar-collapsed .sidebar .sidebar-footer {
+        display: none;
+    }
+}
+
+/* V8.1 WIZARD HEADING */
+.ag-tx-wizard-heading {
+    margin-bottom: 22px;
+}
+
+.ag-tx-wizard-heading h3 {
+    margin: 8px 0;
+    font-size: 21px;
+}
+
+.ag-tx-wizard-heading p {
+    margin: 0;
+    line-height: 1.6;
+    opacity: .75;
+}
+
+.ag-tx-wizard-step .form-group {
+    width: 100%;
+    max-width: 100%;
+}
+
+.ag-tx-wizard-step[hidden] {
+    display: none !important;
+}
+
+.ag-tx-security-options {
+    width: 100%;
+}
+
+
+
+/* ==========================================================
+   AGENTGUARD AI V8.2 — UNIFIED SECURITY WORKSPACE
+   Additive presentation layer. Existing component styles remain
+   available as fallbacks; all API-facing IDs are preserved.
+   ========================================================== */
+
+:root {
+    --ag-bg: #070c13;
+    --ag-panel: #0d1722;
+    --ag-panel-raised: #111e2b;
+    --ag-panel-soft: #0a131d;
+    --ag-line: rgba(148, 163, 184, .16);
+    --ag-line-strong: rgba(148, 163, 184, .28);
+    --ag-ink: #edf5f7;
+    --ag-muted: #91a4b2;
+    --ag-accent: #4de0b1;
+    --ag-accent-wash: rgba(77, 224, 177, .10);
+    --ag-blue: #72b7ff;
+    --ag-radius: 18px;
+    --ag-shadow: 0 18px 55px rgba(0, 0, 0, .20);
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 28px; }
+body {
+    background:
+        radial-gradient(ellipse at 12% 0%, rgba(37, 99, 235, .09), transparent 34rem),
+        radial-gradient(ellipse at 88% 10%, rgba(0, 236, 151, .055), transparent 30rem),
+        var(--ag-bg);
+    color: var(--ag-ink);
+    letter-spacing: .005em;
+}
+::selection { background: rgba(77, 224, 177, .25); color: #fff; }
+a { transition: color .18s ease, border-color .18s ease, background .18s ease; }
+button, input, select { font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--ag-accent);
+    outline-offset: 3px;
+}
+
+.dashboard { min-height: 100vh; }
+.sidebar {
+    width: 268px;
+    flex: 0 0 268px;
+    padding: 26px 17px 20px;
+    background: rgba(8, 17, 26, .94);
+    border-right: 1px solid var(--ag-line);
+    backdrop-filter: blur(18px);
+}
+.brand { gap: 11px; margin: 2px 8px 36px; }
+.brand-icon {
+    border-radius: 13px;
+    width: 42px; height: 42px;
+    background: linear-gradient(145deg, #75f0c4, #1bb98b);
+    color: #04150f;
+    box-shadow: 0 8px 28px rgba(77, 224, 177, .18);
+}
+.brand h2 { font-size: 18px; letter-spacing: -.04em; }
+.sidebar nav { gap: 7px; }
+.sidebar nav a {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 43px; padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: #9badba;
+    font-size: 13px;
+}
+.sidebar nav a:hover, .sidebar nav a.active {
+    background: linear-gradient(90deg, rgba(77,224,177,.12), rgba(77,224,177,.035));
+    border-color: rgba(77,224,177,.14);
+    color: #dffcf2;
+}
+.sidebar .nav-group { margin: 4px 0 8px; }
+.sidebar .nav-group-label {
+    padding: 12px 11px 7px;
+    color: #647988;
+    font-size: 9px;
+    letter-spacing: .16em;
+    font-weight: 800;
+}
+.sidebar .nav-icon {
+    width: 20px; min-width: 20px;
+    text-align: center; color: var(--ag-accent);
+    font-size: 16px;
+}
+.sidebar-footer {
+    border-top: 1px solid var(--ag-line);
+    padding: 16px 8px 4px;
+    line-height: 1.5;
+}
+.main-content {
+    width: min(100% - 268px, 1700px);
+    max-width: none;
+    padding: 34px clamp(20px, 3.2vw, 54px) 28px;
+}
+.topbar { margin-bottom: 25px; }
+.topbar h1 { font-size: clamp(24px, 2.4vw, 32px); letter-spacing: -.045em; }
+.topbar p, .panel-heading p { color: var(--ag-muted); }
+.system-status {
+    border: 1px solid var(--ag-line);
+    border-radius: 999px;
+    padding: 10px 15px;
+    background: rgba(17, 30, 43, .8);
+}
+
+.ag-command-center {
+    border: 1px solid var(--ag-line);
+    border-radius: 24px;
+    padding: clamp(22px, 3vw, 38px);
+    background:
+        radial-gradient(circle at 84% 10%, rgba(77,224,177,.12), transparent 24rem),
+        linear-gradient(135deg, rgba(17,30,43,.98), rgba(8,16,25,.98));
+    box-shadow: var(--ag-shadow);
+}
+.ag-command-center h2 { letter-spacing: -.055em; }
+.ag-command-center .ag-command-intro p { max-width: 650px; color: #a9bbc5; }
+.ag-command-status-panel {
+    background: rgba(5, 13, 21, .68);
+    border: 1px solid var(--ag-line);
+    border-radius: 17px;
+}
+.ag-command-metric, .ag-command-product {
+    background: rgba(13, 23, 34, .88);
+    border: 1px solid var(--ag-line);
+    border-radius: 15px;
+}
+.ag-command-product:hover { transform: translateY(-3px); border-color: rgba(77,224,177,.42); }
+.ag-command-metric strong { letter-spacing: .04em; }
+.ag-public-progress {
+    margin: 22px 0 28px;
+    padding: 24px;
+    background: rgba(13, 23, 34, .78);
+    border: 1px solid var(--ag-line);
+    border-radius: var(--ag-radius);
+}
+.ag-progress-card {
+    border: 1px solid var(--ag-line);
+    background: rgba(5, 13, 21, .5);
+    border-radius: 13px;
+}
+.ag-progress-card h3 { letter-spacing: -.02em; }
+.ag-progress-disclaimer { color: var(--ag-muted); }
+
+.dashboard-section-title, .section-heading {
+    margin: 30px 0 16px;
+}
+.dashboard-section-title h2, .section-heading h2 {
+    font-size: clamp(20px, 2vw, 27px);
+    letter-spacing: -.04em;
+}
+.dashboard-section-title p, .section-heading p { color: var(--ag-muted); }
+
+.panel, .near-network-panel, .ag-transaction-console,
+.near-market-section, .developer-card, .auth-card {
+    background: linear-gradient(155deg, rgba(16,29,42,.97), rgba(10,19,29,.97));
+    border: 1px solid var(--ag-line);
+    border-radius: var(--ag-radius);
+    box-shadow: 0 12px 38px rgba(0,0,0,.12);
+}
+.panel { padding: clamp(19px, 2.4vw, 30px); margin-bottom: 18px; }
+.panel-heading { margin-bottom: 21px; }
+.panel-heading h2, .near-network-heading h3, .ag-tx-heading h2 {
+    letter-spacing: -.035em;
+}
+.near-network-panel { padding: clamp(18px, 2.4vw, 28px); margin: 18px 0; }
+.near-network-heading { gap: 18px; }
+.near-network-heading p { color: var(--ag-muted); line-height: 1.6; }
+.near-network-metric, .developer-stat-card {
+    background: rgba(5, 13, 21, .58);
+    border: 1px solid var(--ag-line);
+    border-radius: 13px;
+    padding: 17px;
+}
+.near-network-metric strong, .developer-stat-card strong { overflow-wrap: anywhere; }
+.near-network-details {
+    border-top: 1px solid var(--ag-line);
+    margin-top: 18px; padding-top: 16px;
+}
+.near-network-details code { overflow-wrap: anywhere; }
+.ag-module-intro {
+    position: relative;
+    margin: 0 0 22px;
+    padding: 18px 20px;
+    border: 1px solid rgba(77,224,177,.17);
+    border-radius: 14px;
+    background: linear-gradient(110deg, rgba(77,224,177,.075), rgba(114,183,255,.035));
+}
+.ag-module-intro h3, .ag-module-intro h4 {
+    margin: 7px 0;
+    font-size: 18px;
+    letter-spacing: -.025em;
+    color: var(--ag-ink);
+}
+.ag-module-intro p { margin: 0; color: var(--ag-muted); line-height: 1.65; max-width: 900px; }
+.ag-module-kicker {
+    color: var(--ag-accent);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .16em;
+}
+.ag-module-trust-row {
+    display: flex; flex-wrap: wrap; gap: 9px 18px;
+    margin-top: 13px; color: #b8d9cf; font-size: 11px;
+}
+.ag-module-trust-row span { white-space: nowrap; }
+
+.ag-transaction-console { padding: clamp(19px, 2.5vw, 32px); }
+.ag-tx-layout { gap: 20px; }
+.ag-tx-input-panel, .ag-tx-results-panel, .ag-tx-findings-panel {
+    background: rgba(5, 13, 21, .5);
+    border: 1px solid var(--ag-line);
+    border-radius: 16px;
+}
+.ag-tx-form-grid { gap: 17px; }
+.ag-tx-step { color: var(--ag-accent); letter-spacing: .14em; }
+.ag-tx-wizard-heading {
+    border-bottom: 1px solid var(--ag-line);
+    padding-bottom: 17px;
+}
+.ag-tx-wizard-step { min-height: 115px; }
+.ag-tx-security-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+}
+.ag-tx-security-options label, .security-options label {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 13px;
+    border: 1px solid var(--ag-line);
+    border-radius: 11px;
+    background: rgba(255,255,255,.018);
+    line-height: 1.45;
+}
+.ag-tx-security-options input, .security-options input {
+    width: 16px; min-width: 16px; height: 16px;
+    margin: 2px 0 0;
+    accent-color: var(--ag-accent);
+}
+input, select, textarea {
+    border: 1px solid var(--ag-line-strong);
+    background: #07111b;
+    border-radius: 10px;
+    min-height: 45px;
+    color: var(--ag-ink);
+}
+input::placeholder { color: #617583; }
+button, .ag-command-primary, .ag-command-secondary {
+    border-radius: 10px;
+    font-weight: 750;
+}
+button { min-height: 42px; }
+button.auth-secondary, .auth-secondary {
+    background: #182a39;
+    color: #d8e5eb;
+    border: 1px solid var(--ag-line-strong);
+}
+button.auth-secondary:hover { background: #21384b; }
+.ag-tx-wizard-controls { gap: 10px; }
+.ag-tx-wizard-controls button { min-width: 120px; }
+
+#historyList, #approvalList { gap: 11px; }
+.record-item {
+    border: 1px solid var(--ag-line);
+    border-radius: 13px;
+    background: rgba(5, 13, 21, .58);
+    padding: 17px;
+}
+.record-details p { overflow-wrap: anywhere; }
+.status-badge { border: 1px solid var(--ag-line); border-radius: 999px; }
+.approval-filter { padding: 12px; border-radius: 12px; background: rgba(255,255,255,.025); }
+
+.developer-platform-section .developer-card,
+.developer-platform-section .developer-api-card,
+.developer-platform-section .developer-sdk-card {
+    border-color: var(--ag-line);
+    border-radius: 15px;
+}
+.developer-platform-section h2 { letter-spacing: -.04em; }
+.developer-stats-grid { gap: 12px; }
+.developer-stat-card { min-width: 0; }
+.developer-stat-card small { color: var(--ag-muted); }
+.auth-layout { gap: 17px; align-items: stretch; }
+.auth-card {
+    padding: 22px;
+    min-width: 0;
+}
+.auth-card-heading { margin-bottom: 18px; }
+.auth-card-heading p { color: var(--ag-muted); line-height: 1.55; }
+.auth-card label { color: #c4d3db; font-size: 12px; font-weight: 700; }
+.auth-card input { margin: 7px 0 13px; }
+.auth-button-grid { gap: 9px; }
+.auth-status {
+    border: 1px solid var(--ag-line);
+    border-radius: 10px;
+    padding: 12px;
+    background: rgba(5,13,21,.55);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.account-settings-section .ag-module-intro { margin-bottom: 20px; }
+#approvalAuthStatus { margin-top: 12px; }
+
+footer {
+    border-top: 1px solid var(--ag-line);
+    margin-top: 28px;
+    color: #718593;
+    line-height: 1.7;
+}
+
+/* Desktop sidebar collapse and compact content balance */
+@media (min-width: 901px) {
+    .main-content { min-width: 0; }
+    body.ag-sidebar-collapsed .sidebar {
+        width: 78px; flex-basis: 78px; padding-inline: 10px;
+    }
+    body.ag-sidebar-collapsed .main-content { width: calc(100% - 78px); }
+    body.ag-sidebar-collapsed .brand { justify-content: center; margin-inline: 0; }
+    body.ag-sidebar-collapsed .brand h2,
+    body.ag-sidebar-collapsed .nav-group-label,
+    body.ag-sidebar-collapsed .sidebar .nav-group a {
+        font-size: 0;
+    }
+    body.ag-sidebar-collapsed .sidebar nav a { justify-content: center; padding-inline: 7px; }
+    body.ag-sidebar-collapsed .sidebar .nav-icon { font-size: 17px; }
+}
+@media (max-width: 1100px) {
+    .main-content { padding: 25px 22px; }
+    .ag-command-top { gap: 22px; }
+}
+@media (max-width: 900px) {
+    .main-content { width: 100%; padding: 76px 18px 24px; }
+    .sidebar {
+        width: min(310px, 86vw); flex-basis: auto;
+        border-right: 1px solid var(--ag-line);
+    }
+    .ag-command-center { border-radius: 18px; }
+}
+@media (max-width: 640px) {
+    .topbar { align-items: flex-start; }
+    .system-status { align-self: flex-start; }
+    .ag-command-center { padding: 20px; }
+    .ag-command-actions { flex-wrap: wrap; }
+    .ag-module-intro { padding: 15px; }
+    .ag-module-trust-row { flex-direction: column; gap: 6px; }
+    .ag-tx-security-options { grid-template-columns: 1fr; }
+    .near-network-grid, .developer-stats-grid { grid-template-columns: 1fr; }
+    .record-item { align-items: flex-start; }
+    .auth-card { padding: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .01ms !important; }
+}
+
+
+/* =========================================================
+   AgentGuardAI V8.3 — multi-chain platform refinement
+   Additive styles only; existing component behavior retained.
+   ========================================================= */
+.ag-network-coverage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 18px 0 22px;
+    padding: 16px;
+    border: 1px solid var(--border-color, rgba(148,163,184,.2));
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(15,23,42,.72), rgba(30,41,59,.42));
+}
+.ag-network-coverage > div {
+    display: grid;
+    grid-template-columns: 10px 1fr;
+    align-items: center;
+    column-gap: 9px;
+    row-gap: 3px;
+    min-width: 0;
+}
+.ag-network-coverage strong {
+    color: var(--text-primary, #e5e7eb);
+    font-size: .88rem;
+    letter-spacing: .02em;
+}
+.ag-network-coverage small {
+    grid-column: 2;
+    color: var(--text-secondary, #94a3b8);
+    font-size: .74rem;
+    line-height: 1.45;
+}
+.ag-coverage-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    grid-row: span 2;
+}
+.ag-coverage-dot.is-live { background: #34d399; box-shadow: 0 0 12px rgba(52,211,153,.55); }
+.ag-coverage-dot.is-testnet { background: #fbbf24; box-shadow: 0 0 12px rgba(251,191,36,.4); }
+.ag-coverage-dot.is-config { background: #60a5fa; box-shadow: 0 0 12px rgba(96,165,250,.4); }
+.ag-network-coverage > p {
+    grid-column: 1 / -1;
+    margin: 3px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(148,163,184,.16);
+    color: var(--text-secondary, #94a3b8);
+    font-size: .72rem;
+    line-height: 1.5;
+}
+.access-key-panel .near-network-eyebrow {
+    letter-spacing: .12em;
+}
+@media (max-width: 720px) {
+    .ag-network-coverage { grid-template-columns: 1fr; }
+    .ag-network-coverage > p { grid-column: 1; }
+}
+
+
+/* =========================================================
+   AGENTGUARD V8.3.1 ACCOUNT WORKSPACE REDESIGN
+   Preserves existing authentication and account controls.
+   ========================================================= */
+
+.account-settings-section .ag-account-intro {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(24px, 3vw, 36px);
+    margin-bottom: 24px;
+    border: 1px solid rgba(52, 211, 153, .24);
+    border-radius: 20px;
+    background:
+        radial-gradient(circle at 90% 10%, rgba(52,211,153,.13), transparent 35%),
+        linear-gradient(135deg, rgba(15,35,43,.98), rgba(10,20,31,.98));
+}
+
+.account-settings-section .ag-account-intro h3 {
+    max-width: 700px;
+    margin: 10px 0;
+    font-size: clamp(25px, 3vw, 36px);
+    line-height: 1.15;
+    letter-spacing: -.035em;
+}
+
+.account-settings-section .ag-account-intro > p {
+    max-width: 700px;
+    color: var(--text-secondary, #a6b8c5);
+    line-height: 1.7;
+}
+
+.account-settings-section .ag-module-trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.account-settings-section .ag-module-trust-row span {
+    padding: 9px 13px;
+    border: 1px solid rgba(52,211,153,.2);
+    border-radius: 30px;
+    background: rgba(52,211,153,.07);
+    color: #a7f3d0;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.account-settings-section > .panel-heading {
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--ag-line, rgba(148,163,184,.16));
+}
+
+.account-settings-section > .panel-heading h2 {
+    font-size: clamp(22px, 2.5vw, 29px);
+    letter-spacing: -.025em;
+}
+
+.account-settings-section .auth-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+    grid-template-rows: auto auto;
+    align-items: stretch;
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.account-settings-section #account-access {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+    padding: clamp(22px, 2.5vw, 30px);
+    border-color: rgba(52,211,153,.27);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(52,211,153,.08), transparent 35%),
+        linear-gradient(155deg, #122832, #0b1722);
+}
+
+.account-settings-section #email-verification {
+    grid-column: 2;
+    grid-row: 1;
+    border-color: rgba(96,165,250,.24);
+}
+
+.account-settings-section #approval-key-management {
+    grid-column: 2;
+    grid-row: 2;
+    border-color: rgba(167,139,250,.24);
+}
+
+.account-settings-section .auth-card {
+    min-width: 0;
+    padding: clamp(19px, 2vw, 26px);
+    border-radius: 18px;
+    box-shadow: 0 15px 38px rgba(0,0,0,.18);
+    gap: 13px;
+}
+
+.account-settings-section .auth-card-heading {
+    padding-bottom: 15px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(148,163,184,.15);
+}
+
+.account-settings-section .auth-card-heading h3 {
+    font-size: 19px;
+    letter-spacing: -.02em;
+}
+
+.account-settings-section .auth-card-heading p {
+    color: #9aafbd;
+    line-height: 1.65;
+}
+
+.account-settings-section .auth-card label {
+    color: #c6d5df;
+    font-size: 12px;
+    letter-spacing: .025em;
+}
+
+.account-settings-section .auth-card input {
+    min-height: 49px;
+    padding: 12px 14px;
+    border: 1px solid rgba(148,163,184,.23);
+    border-radius: 11px;
+    background: rgba(3,12,20,.55);
+    color: #edf7fa;
+}
+
+.account-settings-section .auth-card input:focus {
+    outline: none;
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(52,211,153,.10);
+}
+
+.account-settings-section .auth-button-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.account-settings-section .auth-card button {
+    min-height: 45px;
+    border-radius: 10px;
+    font-weight: 650;
+}
+
+.account-settings-section .auth-card .auth-status {
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 10px;
+    background: rgba(3,12,20,.4);
+    color: #b8cbd5;
+    line-height: 1.6;
+}
+
+.account-settings-section #passwordRecoveryPanel {
+    padding: 15px;
+    border: 1px solid rgba(96,165,250,.2);
+    border-radius: 13px;
+    background: rgba(96,165,250,.045);
+}
+
+.account-settings-section #approval-key-management {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(167,139,250,.08), transparent 38%),
+        linear-gradient(155deg, #171d31, #0b1722);
+}
+
+.account-settings-section #email-verification {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(96,165,250,.08), transparent 38%),
+        linear-gradient(155deg, #112331, #0b1722);
+}
+
+@media (max-width: 850px) {
+    .account-settings-section .auth-layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+    }
+
+    .account-settings-section #account-access,
+    .account-settings-section #email-verification,
+    .account-settings-section #approval-key-management {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
+
+@media (max-width: 600px) {
+    .account-settings-section .ag-account-intro {
+        padding: 21px 17px;
+    }
+
+    .account-settings-section .ag-module-trust-row {
+        gap: 7px;
+    }
+
+    .account-settings-section .auth-layout {
+        gap: 13px;
+    }
+
+    .account-settings-section .auth-card {
+        padding: 17px;
+    }
+
+    .account-settings-section .auth-button-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+
+/* AGENTGUARD V8.3.2 ACCOUNT STEP WIZARD */
+.account-settings-section .ag-account-wizard {
+    margin: 22px 0;
+    padding: 22px;
+    border: 1px solid rgba(52, 211, 153, .22);
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(16, 39, 48, .95), rgba(11, 23, 34, .98));
+}
+
+.account-settings-section .ag-wizard-progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.account-settings-section #agWizardStepLabel {
+    color: #34d399;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+.account-settings-section #agWizardStepName {
+    color: #e5f5f2;
+    font-weight: 700;
+}
+
+.account-settings-section .ag-wizard-progress-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(148, 163, 184, .17);
+}
+
+.account-settings-section #agWizardProgressFill {
+    width: 33.333%;
+    height: 100%;
+    border-radius: inherit;
+    background: #00d99a;
+    transition: width .25s ease;
+}
+
+.account-settings-section .ag-wizard-step-dots {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.account-settings-section .ag-wizard-step-dots span {
+    display: grid;
+    place-items: center;
+    width: 29px;
+    height: 29px;
+    border: 1px solid rgba(148, 163, 184, .3);
+    border-radius: 50%;
+    color: #9aafbd;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.account-settings-section .ag-wizard-step-dots span.active,
+.account-settings-section .ag-wizard-step-dots span.completed {
+    color: #05251c;
+    background: #34d399;
+    border-color: #34d399;
+}
+
+.account-settings-section .ag-wizard-navigation {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 17px;
+}
+
+.account-settings-section .ag-wizard-navigation button {
+    min-width: 120px;
+    min-height: 43px;
+    padding: 10px 20px;
+    border: 1px solid #34d399;
+    border-radius: 10px;
+    background: #00d99a;
+    color: #05251c;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.account-settings-section .ag-wizard-navigation #agWizardBack {
+    background: transparent;
+    color: #34d399;
+}
+
+.account-settings-section .ag-wizard-navigation button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.account-settings-section .auth-layout.ag-account-wizard-ready {
+    display: block !important;
+}
+
+.account-settings-section .auth-layout.ag-account-wizard-ready > .auth-card {
+    display: none !important;
+    width: 100%;
+    max-width: 100%;
+}
+
+.account-settings-section .auth-layout.ag-account-wizard-ready > .auth-card.ag-account-step-active {
+    display: flex !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .account-settings-section .ag-account-wizard {
+        padding: 16px;
+    }
+
+    .account-settings-section .ag-wizard-navigation button {
+        min-width: 0;
+        flex: 1;
+    }
+}

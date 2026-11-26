@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentGuard AI | Security Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261115-feature-organisation1">
+    <title>AgentGuardAI | Security Infrastructure</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20261125-v83-platform">
 </head>
 
 <body>
@@ -27,81 +27,75 @@
     <div class="nav-group nav-overview">
         <a href="#dashboard" class="active">
             <span class="nav-icon">⌂</span>
-            Overview
+            Command Center
         </a>
     </div>
 
     <details class="nav-group" open>
-        <summary class="nav-group-label">NEAR EXPLORER</summary>
-        <a href="#near-network">
-            <span class="nav-icon">◈</span>Network Activity
-        </a>
-        <a href="#near-market-dashboard">
-            <span class="nav-icon">◉</span>NEAR Market
-        </a>
-    </details>
-
-    <details class="nav-group" open>
-        <summary class="nav-group-label">INVESTIGATION CENTER</summary>
-        <a href="#near-transaction-investigator">
-            <span class="nav-icon">⌕</span>Transaction Investigator
-        </a>
-                <a href="#near-wallet-behavior">
-            <span class="nav-icon">◉</span>Wallet Behaviour
-        </a>
-        <a href="#access-keys">
-            <span class="nav-icon">⌑</span>Access-Key Scanner
-        </a>
-        <a href="#multi-account">
-            <span class="nav-icon">◎</span>Multi-Account Scanner
-        </a>
-    </details>
-
-    <details class="nav-group">
-        <summary class="nav-group-label">INTELLIGENCE CENTER</summary>
-        <a href="#security-intelligence">
-            <span class="nav-icon">◈</span>Risk Intelligence
-        </a>
-    </details>
-
-    <details class="nav-group" open>
-        <summary class="nav-group-label">PROTECTION CENTER</summary>
+        <summary class="nav-group-label">PROTECTION</summary>
         <a href="#transaction">
-            <span class="nav-icon">⬡</span>Transaction Security
+            <span class="nav-icon">⬡</span>
+            Transaction Protection
         </a>
         <a href="#approvals">
-            <span class="nav-icon">✓</span>Approval Center
+            <span class="nav-icon">✓</span>
+            Approval Center
         </a>
         <a href="#history">
-            <span class="nav-icon">◷</span>Transaction History
+            <span class="nav-icon">◷</span>
+            Security History
+        </a>
+    </details>
+
+    <details class="nav-group" open>
+        <summary class="nav-group-label">ACCESS &amp; IDENTITY</summary>
+        <a href="#access-keys">
+            <span class="nav-icon">⌑</span>
+            AccessShield Scanner
+        </a>
+        <a href="#multi-account">
+            <span class="nav-icon">◎</span>
+            Multi-Account Analysis
+        </a>
+    </details>
+
+    <details class="nav-group" open>
+        <summary class="nav-group-label">NETWORK INTELLIGENCE</summary>
+        <a href="#intelligence">
+            <span class="nav-icon">◈</span>
+            Network Overview
+        </a>
+        <a href="#near-market-dashboard">
+            <span class="nav-icon">◉</span>
+            Market Intelligence
         </a>
     </details>
 
     <details class="nav-group" open>
         <summary class="nav-group-label">DEVELOPER PLATFORM</summary>
         <a href="#developer-platform">
-            <span class="nav-icon">⌘</span>API Key Management
+            <span class="nav-icon">⌘</span>
+            API Management
         </a>
         <a href="#developer-sdk">
-            <span class="nav-icon">⌨</span>Python SDK
+            <span class="nav-icon">⌨</span>
+            Python SDK
         </a>
         <a href="#developer-api-reference">
-            <span class="nav-icon">⌑</span>API Reference
+            <span class="nav-icon">⌑</span>
+            API Reference
         </a>
         <a href="#developer-usage">
-            <span class="nav-icon">◷</span>Usage Insights
+            <span class="nav-icon">◷</span>
+            Usage Analytics
         </a>
     </details>
+
     <details class="nav-group">
-        <summary class="nav-group-label">ACCOUNT &amp; SETTINGS</summary>
-        <a href="#account-access">
-            <span class="nav-icon">♙</span>Account Access
-        </a>
-        <a href="#email-verification">
-            <span class="nav-icon">✉</span>Email Verification
-        </a>
-        <a href="#approval-key-management">
-            <span class="nav-icon">⌑</span>Approval Key Management
+        <summary class="nav-group-label">SETTINGS</summary>
+        <a href="#account-settings">
+            <span class="nav-icon">♙</span>
+            Account &amp; Security
         </a>
     </details>
 
@@ -118,8 +112,8 @@
 
             <header class="topbar">
                 <div>
-                    <h1>Security Dashboard</h1>
-                    <p>Review transaction risk assessments and security signals.</p>
+                    <h1>AgentGuardAI Security Platform</h1>
+                    <p>Pre-execution transaction analysis, access security and blockchain intelligence.</p>
                 </div>
 
                 <div class="system-status status-checking" id="systemStatus" role="status" aria-live="polite">
@@ -128,48 +122,183 @@
 </div>
             </header>
 
-            <section class="welcome" id="dashboard">
-                <h2>Welcome to AgentGuard AI</h2>
-                <p>
-                    Protect blockchain transactions with explainable
-                    security intelligence and risk assessment.
+            <section class="ag-command-center" id="dashboard">
+
+    <div class="ag-command-top">
+        <div class="ag-command-intro">
+            <span class="ag-command-eyebrow">AGENTGUARDAI / SECURITY COMMAND CENTER</span>
+            <h2>Analyse Before Execution<span>.</span></h2>
+            <p>
+                Inspect transactions, identify security risks and evaluate
+                digital interactions before they reach execution.
+            </p>
+
+            <div class="ag-command-actions">
+                <a href="#transaction" class="ag-command-primary">
+                    Inspect a Transaction <span>→</span>
+                </a>
+                <a href="#intelligence" class="ag-command-secondary">
+                    Explore Intelligence
+                </a>
+            </div>
+        </div>
+
+        <div class="ag-command-status-panel">
+            <span class="ag-command-panel-label">PLATFORM STATUS</span>
+            <div class="ag-command-live">
+                <span class="ag-command-live-dot"></span>
+                <span>Security Engine</span>
+                <strong>HEALTH CHECK</strong>
+            </div>
+            <div class="ag-command-status-divider"></div>
+            <div class="ag-command-status-row">
+                <span>Inspection mode</span>
+                <strong>READ-ONLY / SIMULATED</strong>
+            </div>
+            <div class="ag-command-status-row">
+                <span>Transaction signing</span>
+                <strong>NOT ENABLED</strong>
+            </div>
+            <div class="ag-command-status-row">
+                <span>Platform stage</span>
+                <strong>PUBLIC BETA · EXPERIMENTAL</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="ag-command-metrics">
+        <article class="ag-command-metric">
+            <span class="ag-metric-label">RISK ENGINE</span>
+            <strong>RULE-BASED</strong>
+            <p>Configured transaction risk evaluation</p>
+        </article>
+
+        <article class="ag-command-metric">
+            <span class="ag-metric-label">NETWORK ARCHITECTURE</span>
+            <strong>MULTI-CHAIN</strong>
+            <p>Multi-chain architecture; live network intelligence currently includes NEAR, with BNB testnet contract integration.</p>
+        </article>
+
+        <article class="ag-command-metric">
+            <span class="ag-metric-label">EXECUTION CONTROL</span>
+            <strong>INSPECTION FIRST</strong>
+            <p>No real transaction is signed or broadcast</p>
+        </article>
+    </div>
+
+    <div class="ag-command-products">
+        <div class="ag-command-products-heading">
+            <div>
+                <span class="ag-command-eyebrow">SECURITY INFRASTRUCTURE</span>
+                <h3>Protection Modules</h3>
+            </div>
+            <span class="ag-command-beta">PUBLIC BETA</span>
+        </div>
+
+        <div class="ag-command-product-grid">
+            <a href="#transaction" class="ag-command-product">
+                <span class="ag-product-icon">⌁</span>
+                <span class="ag-product-tag">CORE PRODUCT</span>
+                <h4>Transaction Protection</h4>
+                <p>Evaluate proposed transactions and identify configured risk signals before execution.</p>
+                <span class="ag-product-link">Open protection module →</span>
+            </a>
+
+            <a href="#access-keys" class="ag-command-product">
+                <span class="ag-product-icon">⬡</span>
+                <span class="ag-product-tag">ACCESS SECURITY</span>
+                <h4>AccessShield</h4>
+                <p>Access-security roadmap for API-connected services, user accounts and AI agents. Current live scanner checks NEAR access-key permissions.</p>
+                <span class="ag-product-link">Explore access analysis →</span>
+            </a>
+
+            <a href="#intelligence" class="ag-command-product">
+                <span class="ag-product-icon">◎</span>
+                <span class="ag-product-tag">NETWORK INTELLIGENCE</span>
+                <h4>Network Intelligence</h4>
+                <p>Inspect available blockchain data and review network security signals.</p>
+                <span class="ag-product-link">Explore intelligence →</span>
+            </a>
+        </div>
+    </div>
+
+</section>
+
+            <!-- PUBLIC AGENTGUARD DEVELOPMENT TRACKER -->
+            <section class="ag-public-progress" id="public-progress">
+                <div class="ag-progress-heading">
+                    <div>
+                        <span class="ag-v7-label">PUBLIC BUILD TRACKER</span>
+                        <h2>Building AgentGuardAI</h2>
+                        <p>Follow the development of our security infrastructure platform.</p>
+                    </div>
+                    <span class="ag-beta-status">● PUBLIC BETA DEVELOPMENT</span>
+                </div>
+
+                <div class="ag-progress-grid">
+                    <article class="ag-progress-card is-complete">
+                        <span class="ag-progress-state">COMPLETED</span>
+                        <h3>Security Engine</h3>
+                        <p>Transaction risk assessment and security intelligence foundations.</p>
+                    </article>
+
+                    <article class="ag-progress-card is-complete">
+                        <span class="ag-progress-state">COMPLETED</span>
+                        <h3>NEAR Network Module</h3>
+                        <p>Live NEAR network monitoring, transaction investigation and public access-key analysis.</p>
+                    </article>
+
+                    <article class="ag-progress-card is-complete">
+                        <span class="ag-progress-state">TESTNET DEPLOYED</span>
+                        <h3>BNB V7 Contracts</h3>
+                        <p>Factory and personal vault contracts deployed on BNB Smart Chain Testnet.</p>
+                    </article>
+
+                    <article class="ag-progress-card is-active">
+                        <span class="ag-progress-state">IN PROGRESS</span>
+                        <h3>Pre-Execution Integration</h3>
+                        <p>Connecting transaction risk assessment with BNB V7 on-chain security checks.</p>
+                    </article>
+
+                    <article class="ag-progress-card is-active">
+                        <span class="ag-progress-state">IN PROGRESS</span>
+                        <h3>Public Platform</h3>
+                        <p>Redesigning the dashboard and making development progress visible.</p>
+                    </article>
+
+                    <article class="ag-progress-card is-planned">
+                        <span class="ag-progress-state">PLANNED</span>
+                        <h3>AccessShield</h3>
+                        <p>Expanding protection to API-connected projects, accounts and AI agents.</p>
+                    </article>
+                </div>
+
+                <p class="ag-progress-disclaimer">
+                    Development status is informational. Testnet features are experimental
+                    and have not undergone an independent security audit.
                 </p>
             </section>
-
-            <section class="overview">
-                <div class="stat-card">
-                    <p>Risk Engine</p>
-                    <h3>RULE-BASED</h3>
-                    <span>Evaluates configured transaction risk signals</span>
-                </div>
-
-                <div class="stat-card">
-                    <p>Supported Networks</p>
-                    <h3>3</h3>
-                    <span>NEAR, BNB Chain, Ethereum</span>
-                </div>
-
-                <div class="stat-card">
-                    <p>Execution Mode</p>
-                    <h3>SIMULATED</h3>
-                    <span>No real transactions submitted</span>
-                </div>
-            </section>
-
             <!-- AGENTGUARD ACTIVITY CAROUSEL -->
             <section class="activity-section" id="intelligence">
                 <div class="section-heading">
                     <div>
-                        <h2>NEAR Security &amp; Network Monitoring</h2>
-                        <p>Explore the protection systems powering AgentGuard AI.</p>
+                        <h2>Blockchain Intelligence</h2>
+                        <p>Multi-chain security workspace. Network-specific live data and investigation capabilities are clearly identified below.</p>
                     </div>
+                </div>
+
+                <div class="ag-network-coverage" role="note" aria-label="Network capability coverage">
+                    <div><span class="ag-coverage-dot is-live"></span><strong>NEAR</strong><small>Live read-only network intelligence</small></div>
+                    <div><span class="ag-coverage-dot is-testnet"></span><strong>BNB Chain</strong><small>V7 testnet contract integration</small></div>
+                    <div><span class="ag-coverage-dot is-config"></span><strong>Ethereum</strong><small>Transaction assessment network option</small></div>
+                    <p>Coverage varies by module. A network option does not imply live data indexing or production execution support.</p>
                 </div>
 
                 <!-- LIVE NEAR NETWORK ACTIVITY -->
                 <section class="near-network-panel" id="near-network" aria-label="NEAR network activity">
                     <div class="near-network-heading">
                         <div>
-                            <span class="near-network-eyebrow">BLOCKCHAIN NETWORK MONITOR</span>
+                            <span class="near-network-eyebrow">NETWORK MODULE / NEAR MAINNET &amp; TESTNET</span>
                             <h3>NEAR Network Activity</h3>
                             <p>Live information from the latest finalized NEAR block.</p>
                         </div>
@@ -580,9 +709,9 @@
                 <section class="near-network-panel access-key-panel" id="access-keys" aria-label="NEAR access-key security analysis">
                     <div class="near-network-heading">
                         <div>
-                            <span class="near-network-eyebrow">READ-ONLY SECURITY SCANNER</span>
-                            <h3>Access-Key Security Analysis</h3>
-                            <p>Inspect public account permissions and identify broad access exposure.</p>
+                            <span class="near-network-eyebrow">ACCESSHIELD / LIVE CAPABILITY</span>
+                            <h3>AccessShield — NEAR Permission Scanner</h3>
+                            <p>Inspect public NEAR account permissions and identify broad access exposure. API, application-account and AI-agent permission monitoring remain planned capabilities.</p>
                         </div>
                         <div class="near-network-status">
                             <span id="access-key-status-dot"></span>
@@ -590,6 +719,11 @@
                         </div>
                     </div>
 
+                    <div class="ag-module-intro ag-access-intro">
+                        <span class="ag-module-kicker">ACCESSHIELD / EARLY CAPABILITY</span>
+                        <h4>Inspect public account permissions</h4>
+                        <p><strong>Available now:</strong> read-only analysis of public NEAR access-key permissions. <strong>On the roadmap:</strong> API-connected services, application accounts and AI-agent permission monitoring. These broader capabilities are not yet available in this release.</p>
+                    </div>
                     <form id="access-key-form" class="access-key-form">
                         <label for="access-key-account">NEAR Account ID</label>
                         <div class="access-key-controls">
@@ -857,8 +991,8 @@
 <section class="near-market-section" id="near-market-dashboard">
     <div class="section-heading market-section-heading">
         <div>
-            <h2>NEAR Market Intelligence</h2>
-            <p>Live price, trading volume and large-purchase activity.</p>
+            <h2>Market Intelligence</h2>
+            <p>NEAR market data module: live price, trading volume and qualifying pool activity.</p>
         </div>
     </div>
     <div class="near-market-viewport">
@@ -913,135 +1047,210 @@
         </div>
     </div>
 
-    <section class="panel" id="transaction">
+    <section class="ag-transaction-console" id="transaction">
 
-                <div class="panel-heading">
-                    <div>
-                        <h2>Transaction Security Check</h2>
-                        <p>Evaluate a transaction before execution.</p>
+    <div class="ag-tx-heading">
+        <div>
+            <span class="ag-tx-eyebrow">AGENTGUARDAI / CORE SECURITY ENGINE</span>
+            <h2>Transaction Protection</h2>
+            <p>Inspect a proposed transaction before it reaches execution.</p>
+        </div>
+        <span class="ag-tx-beta">PRE-EXECUTION INSPECTION</span>
+    </div>
+
+    <div class="ag-tx-layout">
+
+        <div class="ag-tx-input-panel">
+            <div class="ag-tx-panel-heading">
+                <div>
+                    <span class="ag-tx-step">01 / TRANSACTION INPUT</span>
+                    <h3>Transaction Details</h3>
+                </div>
+                <span class="ag-tx-icon">⌁</span>
+            </div>
+
+            <form id="transaction-form">
+
+                <div class="ag-tx-form-grid">
+
+                    <div class="form-group">
+                        <label for="transaction_id">Transaction Reference</label>
+                        <input type="text" id="transaction_id"
+                               placeholder="transaction-001" required>
                     </div>
+
+                    <div class="form-group">
+                        <label for="network">Blockchain Network</label>
+                        <select id="network" required>
+                            <option value="near" selected>NEAR</option>
+                            <option value="bnb">BNB Chain</option>
+                            <option value="ethereum">Ethereum</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Transaction Amount</label>
+                        <input type="number" id="amount" min="0"
+                               step="any" placeholder="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recipient_address">Recipient Address</label>
+                        <input type="text" id="recipient_address"
+                               placeholder="Enter recipient address" required>
+                    </div>
+
                 </div>
 
-                <form id="transaction-form">
+                <div class="ag-tx-security-options">
+                    <span class="ag-tx-step">02 / SECURITY CONTEXT</span>
 
-                    <div class="form-grid">
+                    <label>
+                        <input type="checkbox" id="recipient_known">
+                        <span>
+                            <strong>Known recipient</strong>
+                            <small>Recipient is recognised by the submitter.</small>
+                        </span>
+                    </label>
 
-                        <div class="form-group">
-                            <label for="transaction_id">
-                                Transaction ID
-                            </label>
-                            <input
-                                type="text"
-                                id="transaction_id"
-                                placeholder="demo-transaction-001"
-                                required
-                            >
-                        </div>
+                    <label>
+                        <input type="checkbox" id="new_contract">
+                        <span>
+                            <strong>New contract interaction</strong>
+                            <small>Proposed interaction involves a new contract.</small>
+                        </span>
+                    </label>
 
-                        <div class="form-group">
-                            <label for="amount">Amount</label>
-                            <input
-                                type="number"
-                                id="amount"
-                                min="0"
-                                step="any"
-                                placeholder="0.5"
-                                required
-                            >
-                        </div>
+                    <label>
+                        <input type="checkbox" id="unlimited_approval">
+                        <span>
+                            <strong>Unlimited token approval</strong>
+                            <small>Proposed transaction includes unlimited approval.</small>
+                        </span>
+                    </label>
+                </div>
 
-                        <div class="form-group">
-                            <label for="network">Blockchain Network</label>
-                            <select id="network" required>
-                                <option value="near" selected>NEAR</option>
-                                <option value="bnb">BNB Chain</option>
-                                <option value="ethereum">Ethereum</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="recipient_address">
-                                Recipient Address
-                            </label>
-                            <input
-                                type="text"
-                                id="recipient_address"
-                                placeholder="Enter recipient address"
-                                required
-                            >
-                        </div>
-
-                    </div>
-
-                    <div class="security-options">
-
-                        <label>
-                            <input type="checkbox" id="recipient_known">
-                            Recipient is known
-                        </label>
-
-                        <label>
-                            <input type="checkbox" id="new_contract">
-                            New contract interaction
-                        </label>
-
-                        <label>
-                            <input
-                                type="checkbox"
-                                id="unlimited_approval"
-                            >
-                            Unlimited token approval
-                        </label>
-
-                    </div>
-
+                <div class="ag-tx-submit-area">
                     <button type="submit" id="evaluate-button">
-                        Evaluate Transaction
+                        Inspect Transaction <span>→</span>
                     </button>
-
-                </form>
-
-                <div id="loading" class="hidden">
-                    Evaluating transaction...
+                    <p>Inspection only. This action does not sign or broadcast a transaction.</p>
                 </div>
 
-                <div id="error-message" class="error hidden"></div>
+            </form>
 
-            </section>
+            <div id="loading" class="hidden ag-tx-loading" role="status">
+                <span class="ag-tx-spinner"></span>
+                Analysing transaction security signals...
+            </div>
 
-            <section class="panel hidden" id="results">
+            <div id="error-message" class="error hidden" role="alert"></div>
+        </div>
 
-                <div class="panel-heading">
-                    <div>
-                        <h2>Security Assessment</h2>
-                        <p>Transaction evaluation results.</p>
-                    </div>
+        <aside class="ag-tx-process-panel">
+            <span class="ag-tx-step">INSPECTION WORKFLOW</span>
+            <h3>How protection works</h3>
+
+            <div class="ag-tx-process-step">
+                <span>01</span>
+                <div>
+                    <strong>Transaction submitted</strong>
+                    <p>Proposed transaction details enter the inspection engine.</p>
                 </div>
+            </div>
 
-                <div class="result-grid">
-
-                    <div class="result-card">
-                        <p>Risk Score</p>
-                        <h2 id="risk-score">--</h2>
-                    </div>
-
-                    <div class="result-card">
-                        <p>Decision</p>
-                        <h2 id="decision">--</h2>
-                    </div>
-
-                    <div class="result-card">
-                        <p>Risk Findings</p>
-                        <h2 id="finding-count">--</h2>
-                    </div>
-
+            <div class="ag-tx-process-step">
+                <span>02</span>
+                <div>
+                    <strong>Risk assessment</strong>
+                    <p>Configured security rules and available network checks are evaluated.</p>
                 </div>
+            </div>
 
-                <div id="summary"></div>
+            <div class="ag-tx-process-step">
+                <span>03</span>
+                <div>
+                    <strong>Security decision</strong>
+                    <p>The engine returns its assessment and any identified findings.</p>
+                </div>
+            </div>
 
-                <div id="intelligence-results"></div>
+            <div class="ag-tx-process-step">
+                <span>04</span>
+                <div>
+                    <strong>Execution remains separate</strong>
+                    <p>Inspection does not sign, broadcast or execute the transaction.</p>
+                </div>
+            </div>
 
-            </section>
+            <div class="ag-tx-safety-note">
+                <strong>Execution safeguard</strong>
+                <p>A permitted inspection is not proof that a transaction is safe or authorization to execute it.</p>
+            </div>
+        </aside>
+
+    </div>
+</section>
+
+<section class="ag-tx-results hidden" id="results">
+
+    <div class="ag-tx-heading">
+        <div>
+            <span class="ag-tx-eyebrow">AGENTGUARDAI / INSPECTION REPORT</span>
+            <h2>Security Assessment</h2>
+            <p>Review the actual findings returned by the security engine.</p>
+        </div>
+        <span class="ag-tx-report-badge">ASSESSMENT REPORT</span>
+    </div>
+
+    <div class="ag-tx-result-overview">
+
+        <article class="ag-tx-score-card">
+            <span class="ag-tx-step">RISK SCORE</span>
+            <h2 id="risk-score">--</h2>
+            <p>Configured assessment score</p>
+        </article>
+
+        <article class="ag-tx-decision-card">
+            <span class="ag-tx-step">SECURITY DECISION</span>
+            <h2 id="decision">--</h2>
+            <p>Decision returned by the backend</p>
+        </article>
+
+        <article class="ag-tx-findings-card">
+            <span class="ag-tx-step">TOTAL FINDINGS</span>
+            <h2 id="finding-count">--</h2>
+            <p>Identified security findings</p>
+        </article>
+
+    </div>
+
+    <div class="ag-tx-summary-panel">
+        <span class="ag-tx-step">ASSESSMENT SUMMARY</span>
+        <div id="summary"></div>
+    </div>
+
+    <div id="bnb-preflight-panel" class="ag-tx-summary-panel hidden">
+        <span class="ag-tx-step">BNB V7 ON-CHAIN PREFLIGHT</span>
+        <div id="bnb-preflight-results"></div>
+    </div>
+
+    <div class="ag-tx-execution-panel">
+        <div>
+            <span class="ag-tx-step">EXECUTION RECORD</span>
+            <h3>Transaction Execution Status</h3>
+        </div>
+        <strong id="execution-status">NOT EXECUTED</strong>
+        <p>Security inspection is separate from transaction signing and broadcasting.</p>
+    </div>
+
+    <div class="ag-tx-findings-panel">
+        <span class="ag-tx-step">SECURITY INTELLIGENCE</span>
+        <h3>Detailed Findings</h3>
+        <div id="intelligence-results"></div>
+    </div>
+
+</section>
 <!-- Transaction History -->
 <section class="panel" id="history">
     <div class="panel-heading panel-toolbar">
@@ -1058,7 +1267,13 @@
 </section>
 
 <!-- Approval Center -->
-<section class="panel" id="approvals">
+<section class="panel ag-approval-module" id="approvals">
+    <div class="ag-module-intro">
+        <span class="ag-module-kicker">AUTHORIZATION WORKFLOW</span>
+        <h3>Review before authorizing</h3>
+        <p>Unlock with your personal Approval Key to view private approval records. This area displays approval status; it does not sign or broadcast blockchain transactions.</p>
+    </div>
+
     <div class="panel-heading panel-toolbar">
         <div>
             <h2>Approval Center</h2>
@@ -1392,6 +1607,14 @@ except AgentGuardError as error:
 
 </section>
 <section class="panel account-settings-section" id="account-settings">
+    <div class="ag-module-intro ag-account-intro">
+        <span class="ag-module-kicker">IDENTITY &amp; CONTROL</span>
+        <h3>Secure your AgentGuard workspace</h3>
+        <p>Create or access your account, verify your email, then manage the personal key used to unlock approval records. Keep recovery tokens and one-time keys private.</p>
+        <div class="ag-module-trust-row">
+            <span>● Email verification</span><span>● Personal approval key</span><span>● Recovery controls</span>
+        </div>
+    </div>
     <div class="panel-heading">
         <div>
             <h2>Account &amp; Settings</h2>
@@ -1524,14 +1747,14 @@ except AgentGuardError as error:
             </div>
             <footer>
                 AgentGuard AI © 2026 |
-                Blockchain Transaction Security
+                Pre-execution security intelligence · Public beta
             </footer>
 
         </main>
 
     </div>
 
-    <script src="/static/app.js?v=20261115-wallet-history5"></script>
+    <script src="/static/app.js?v=20261125-v83-platform"></script>
 
 </body>
 </html>

@@ -1,0 +1,13 @@
+{
+  "network": "BNB Smart Chain Testnet",
+  "chainId": 97,
+  "deployer": "0x5c29eF39a552AD27a841925302072503386539E8",
+  "factoryAddress": "0xE570FC4c90224DEd39360539d1b334bAffC9448C",
+  "vaultAddress": "0x1f6bd4D8651e9439a69C400DE6314367eaF97c57",
+  "vaultOwner": "0x5c29eF39a552AD27a841925302072503386539E8",
+  "transactionLimitBNB": "0.1",
+  "dailyLimitBNB": "0.5",
+  "factoryDeploymentTransaction": "0x041bcd65c94d7fcc9a3c86425c694a9433a6506bc8165af085121545606ea579",
+  "vaultCreationTransaction": "0x823da320555c71fb6e50e87d68c9ede4d8655016cdab8a98d08df710fc3b27f4",
+  "deployedAt": "2026-11-24T12:14:29.384Z"
+}

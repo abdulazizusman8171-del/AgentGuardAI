@@ -1,4 +1,4 @@
-﻿import os
+import os
 from app.wallet_behavior_analyzer import analyze_wallet_behavior
 import logging
 import hmac
@@ -28,6 +28,9 @@ from app.near_market import NearMarketClient, NearMarketError
 from app.auth import hash_password, verify_password, generate_session_token, hash_token, generate_approval_key, verify_approval_key
 from app.auth_models import RegistrationRequest, EmailVerificationRequest, LoginRequest, ApprovalKeyRecoveryRequest, OrganizationCreateRequest, OrganizationInvitationRequest, OrganizationInvitationAcceptRequest
 from app.email_service import send_verification_email, send_approval_key_recovery_email, send_password_reset_email
+from app.bnb_v7 import router as bnb_v7_router
+from app.bnb_v7 import bnb_v7_preflight
+
 from app.final_security import (
     enforce_login_rate_limit,
     record_login_failure,
@@ -131,6 +134,8 @@ app = FastAPI(
     description="Blockchain transaction security API",
     version="0.3.0"
 )
+
+app.include_router(bnb_v7_router)
 
 app.add_middleware(GatewayRequestSizeLimitMiddleware)
 
@@ -268,11 +273,35 @@ def verify_email(payload: EmailVerificationRequest):
 
 @app.get("/", include_in_schema=False)
 def dashboard(request: Request):
-    return templates.TemplateResponse(
+    csrf_token = request.cookies.get("agentguard_csrf")
+
+    if not csrf_token:
+        csrf_token = new_csrf_token()
+
+    secure_setting = os.getenv("AGENTGUARD_COOKIE_SECURE")
+    secure_cookie = (
+        secure_setting.lower() == "true"
+        if secure_setting is not None
+        else request.url.scheme == "https"
+    )
+
+    page = templates.TemplateResponse(
         request=request,
         name="index.html",
         context={}
     )
+
+    page.set_cookie(
+        key="agentguard_csrf",
+        value=csrf_token,
+        max_age=SESSION_DURATION_SECONDS,
+        httponly=False,
+        secure=secure_cookie,
+        samesite="lax",
+        path="/"
+    )
+
+    return page
 
 @app.get("/health")
 def health_check():
@@ -670,6 +699,23 @@ def security_intelligence(payload: dict[str, Any]):
             blocked_recipients=BLOCKED_RECIPIENTS
         )
 
+        bnb_preflight = None
+
+        if str(payload.get("network", "")).strip().lower() == "bnb":
+            bnb_preflight = bnb_v7_preflight(payload.get("amount"))
+
+            security_report["bnb_v7_preflight"] = bnb_preflight
+
+            if not bnb_preflight["passed"]:
+                security_report["decision"] = "BLOCK"
+                security_report["risk_score"] = max(
+                    int(security_report.get("risk_score", 0)),
+                    100
+                )
+                security_report.setdefault("reasons", []).extend(
+                    bnb_preflight["reasons"]
+                )
+
         tracker.record_transaction_assessment(
             payload,
             security_report,
@@ -683,7 +729,8 @@ def security_intelligence(payload: dict[str, Any]):
         return {
             "success": True,
             "security_report": security_report,
-            "intelligence": intelligence
+            "intelligence": intelligence,
+            "bnb_v7_preflight": bnb_preflight
         }
 
     except ValueError as error:

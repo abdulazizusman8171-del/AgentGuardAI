@@ -132,6 +132,38 @@ function displayResults(data) {
         intelligenceContainer.appendChild(card);
     });
 
+    const executionStatus = document.getElementById("execution-status");
+    if (executionStatus) {
+        executionStatus.textContent = "NOT EXECUTED";
+    }
+
+    const preflightPanel = document.getElementById("bnb-preflight-panel");
+    const preflightResults = document.getElementById("bnb-preflight-results");
+    const preflight = data.bnb_v7_preflight || report.bnb_v7_preflight;
+
+    if (preflightPanel && preflightResults) {
+        preflightResults.replaceChildren();
+
+        if (preflight) {
+            preflightPanel.classList.remove("hidden");
+
+            const status = document.createElement("p");
+            status.textContent = preflight.passed
+                ? "BNB V7 preflight: PASSED"
+                : "BNB V7 preflight: BLOCKED";
+
+            preflightResults.appendChild(status);
+
+            (preflight.reasons || []).forEach(function (reason) {
+                const item = document.createElement("p");
+                item.textContent = reason;
+                preflightResults.appendChild(item);
+            });
+        } else {
+            preflightPanel.classList.add("hidden");
+        }
+    }
+
     results.classList.remove("hidden");
 
     results.scrollIntoView({
@@ -256,15 +288,15 @@ function showOneTimeKey(data) {
     approvalAuthStatus.textContent = data.warning + " Store it safely; it will not be shown again.";
 }
 document.getElementById("registerAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/register", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = data.message; }
+    try { const data = await authPost("/auth/register", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = data.message; window.agentGuardAccountWizard?.completeStep(0); }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("verifyEmailAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/verify-email", { token: document.getElementById("emailVerificationToken").value }); accountStatus.textContent = data.message; }
+    try { const data = await authPost("/auth/verify-email", { token: document.getElementById("emailVerificationToken").value }); accountStatus.textContent = data.message; window.agentGuardAccountWizard?.completeStep(1); }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("loginAccount").addEventListener("click", async () => {
-    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; await loadDeveloperApiKeys(); await loadDeveloperAnalytics(); }
+    try { const data = await authPost("/auth/login", { email: document.getElementById("accountEmail").value, password: document.getElementById("accountPassword").value }); accountStatus.textContent = "Logged in as " + data.user.email; window.agentGuardAccountWizard?.completeStep(0); window.agentGuardAccountWizard?.completeStep(1); await loadDeveloperApiKeys(); await loadDeveloperAnalytics(); }
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("logoutAccount").addEventListener("click", async () => {
@@ -272,7 +304,7 @@ document.getElementById("logoutAccount").addEventListener("click", async () => {
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("createApprovalKey").addEventListener("click", async () => {
-    try { showOneTimeKey(await authPost("/auth/approval-key")); }
+    try { const data = await authPost("/auth/approval-key"); showOneTimeKey(data); if (data && data.approval_key) window.agentGuardAccountWizard?.completeStep(2); }
     catch (e) { approvalAuthStatus.textContent = e.message; }
 });
 document.getElementById("requestKeyRecovery").addEventListener("click", async () => {
@@ -280,7 +312,7 @@ document.getElementById("requestKeyRecovery").addEventListener("click", async ()
     catch (e) { accountStatus.textContent = e.message; }
 });
 document.getElementById("completeKeyRecovery").addEventListener("click", async () => {
-    try { showOneTimeKey(await authPost("/auth/approval-key/recover", { token: document.getElementById("recoveryToken").value })); accountStatus.textContent = "Approval Key replaced. Please log in again."; }
+    try { const data = await authPost("/auth/approval-key/recover", { token: document.getElementById("recoveryToken").value }); showOneTimeKey(data); if (data && data.approval_key) window.agentGuardAccountWizard?.completeStep(2); accountStatus.textContent = "Approval Key replaced. Please log in again."; }
     catch (e) { accountStatus.textContent = e.message; }
 });
 function formatTimestamp(value) {
@@ -357,7 +389,7 @@ const originalCards = activityTrack
     : [];
 
 const originalCardCount = originalCards.length;
-const carouselDuration = 36000;
+const carouselDuration = 60000;
 
 if (activityTrack && carouselViewport && originalCardCount > 0) {
     originalCards.forEach(card => {
@@ -899,7 +931,7 @@ async function loadNearNetworkActivity() {
 
         setText("near-network-updated", new Date().toLocaleTimeString());
 
-        status.textContent = "Live ? Finalized";
+        status.textContent = "Live | Finalized";
         statusDot.classList.remove("is-error");
         statusDot.classList.add("is-live");
 
@@ -909,7 +941,7 @@ async function loadNearNetworkActivity() {
         console.error("NEAR network activity error:", error);
 
         status.textContent = nearNetworkHasSuccessfulData
-            ? "Connection issue ? Showing last data"
+            ? "Connection issue | Showing last data"
             : "Network data unavailable";
 
         statusDot.classList.remove("is-live");
@@ -3536,3 +3568,367 @@ loadDeveloperAnalytics();
 
     addRow();
 })();
+
+
+
+// ==========================================
+// AGENTGUARDAI V8.1 — DESKTOP SIDEBAR COLLAPSE
+// ==========================================
+(function () {
+    const sidebar = document.getElementById("mainSidebar");
+    if (!sidebar) return;
+
+    const brand = sidebar.querySelector(".brand");
+    if (!brand) return;
+
+    const collapseButton = document.createElement("button");
+    collapseButton.type = "button";
+    collapseButton.className = "ag-sidebar-collapse";
+    collapseButton.id = "agSidebarCollapse";
+    collapseButton.setAttribute("aria-label", "Collapse navigation");
+    collapseButton.setAttribute("title", "Collapse navigation");
+    collapseButton.textContent = "«";
+    brand.appendChild(collapseButton);
+
+    const applySidebarState = collapsed => {
+        document.body.classList.toggle("ag-sidebar-collapsed", collapsed);
+        collapseButton.textContent = collapsed ? "»" : "«";
+        collapseButton.setAttribute(
+            "aria-label",
+            collapsed ? "Expand navigation" : "Collapse navigation"
+        );
+        collapseButton.title = collapsed
+            ? "Expand navigation"
+            : "Collapse navigation";
+
+        if (collapsed) {
+            sidebar.querySelectorAll("details.nav-group").forEach(group => {
+                group.open = true;
+            });
+        }
+    };
+
+    const savedState = localStorage.getItem("agSidebarCollapsed") === "true";
+    applySidebarState(savedState);
+
+    collapseButton.addEventListener("click", () => {
+        const collapsed = !document.body.classList.contains("ag-sidebar-collapsed");
+        localStorage.setItem("agSidebarCollapsed", String(collapsed));
+        applySidebarState(collapsed);
+    });
+
+    sidebar.querySelectorAll(".nav-group a").forEach(link => {
+        const label = link.textContent.trim().replace(/\s+/g, " ");
+        link.dataset.tooltip = label;
+        link.title = label;
+    });
+})();
+
+
+// ==========================================
+// AGENTGUARDAI V8.1 — TRANSACTION WIZARD
+// ==========================================
+(function () {
+    const form = document.getElementById("transaction-form");
+    if (!form || form.dataset.wizardReady === "true") return;
+
+    const grid = form.querySelector(".ag-tx-form-grid");
+    const security = form.querySelector(".ag-tx-security-options");
+    const submitArea = form.querySelector(".ag-tx-submit-area");
+
+    if (!grid || !security || !submitArea) return;
+
+    const fields = [
+        {
+            id: "network",
+            title: "Choose your network",
+            description: "Select the blockchain where the transaction is intended to occur."
+        },
+        {
+            id: "transaction_id",
+            title: "Transaction reference",
+            description: "Give this proposed transaction a reference for identification."
+        },
+        {
+            id: "amount",
+            title: "Transaction amount",
+            description: "Enter the amount associated with the proposed transaction."
+        },
+        {
+            id: "recipient_address",
+            title: "Recipient address",
+            description: "Enter the destination wallet or contract address."
+        }
+    ];
+
+    const wizard = document.createElement("div");
+    wizard.className = "ag-tx-wizard";
+
+    const progress = document.createElement("div");
+    progress.className = "ag-tx-wizard-progress";
+    progress.setAttribute("aria-label", "Transaction inspection progress");
+
+    const progressSegments = fields.concat([{ id: "security" }]).map(() => {
+        const segment = document.createElement("span");
+        progress.appendChild(segment);
+        return segment;
+    });
+
+    const heading = document.createElement("div");
+    heading.className = "ag-tx-wizard-heading";
+
+    const stepLabel = document.createElement("span");
+    stepLabel.className = "ag-tx-step";
+
+    const title = document.createElement("h3");
+    const description = document.createElement("p");
+
+    heading.append(stepLabel, title, description);
+    wizard.append(progress, heading);
+
+    const steps = [];
+
+    function makeStep(field, index) {
+        const original = document.getElementById(field.id);
+        const group = original?.closest(".form-group");
+
+        if (!group) return;
+
+        const step = document.createElement("div");
+        step.className = "ag-tx-wizard-step";
+        step.appendChild(group);
+        wizard.appendChild(step);
+
+        steps.push({
+            element: step,
+            title: field.title,
+            description: field.description,
+            validate: () => original.reportValidity()
+        });
+    }
+
+    fields.forEach(makeStep);
+
+    const securityStep = document.createElement("div");
+    securityStep.className = "ag-tx-wizard-step";
+    securityStep.appendChild(security);
+    securityStep.appendChild(submitArea);
+    wizard.appendChild(securityStep);
+
+    steps.push({
+        element: securityStep,
+        title: "Security context",
+        description: "Tell AgentGuardAI what is known about this transaction."
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "ag-tx-wizard-controls";
+
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "ag-wizard-back";
+    back.textContent = "← Back";
+
+    const next = document.createElement("button");
+    next.type = "button";
+    next.className = "ag-wizard-next";
+    next.textContent = "Continue →";
+
+    controls.append(back, next);
+    wizard.appendChild(controls);
+
+    grid.replaceWith(wizard);
+
+    let currentStep = 0;
+
+    function renderStep() {
+        steps.forEach((step, index) => {
+            step.element.hidden = index !== currentStep;
+        });
+
+        progressSegments.forEach((segment, index) => {
+            segment.classList.toggle("is-complete", index <= currentStep);
+        });
+
+        stepLabel.textContent =
+            `STEP ${String(currentStep + 1).padStart(2, "0")} / ${steps.length}`;
+
+        title.textContent = steps[currentStep].title;
+        description.textContent = steps[currentStep].description;
+
+        back.disabled = currentStep === 0;
+
+        next.textContent = currentStep === steps.length - 1
+            ? "Ready to inspect"
+            : "Continue →";
+
+        if (currentStep === steps.length - 1) {
+            next.hidden = true;
+        } else {
+            next.hidden = false;
+        }
+    }
+
+    next.addEventListener("click", () => {
+        if (!steps[currentStep].validate?.()) return;
+
+        if (currentStep < steps.length - 1) {
+            currentStep++;
+            renderStep();
+        }
+    });
+
+    back.addEventListener("click", () => {
+        if (currentStep > 0) {
+            currentStep--;
+            renderStep();
+        }
+    });
+
+    form.dataset.wizardReady = "true";
+    renderStep();
+})();
+
+
+// AGENTGUARD V8.3.2 ACCOUNT STEP WIZARD
+(() => {
+    function initAccountStepWizard() {
+        const section = document.querySelector(".account-settings-section");
+        if (!section || section.dataset.stepWizardReady === "true") return;
+
+        const layout = section.querySelector(".auth-layout");
+        const steps = [
+            document.getElementById("account-access"),
+            document.getElementById("email-verification"),
+            document.getElementById("approval-key-management")
+        ];
+
+        if (!layout || steps.some(step => !step || !layout.contains(step))) return;
+
+        const wizard = document.createElement("div");
+        wizard.className = "ag-account-wizard";
+        wizard.innerHTML = `
+            <div class="ag-wizard-progress">
+                <div class="ag-wizard-progress-label">
+                    <span id="agWizardStepLabel">STEP 1 OF 3</span>
+                    <span id="agWizardStepName">Account Access</span>
+                </div>
+                <div class="ag-wizard-progress-track">
+                    <div id="agWizardProgressFill"></div>
+                </div>
+                <div class="ag-wizard-step-dots" aria-label="Account setup progress">
+                    <span class="active">1</span>
+                    <span>2</span>
+                    <span>3</span>
+                </div>
+            </div>
+            <div class="ag-wizard-navigation">
+                <button type="button" id="agWizardBack" disabled>Back</button>
+                <button type="button" id="agWizardNext">Continue</button>
+            </div>
+        `;
+
+        layout.parentNode.insertBefore(wizard, layout);
+
+        let currentStep = 0;
+        const names = [
+            "Account Access",
+            "Email Verification",
+            "Personal Approval Key"
+        ];
+
+        const backButton = wizard.querySelector("#agWizardBack");
+        const nextButton = wizard.querySelector("#agWizardNext");
+        const stepLabel = wizard.querySelector("#agWizardStepLabel");
+        const stepName = wizard.querySelector("#agWizardStepName");
+        const progressFill = wizard.querySelector("#agWizardProgressFill");
+        const dots = Array.from(wizard.querySelectorAll(".ag-wizard-step-dots span"));
+
+        function showStep(index) {
+            currentStep = Math.max(0, Math.min(index, steps.length - 1));
+
+            steps.forEach((step, i) => {
+                step.classList.toggle("ag-account-step-active", i === currentStep);
+                step.setAttribute("aria-hidden", i === currentStep ? "false" : "true");
+            });
+
+            layout.classList.add("ag-account-wizard-ready");
+
+            stepLabel.textContent = `STEP ${currentStep + 1} OF 3`;
+            stepName.textContent = names[currentStep];
+            progressFill.style.width = `${((currentStep + 1) / 3) * 100}%`;
+
+            dots.forEach((dot, i) => {
+                dot.classList.toggle("active", i === currentStep);
+                dot.classList.toggle("completed", i < currentStep);
+            });
+
+            backButton.disabled = currentStep === 0;
+            nextButton.textContent = currentStep === 2 ? "Completed" : "Continue";
+            nextButton.disabled = currentStep === 2;
+        }
+
+        // AGENTGUARD V8.3.4 RELIABLE ACCOUNT WIZARD
+        const completed = [false, false, false];
+
+        function updateWizardControls() {
+            nextButton.disabled =
+                currentStep >= 2 || !completed[currentStep];
+
+            nextButton.textContent =
+                currentStep === 2 ? "Final Step" : "Continue";
+
+            backButton.disabled = currentStep === 0;
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle("completed", completed[index]);
+            });
+        }
+
+        function completeWizardStep(index) {
+            if (index < 0 || index > 2) return;
+
+            for (let i = 0; i < index; i++) {
+                if (!completed[i]) return;
+            }
+
+            completed[index] = true;
+            updateWizardControls();
+        }
+
+        window.agentGuardAccountWizard = {
+            completeStep: completeWizardStep
+        };
+
+        const originalShowStep = showStep;
+        showStep = function(index) {
+            originalShowStep(index);
+            updateWizardControls();
+        };
+
+        backButton.addEventListener("click", () => {
+            if (currentStep > 0) showStep(currentStep - 1);
+        });
+
+        nextButton.addEventListener("click", () => {
+            if (currentStep >= 2) return;
+            if (!completed[currentStep]) {
+                updateWizardControls();
+                return;
+            }
+            showStep(currentStep + 1);
+        });
+
+        section.dataset.stepWizardReady = "true";
+        showStep(0);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAccountStepWizard);
+    } else {
+        initAccountStepWizard();
+    }
+})();
+
+
+// AGENTGUARD V8.3.4 RELIABLE ACCOUNT WIZARD

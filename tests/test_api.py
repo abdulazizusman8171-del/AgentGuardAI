@@ -95,7 +95,11 @@ class TestAgentGuardAPI(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Security Dashboard", response.text)
+        self.assertIn("AgentGuardAI Security Platform", response.text)
+        self.assertIn("Analyse Before Execution", response.text)
+        self.assertIn("Transaction Protection", response.text)
+        self.assertIn("AccessShield", response.text)
+        self.assertIn("PUBLIC BETA", response.text)
 
     def test_dashboard_css(self):
         response = self.client.get("/static/styles.css")
