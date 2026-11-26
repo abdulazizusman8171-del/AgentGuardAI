@@ -1,4 +1,4 @@
-const form = document.getElementById("transaction-form");
+﻿const form = document.getElementById("transaction-form");
 const button = document.getElementById("evaluate-button");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
@@ -2368,7 +2368,7 @@ setInterval(() => {
 
     const originalCards = Array.from(track.children);
     const originalCardCount = originalCards.length;
-    const duration = 18000;
+    const duration = 30000;
 
     if (originalCardCount < 2) return;
 
@@ -3932,3 +3932,7 @@ loadDeveloperAnalytics();
 
 
 // AGENTGUARD V8.3.4 RELIABLE ACCOUNT WIZARD
+
+
+
+

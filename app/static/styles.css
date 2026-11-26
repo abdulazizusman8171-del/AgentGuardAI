@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -3487,7 +3487,7 @@ html, body {
 /* FINAL NEAR CAROUSEL ANIMATION OVERRIDE */
 .near-market-grid {
     animation-name: agentGuardContinuousSlide !important;
-    animation-duration: 18000ms !important;
+    animation-duration: 30000ms !important;
     animation-timing-function: linear !important;
     animation-iteration-count: infinite !important;
     animation-fill-mode: none !important;
@@ -6418,3 +6418,12 @@ footer {
         flex: 1;
     }
 }
+
+
+/* AGENTGUARD V84 SECURITY INTELLIGENCE SPEED FIX */
+.activity-track {
+    animation-duration: 60000ms !important;
+    animation-timing-function: linear !important;
+}
+
+
