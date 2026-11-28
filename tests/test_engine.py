@@ -1,5 +1,7 @@
 import sys
 import unittest
+from unittest.mock import patch
+import app.bnb_v7
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
@@ -281,10 +283,12 @@ class TestAgentGuard(unittest.TestCase):
 
         self.assertEqual(result["decision"], "ALLOW")
 
-    def test_valid_bnb_address(self):
+    @patch("app.bnb_v7.bnb_v7_preflight", return_value={"passed": True, "reasons": [], "checks": {}})
+    def test_valid_bnb_address(self, mock_preflight):
         transaction = {
             "amount": 0.1,
             "network": "bnb",
+            "wallet_address": "0x5c29ef39a552ad27a841925302072503386539e8",
             "recipient_address": "0x1234567890abcdef1234567890abcdef12345678",
             "recipient_known": True,
             "new_contract": False,

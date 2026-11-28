@@ -268,7 +268,7 @@ def vault_security(address: str):
     }
 
 
-def bnb_v7_preflight(amount_bnb):
+def bnb_v7_preflight(amount_bnb, wallet_address=None):
     """
     Read-only BNB V7 pre-execution security checks.
     Returns on-chain limits and whether the proposed amount is permitted.
@@ -288,10 +288,78 @@ def bnb_v7_preflight(amount_bnb):
         amount_wei = int(amount_wei_decimal)
 
         chain_id = check_network()
-        deployment = load_deployment()
-        vault_address = validate_address(deployment["vaultAddress"])
 
+        if not wallet_address:
+            raise ValueError(
+                "A sending wallet_address is required for BNB V7 security checks."
+            )
+
+        wallet_address = validate_address(wallet_address)
+
+        deployment = load_deployment()
+        factory_address = validate_address(deployment["factoryAddress"])
+
+        contract_exists(factory_address)
+
+        has_vault = function_call(
+            factory_address,
+            "hasVault(address)",
+            ["address"],
+            [wallet_address],
+            ["bool"]
+        )[0]
+
+        if not has_vault:
+            return {
+                "network": "BNB Smart Chain Testnet",
+                "chain_id": chain_id,
+                "wallet_address": wallet_address,
+                "vault_address": None,
+                "amount_wei": str(amount_wei),
+                "checks": {
+                    "network_verified": True,
+                    "wallet_has_vault": False
+                },
+                "passed": False,
+                "reasons": [
+                    "No AgentGuard V7 vault is registered for this wallet."
+                ],
+                "read_only": True
+            }
+
+        vault_address = function_call(
+            factory_address,
+            "getVault(address)",
+            ["address"],
+            [wallet_address],
+            ["address"]
+        )[0]
+
+        zero_address = "0x0000000000000000000000000000000000000000"
+
+        if (
+            not isinstance(vault_address, str)
+            or vault_address.lower() == zero_address
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Factory returned an invalid vault address."
+            )
+
+        vault_address = validate_address(vault_address)
         contract_exists(vault_address)
+
+        vault_owner = function_call(
+            vault_address,
+            "owner()",
+            output_types=["address"]
+        )[0]
+
+        if vault_owner.lower() != wallet_address.lower():
+            raise HTTPException(
+                status_code=503,
+                detail="V7 vault owner does not match the sending wallet."
+            )
 
         paused = function_call(
             vault_address, "paused()", output_types=["bool"]
@@ -327,12 +395,14 @@ def bnb_v7_preflight(amount_bnb):
 
         checks = {
             "network_verified": chain_id == EXPECTED_CHAIN_ID,
+            "wallet_has_vault": True,
+            "vault_owner_matches_wallet": (
+                vault_owner.lower() == wallet_address.lower()
+            ),
             "vault_not_paused": not paused,
             "no_pending_recovery": not recovery_pending,
             "within_transaction_limit": amount_wei <= int(max_transaction),
-            "within_daily_limit": (
-                amount_wei <= remaining_daily
-            )
+            "within_daily_limit": amount_wei <= remaining_daily
         }
 
         reasons = []
@@ -352,6 +422,9 @@ def bnb_v7_preflight(amount_bnb):
         return {
             "network": "BNB Smart Chain Testnet",
             "chain_id": chain_id,
+            "wallet_address": wallet_address,
+            "vault_owner": vault_owner,
+            "factory_address": factory_address,
             "vault_address": vault_address,
             "amount_wei": str(amount_wei),
             "max_transaction_wei": str(max_transaction),

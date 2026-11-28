@@ -280,6 +280,61 @@ def evaluate_transaction(
         reasons.append("Recipient is on the dangerous address blocklist")
 
     # ======================================
+    # BNB V7 ON-CHAIN SECURITY PREFLIGHT
+    # ======================================
+
+    bnb_v7_report = None
+    bnb_v7_blocked = False
+
+    if network == "bnb":
+
+        wallet_address = transaction.get("wallet_address")
+
+        if not isinstance(wallet_address, str) or not wallet_address.strip():
+            raise ValueError(
+                "wallet_address is required for BNB transactions."
+            )
+
+        asset = transaction.get("asset", "BNB")
+
+        if (
+            not isinstance(asset, str)
+            or asset.strip().upper() not in ("BNB", "NATIVE")
+        ):
+            raise ValueError(
+                "BNB V7 spending limits currently support native BNB only."
+            )
+
+        # Import locally to avoid unnecessary module coupling.
+        from app.bnb_v7 import bnb_v7_preflight
+
+        bnb_v7_report = bnb_v7_preflight(
+            amount,
+            wallet_address=wallet_address
+        )
+
+        if not isinstance(bnb_v7_report, dict):
+            raise ValueError("Invalid BNB V7 preflight response.")
+
+        bnb_v7_blocked = bnb_v7_report.get("passed") is not True
+
+        if bnb_v7_blocked:
+            risk_score = 100
+
+            preflight_reasons = bnb_v7_report.get("reasons", [])
+
+            if isinstance(preflight_reasons, list):
+                reasons.extend(
+                    reason for reason in preflight_reasons
+                    if isinstance(reason, str)
+                )
+
+            if not preflight_reasons:
+                reasons.append(
+                    "BNB V7 security verification did not pass."
+                )
+
+    # ======================================
     # FINAL RISK SCORE
     # ======================================
 
@@ -297,6 +352,10 @@ def evaluate_transaction(
         reasons.append("Duplicate transaction detected")
 
     elif recipient_blocklisted:
+
+        decision = "BLOCK"
+
+    elif bnb_v7_blocked:
 
         decision = "BLOCK"
 
@@ -320,7 +379,7 @@ def evaluate_transaction(
     # SECURITY REPORT
     # ======================================
 
-    return {
+    security_report = {
         "risk_score": risk_score,
         "decision": decision,
         "reasons": reasons,
@@ -329,6 +388,11 @@ def evaluate_transaction(
         "recipient_blocklisted": recipient_blocklisted,
         "duplicate_transaction": duplicate_transaction
     }
+
+    if bnb_v7_report is not None:
+        security_report["bnb_v7"] = bnb_v7_report
+
+    return security_report
 
 
 # ==========================================
